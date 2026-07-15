@@ -4,8 +4,10 @@
   "description": "",
   "main": "vite.config.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,4 +19,5 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "vite": "^8.1.4"
   }
+  
 }
