@@ -14,3 +14,39 @@
     </form>
   </div>
 </template>
+
+<script>
+export default {
+  name: 'App'
+}
+</script>
+
+<style>
+/* CSS Dasar untuk membagi layar menjadi Sidebar & Konten Utama */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  font-family: sans-serif;
+}
+.sidebar {
+  width: 250px;
+  background-color: #1e293b;
+  color: white;
+  padding: 20px;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.sidebar li a {
+  color: #cbd5e1;
+  text-decoration: none;
+  display: block;
+  padding: 10px 0;
+}
+.main-content {
+  flex: 1;
+  background-color: #f8fafc;
+  padding: 20px;
+}
+</style>
