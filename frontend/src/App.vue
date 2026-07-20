@@ -4,10 +4,10 @@
       <h2>AsetKu</h2>
       <nav>
         <ul>
-          <li><a href="/src/views/Login.vue">Dashboard</a></li>
-          <li><a href="/src/views/AssetManagement.vue">Manajemen Aset</a></li>
-          <li><a href="/src/views/WorkOrder.vue">Work Order</a></li>
-          <li><a href="/src/views/UtilityMonitoring.vue">Utility Monitoring</a></li>
+          <li><router-link to="/dashboard">Dashboard</router-link></li>
+          <li><router-link to="/assets">Manajemen Aset</router-link></li>
+          <li><router-link to="/workorders">Work Order</router-link></li>
+          <li><router-link to="/utility">Utility Monitoring</router-link></li>
         </ul>
       </nav>
     </aside>
@@ -25,15 +25,14 @@ export default {
 </script>
 
 <style>
-/* CSS Dasar untuk membagi layar menjadi Sidebar & Konten Utama */
 .app-container {
   display: flex;
   min-height: 100vh;
-  font-family: sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 .sidebar {
-  width: 250px;
-  background-color: #1e293b;
+  width: 220px;
+  background-color: #0f172a;
   color: white;
   padding: 20px;
 }
@@ -41,15 +40,16 @@ export default {
   list-style: none;
   padding: 0;
 }
-.sidebar li a {
+.sidebar li {
+  margin-bottom: 12px;
+}
+.sidebar a {
   color: #cbd5e1;
   text-decoration: none;
-  display: block;
-  padding: 10px 0;
 }
 .main-content {
   flex: 1;
   background-color: #f8fafc;
-  padding: 20px;
+  padding: 24px;
 }
 </style>
