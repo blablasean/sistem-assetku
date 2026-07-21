@@ -15,14 +15,26 @@
       <form @submit.prevent="login" class="login-form">
         <label>
           <span>Username</span>
-          <input type="text" v-model="username" placeholder="Masukkan username" />
+          <input 
+            type="text" 
+            v-model="username" 
+            placeholder="Masukkan username"
+            :disabled="isLoading"
+          />
         </label>
         <label>
           <span>Password</span>
-          <input type="password" v-model="password" placeholder="Masukkan password" />
+          <input 
+            type="password" 
+            v-model="password" 
+            placeholder="Masukkan password"
+            :disabled="isLoading"
+          />
         </label>
 
-        <button type="submit">Masuk</button>
+        <button type="submit" :disabled="isLoading">
+          {{ isLoading ? 'Sedang masuk...' : 'Masuk' }}
+        </button>
 
         <p v-if="error" class="error-message">{{ error }}</p>
       </form>
@@ -38,27 +50,58 @@ import api from '../api'
 const username = ref('')
 const password = ref('')
 const error = ref('')
+const isLoading = ref(false)
 const router = useRouter()
 
 async function login() {
   error.value = ''
+  isLoading.value = true
 
   if (!username.value || !password.value) {
     error.value = 'Username dan password wajib diisi.'
+    isLoading.value = false
     return
   }
 
   try {
-    const res = await api.post('/login', {
+    const res = await api.post('/auth/login', {
       username: username.value,
       password: password.value,
     })
-    const token = res.data.token
-    // store token in localStorage for demo
+
+    if (!res.data.status) {
+      error.value = res.data.message || 'Login gagal'
+      return
+    }
+
+    const token = res.data.data?.token
+    if (!token) {
+      error.value = 'Token tidak diterima dari server'
+      return
+    }
+
+    // Store token in localStorage
     localStorage.setItem('token', token)
+    localStorage.setItem('username', username.value)
+
+    // Redirect to dashboard
     router.push('/dashboard')
-  } catch (e) {
-    error.value = e?.response?.data || 'Login gagal'
+  } catch (err) {
+    console.error('Login error:', err)
+    
+    if (err.response?.status === 401) {
+      error.value = 'Username atau password salah'
+    } else if (err.response?.data?.message) {
+      error.value = err.response.data.message
+    } else if (err.code === 'ERR_NETWORK') {
+      error.value = 'Tidak dapat terhubung ke server. Pastikan backend berjalan.'
+    } else if (err.message === 'timeout of 5000ms exceeded') {
+      error.value = 'Koneksi timeout. Server tidak merespons.'
+    } else {
+      error.value = err.message || 'Login gagal. Silakan coba lagi.'
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 </script>
@@ -151,8 +194,13 @@ p {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
-button {
-  border: none;
+button {:not(:disabled) {
+  background: #1d4ed8;
+}
+
+button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
   border-radius: 14px;
   padding: 14px 0;
   font-size: 1rem;

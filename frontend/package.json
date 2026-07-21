@@ -1,17 +1,16 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-  "description": "",
-  "main": "vite.config.js",
+  "description": "Sistem AsetKu - Frontend",
+  "type": "module",
   "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview"
-},
-  "keywords": [],
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["asset-management", "vue3"],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "vue": "^3.5.39",
     "axios": "^1.6.0",
@@ -21,5 +20,4 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "vite": "^8.1.4"
   }
-  
 }
