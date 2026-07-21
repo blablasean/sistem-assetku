@@ -194,24 +194,27 @@ p {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
-button {:not(:disabled) {
-  background: #1d4ed8;
+/* Button styles */
+button {
+  display: inline-block;
+  width: 100%;
+  padding: 14px 0;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #2563eb;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 button:disabled {
   background: #9ca3af;
   cursor: not-allowed;
-  border-radius: 14px;
-  padding: 14px 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #ffffff;
-  background: #2563eb;
-  cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-button:hover {
+button:not(:disabled):hover {
   background: #1d4ed8;
 }
 

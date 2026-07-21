@@ -8,6 +8,7 @@ import (
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
 	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -22,41 +23,102 @@ func RegisterRoutes(
 	maintenanceCtrl *controllers.MaintenanceController,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
-
 	// Public endpoints
-	mux.HandleFunc("GET /", handleHome)
-	mux.HandleFunc("POST /auth/login", handleLogin(authCtrl))
-	mux.HandleFunc("POST /auth/register", handleRegister(db))
+	mux.HandleFunc("/", handleHome)
+	mux.HandleFunc("/auth/login", handleLogin(authCtrl))
+	mux.HandleFunc("/auth/register", handleRegister(db))
 
-	// Protected endpoints wrapper
-	authMux := http.NewServeMux()
+	// Protected endpoints (single handler per path; switch by method)
+	mux.Handle("/assets", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handleGetAssets(assetCtrl)(w, r)
+		case http.MethodPost:
+			handleCreateAsset(assetCtrl)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Asset endpoints
-	authMux.HandleFunc("GET /assets", handleGetAssets(assetCtrl))
-	authMux.HandleFunc("POST /assets", handleCreateAsset(assetCtrl))
-	authMux.HandleFunc("GET /assets/{id}", handleGetAssetDetail(assetCtrl))
-	authMux.HandleFunc("GET /assets/{id}/history", handleGetAssetHistory(mutationCtrl))
+	// asset detail and history - use prefix "/assets/"
+	mux.Handle("/assets/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// path after /assets/
+		tail := strings.TrimPrefix(r.URL.Path, "/assets/")
+		if tail == "" {
+			http.NotFound(w, r)
+			return
+		}
+		if strings.HasSuffix(tail, "/history") && r.Method == http.MethodGet {
+			// /assets/{id}/history
+			// extract id
+			idStr := strings.TrimSuffix(tail, "/history")
+			// set path value via query parameter emulation
+			q := r.URL.Query()
+			q.Set("id", idStr)
+			r.URL.RawQuery = q.Encode()
+			handleGetAssetHistory(mutationCtrl)(w, r)
+			return
+		}
+		if r.Method == http.MethodGet {
+			q := r.URL.Query()
+			q.Set("id", tail)
+			r.URL.RawQuery = q.Encode()
+			handleGetAssetDetail(assetCtrl)(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})))
 
-	// Mutation endpoints
-	authMux.HandleFunc("POST /mutations", handleCreateMutation(mutationCtrl))
-	authMux.HandleFunc("GET /mutations/{assetID}", handleGetMutationHistory(mutationCtrl))
+	// Mutations
+	mux.Handle("/mutations", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handleCreateMutation(mutationCtrl)(w, r)
+		case http.MethodGet:
+			// expect ?assetID=...
+			handleGetMutationHistory(mutationCtrl)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Work Order endpoints
-	authMux.HandleFunc("POST /workorders", handleCreateWorkOrder(workOrderCtrl))
-	authMux.HandleFunc("POST /workorders/{id}/assign", handleAssignWorker(workOrderCtrl))
-	authMux.HandleFunc("PUT /workorders/{id}/status", handleUpdateWorkOrderStatus(workOrderCtrl))
-	authMux.HandleFunc("GET /workorders/{id}/status", handleGetWorkOrderStatus(workOrderCtrl))
+	// Workorders
+	mux.Handle("/workorders/assign", middlewares.AuthMiddleware(handleAssignWorker(workOrderCtrl)))
+	mux.Handle("/workorders/status", middlewares.AuthMiddleware(handleUpdateWorkOrderStatus(workOrderCtrl)))
+	mux.Handle("/workorders", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handleCreateWorkOrder(workOrderCtrl)(w, r)
+		case http.MethodGet:
+			handleGetWorkOrderStatus(workOrderCtrl)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Maintenance endpoints
-	authMux.HandleFunc("POST /maintenance/schedule", handleCreatePMSchedule(maintenanceCtrl))
-	authMux.HandleFunc("POST /maintenance/{id}/checklist", handleSubmitPMChecklist(maintenanceCtrl))
-	authMux.HandleFunc("GET /maintenance/{assetID}/history", handleGetMaintenanceHistory(maintenanceCtrl))
-
-	// Apply auth middleware to protected routes
-	mux.Handle("/assets", middlewares.AuthMiddleware(authMux))
-	mux.Handle("/mutations", middlewares.AuthMiddleware(authMux))
-	mux.Handle("/workorders", middlewares.AuthMiddleware(authMux))
-	mux.Handle("/maintenance", middlewares.AuthMiddleware(authMux))
+	// Maintenance
+	mux.Handle("/maintenance/schedule", middlewares.AuthMiddleware(handleCreatePMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tail := strings.TrimPrefix(r.URL.Path, "/maintenance/")
+		if strings.HasSuffix(tail, "/checklist") && r.Method == http.MethodPost {
+			// /maintenance/{id}/checklist
+			idStr := strings.TrimSuffix(tail, "/checklist")
+			q := r.URL.Query()
+			q.Set("id", idStr)
+			r.URL.RawQuery = q.Encode()
+			handleSubmitPMChecklist(maintenanceCtrl)(w, r)
+			return
+		}
+		if strings.HasSuffix(tail, "/history") && r.Method == http.MethodGet {
+			idStr := strings.TrimSuffix(tail, "/history")
+			q := r.URL.Query()
+			q.Set("assetID", idStr)
+			r.URL.RawQuery = q.Encode()
+			handleGetMaintenanceHistory(maintenanceCtrl)(w, r)
+			return
+		}
+		http.Error(w, "not found", http.StatusNotFound)
+	})))
 
 	return mux
 }
@@ -171,7 +233,7 @@ func handleCreateAsset(assetCtrl *controllers.AssetController) http.HandlerFunc 
 
 func handleGetAssetDetail(assetCtrl *controllers.AssetController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.PathValue("id")
+		idStr := r.URL.Query().Get("id")
 		assetID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", err.Error())
@@ -190,7 +252,7 @@ func handleGetAssetDetail(assetCtrl *controllers.AssetController) http.HandlerFu
 
 func handleGetAssetHistory(mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.PathValue("id")
+		idStr := r.URL.Query().Get("id")
 		assetID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", err.Error())
@@ -232,7 +294,7 @@ func handleCreateMutation(mutationCtrl *controllers.MutationController) http.Han
 
 func handleGetMutationHistory(mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.PathValue("assetID")
+		idStr := r.URL.Query().Get("assetID")
 		assetID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", err.Error())
@@ -280,7 +342,7 @@ func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.Han
 			return
 		}
 
-		idStr := r.PathValue("id")
+		idStr := r.URL.Query().Get("id")
 		woID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid work order ID", err.Error())
@@ -315,7 +377,7 @@ func handleUpdateWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController)
 			return
 		}
 
-		idStr := r.PathValue("id")
+		idStr := r.URL.Query().Get("id")
 		woID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid work order ID", err.Error())
@@ -344,7 +406,7 @@ func handleUpdateWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController)
 
 func handleGetWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.PathValue("id")
+		idStr := r.URL.Query().Get("id")
 		woID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid work order ID", err.Error())
@@ -417,7 +479,7 @@ func handleSubmitPMChecklist(maintenanceCtrl *controllers.MaintenanceController)
 
 func handleGetMaintenanceHistory(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.PathValue("assetID")
+		idStr := r.URL.Query().Get("assetID")
 		assetID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", err.Error())
