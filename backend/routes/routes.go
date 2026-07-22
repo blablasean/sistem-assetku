@@ -35,24 +35,25 @@ func RegisterRoutes(
 			handleGetAssets(assetCtrl)(w, r)
 		case http.MethodPost:
 			handleCreateAsset(assetCtrl)(w, r)
+		case http.MethodPut:
+			handleEditAsset(assetCtrl)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})))
 
+	mux.Handle("/assets/code", middlewares.AuthMiddleware(handleGetAssetByCode(assetCtrl)))
+	mux.Handle("/assets/reserve", middlewares.AuthMiddleware(handleReserveAsset(assetCtrl)))
+
 	// asset detail and history - use prefix "/assets/"
 	mux.Handle("/assets/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// path after /assets/
 		tail := strings.TrimPrefix(r.URL.Path, "/assets/")
 		if tail == "" {
 			http.NotFound(w, r)
 			return
 		}
 		if strings.HasSuffix(tail, "/history") && r.Method == http.MethodGet {
-			// /assets/{id}/history
-			// extract id
 			idStr := strings.TrimSuffix(tail, "/history")
-			// set path value via query parameter emulation
 			q := r.URL.Query()
 			q.Set("id", idStr)
 			r.URL.RawQuery = q.Encode()
@@ -75,7 +76,6 @@ func RegisterRoutes(
 		case http.MethodPost:
 			handleCreateMutation(mutationCtrl)(w, r)
 		case http.MethodGet:
-			// expect ?assetID=...
 			handleGetMutationHistory(mutationCtrl)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -85,12 +85,14 @@ func RegisterRoutes(
 	// Workorders
 	mux.Handle("/workorders/assign", middlewares.AuthMiddleware(handleAssignWorker(workOrderCtrl)))
 	mux.Handle("/workorders/status", middlewares.AuthMiddleware(handleUpdateWorkOrderStatus(workOrderCtrl)))
+	mux.Handle("/workorders/close", middlewares.AuthMiddleware(handleCloseWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/cancel", middlewares.AuthMiddleware(handleCancelWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			handleCreateWorkOrder(workOrderCtrl)(w, r)
 		case http.MethodGet:
-			handleGetWorkOrderStatus(workOrderCtrl)(w, r)
+			handleGetWorkOrders(workOrderCtrl)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -101,7 +103,6 @@ func RegisterRoutes(
 	mux.Handle("/maintenance/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tail := strings.TrimPrefix(r.URL.Path, "/maintenance/")
 		if strings.HasSuffix(tail, "/checklist") && r.Method == http.MethodPost {
-			// /maintenance/{id}/checklist
 			idStr := strings.TrimSuffix(tail, "/checklist")
 			q := r.URL.Query()
 			q.Set("id", idStr)
@@ -119,6 +120,9 @@ func RegisterRoutes(
 		}
 		http.Error(w, "not found", http.StatusNotFound)
 	})))
+
+	// Activity logs
+	mux.Handle("/activitylogs", middlewares.AuthMiddleware(handleGetActivityLogs(db)))
 
 	return mux
 }
@@ -193,17 +197,11 @@ func handleRegister(db *gorm.DB) http.HandlerFunc {
 func handleGetAssets(assetCtrl *controllers.AssetController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
-		if q == "" {
-			utils.SendError(w, http.StatusBadRequest, "Missing search query", "query parameter 'q' required")
-			return
-		}
-
 		assets, err := assetCtrl.SearchAndFilterAssets(q)
 		if err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch assets", err.Error())
 			return
 		}
-
 		utils.SendSuccess(w, http.StatusOK, "Assets retrieved successfully", assets)
 	}
 }
@@ -211,8 +209,38 @@ func handleGetAssets(assetCtrl *controllers.AssetController) http.HandlerFunc {
 func handleCreateAsset(assetCtrl *controllers.AssetController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "hod" {
-			utils.SendError(w, http.StatusForbidden, "Access denied", "Only HOD can create assets")
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload models.Asset
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := assetCtrl.RegistrasiAsset(payload, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to create asset", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusCreated, "Asset created successfully", payload)
+	}
+}
+
+func handleEditAsset(assetCtrl *controllers.AssetController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		idStr := r.URL.Query().Get("id")
+		assetID, err := strconv.Atoi(idStr)
+		if err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", err.Error())
 			return
 		}
 
@@ -222,12 +250,54 @@ func handleCreateAsset(assetCtrl *controllers.AssetController) http.HandlerFunc 
 			return
 		}
 
-		if err := assetCtrl.RegistrasiAsset(payload, claims.Role); err != nil {
-			utils.SendError(w, http.StatusForbidden, "Failed to create asset", err.Error())
+		if err := assetCtrl.EditAsset(assetID, payload, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to edit asset", err.Error())
 			return
 		}
 
-		utils.SendSuccess(w, http.StatusCreated, "Asset created successfully", payload)
+		utils.SendSuccess(w, http.StatusOK, "Asset updated successfully", payload)
+	}
+}
+
+func handleGetAssetByCode(assetCtrl *controllers.AssetController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			utils.SendError(w, http.StatusBadRequest, "Asset code parameter required", "code is missing")
+			return
+		}
+		asset, err := assetCtrl.GetAssetByCode(code)
+		if err != nil {
+			utils.SendError(w, http.StatusNotFound, "Asset not found", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Asset retrieved successfully", asset)
+	}
+}
+
+func handleReserveAsset(assetCtrl *controllers.AssetController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "management"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			AssetID    int  `json:"asset_id"`
+			IsReserved bool `json:"is_reserved"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := assetCtrl.ReserveAsset(payload.AssetID, payload.IsReserved, role); err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to update reservation", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Asset reservation updated", payload)
 	}
 }
 
@@ -272,9 +342,9 @@ func handleGetAssetHistory(mutationCtrl *controllers.MutationController) http.Ha
 func handleCreateMutation(mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil {
-			utils.SendError(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
-			return
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
 
 		var payload models.Mutation
@@ -283,7 +353,7 @@ func handleCreateMutation(mutationCtrl *controllers.MutationController) http.Han
 			return
 		}
 
-		if err := mutationCtrl.CreateMutation(payload, claims.Role); err != nil {
+		if err := mutationCtrl.CreateMutation(payload, role); err != nil {
 			utils.SendError(w, http.StatusForbidden, "Failed to create mutation", err.Error())
 			return
 		}
@@ -314,9 +384,15 @@ func handleGetMutationHistory(mutationCtrl *controllers.MutationController) http
 func handleCreateWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "hod" {
-			utils.SendError(w, http.StatusForbidden, "Access denied", "Only HOD can create work orders")
-			return
+		role := "external"
+		userID := 1
+		if claims != nil {
+			if claims.Role != "" {
+				role = claims.Role
+			}
+			if claims.UserID > 0 {
+				userID = claims.UserID
+			}
 		}
 
 		var payload models.WorkOrder
@@ -325,8 +401,12 @@ func handleCreateWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 			return
 		}
 
-		if err := workOrderCtrl.CreateWorkOrder(payload, claims.Role); err != nil {
-			utils.SendError(w, http.StatusForbidden, "Failed to create work order", err.Error())
+		if payload.RequesterID == 0 {
+			payload.RequesterID = userID
+		}
+
+		if err := workOrderCtrl.CreateWorkOrder(payload, role); err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to create work order", err.Error())
 			return
 		}
 
@@ -334,22 +414,27 @@ func handleCreateWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 	}
 }
 
+func handleGetWorkOrders(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		orders, err := workOrderCtrl.GetAllWorkOrders()
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch work orders", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Work orders retrieved successfully", orders)
+	}
+}
+
 func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "hod" {
-			utils.SendError(w, http.StatusForbidden, "Access denied", "Only HOD can assign workers")
-			return
-		}
-
-		idStr := r.URL.Query().Get("id")
-		woID, err := strconv.Atoi(idStr)
-		if err != nil {
-			utils.SendError(w, http.StatusBadRequest, "Invalid work order ID", err.Error())
-			return
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
 
 		var payload struct {
+			WOID       int `json:"wo_id"`
 			EngineerID int `json:"engineer_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -357,50 +442,101 @@ func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.Han
 			return
 		}
 
-		if err := workOrderCtrl.AssignWorker(woID, payload.EngineerID, claims.Role); err != nil {
+		if err := workOrderCtrl.AssignWorker(payload.WOID, payload.EngineerID, role); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to assign worker", err.Error())
 			return
 		}
 
-		utils.SendSuccess(w, http.StatusOK, "Worker assigned successfully", map[string]int{
-			"work_order_id": woID,
-			"engineer_id":   payload.EngineerID,
-		})
+		utils.SendSuccess(w, http.StatusOK, "Worker assigned successfully", payload)
 	}
 }
 
 func handleUpdateWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "hod" {
-			utils.SendError(w, http.StatusForbidden, "Access denied", "Only HOD can update work order status")
-			return
-		}
-
-		idStr := r.URL.Query().Get("id")
-		woID, err := strconv.Atoi(idStr)
-		if err != nil {
-			utils.SendError(w, http.StatusBadRequest, "Invalid work order ID", err.Error())
-			return
+		role := "engineer"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
 
 		var payload struct {
-			Status string `json:"status"`
+			WOID        int    `json:"wo_id"`
+			Status      string `json:"status"`
+			ActionTaken string `json:"action_taken"`
+			Cost        int    `json:"cost"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
 
-		if err := workOrderCtrl.UpdateWOStatus(woID, payload.Status, claims.Role); err != nil {
+		if err := workOrderCtrl.UpdateWOStatus(payload.WOID, payload.Status, payload.ActionTaken, payload.Cost, role); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to update status", err.Error())
 			return
 		}
 
-		utils.SendSuccess(w, http.StatusOK, "Work order status updated successfully", map[string]interface{}{
-			"work_order_id": woID,
-			"status":        payload.Status,
-		})
+		utils.SendSuccess(w, http.StatusOK, "Work order status updated successfully", payload)
+	}
+}
+
+func handleCancelWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			WOID int `json:"wo_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := workOrderCtrl.CancelWorkOrder(payload.WOID, role); err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to cancel work order", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Work order cancelled successfully", payload)
+	}
+}
+
+func handleCloseWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			WOID int `json:"wo_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := workOrderCtrl.CloseWorkOrder(payload.WOID, role); err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to close work order", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Work order closed successfully", payload)
+	}
+}
+
+func handleGetActivityLogs(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var logs []models.ActivityLog
+		if err := db.Order("id desc").Limit(50).Find(&logs).Error; err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch activity logs", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", logs)
 	}
 }
 

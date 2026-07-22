@@ -1,7 +1,25 @@
-# CHANGELOG - Sistem AsetKu Fixes
+# CHANGELOG - Sistem AsetKu Fixes & Updates
 
-## Summary
-Comprehensive fixes untuk semua error dan masalah keamanan di aplikasi Sistem AsetKu.
+## 🌟 Version 1.1.0 - Hotel Operational Release
+
+### 1. 👥 4 User Roles & Access Rights (RBAC Matrix)
+- **Management Engineer (Supervisor)**: Full access to Dashboard, Asset Management, Work Order Management (Priority, History, Cancel, Close, Assign Worker), Activity Log.
+- **Head of Department (HOD) Engineer**: Profile Asset (Registrasi & Edit Asset), Generate QR Code, Asset Management, Maintenance Management, Preventive Maintenance Checklist.
+- **Staff Engineer (Teknisi Lapangan)**: Dashboard, Asset Management, Maintenance Management (Reminder, Report, History, PM Schedule), Task Execution & Progress Update.
+- **External User (Staff Hotel / Departemen Lain)**: Work Order / Repair Request (Pengajuan tiket kerusakan dengan Lokasi & Priority), Work Order Status Tracking (Real-time tracking).
+
+### 2. 🔧 Work Order Management Enhancements
+- Added **Priority** (*Low, Medium, High, Emergency*) and **Location / Room** fields to Work Orders.
+- Work Order lifecycle workflow: *Open ➔ In Progress ➔ Under Review ➔ Completed / Closed*.
+- Full ticket controls: Assign Worker, Cancel Work Order, Close Work Order with completion date.
+
+### 3. 📱 QR Code Scanning & Printing
+- Printable QR Code badge generation for physical hotel assets.
+- QR Code scanner simulation modal: Scan asset ➔ View specifications, last maintenance date, location, and PIC ➔ Direct **"Laporkan Kerusakan Aset Ini"** button.
+
+### 4. 🔄 Asset Mutation & Relocation Tracking
+- Official logging of physical asset transfers (e.g. moving TV, AC, or chairs between rooms/areas).
+- Preserves location history, previous location, new location, new PIC, and mutation reason.
 
 ---
 

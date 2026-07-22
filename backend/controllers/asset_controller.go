@@ -17,18 +17,31 @@ func NewAssetController(db *gorm.DB) *AssetController {
 }
 
 func (c *AssetController) RegistrasiAsset(newAsset models.Asset, callerRole string) error {
-	if err := validateHodRole(callerRole); err != nil {
-		return err
+	if callerRole != "hod" && callerRole != "management" {
+		return errors.New("akses ditolak: hanya HOD atau Management yang dapat mendaftarkan aset")
 	}
-
 	return c.db.Create(&newAsset).Error
 }
 
-func (c *AssetController) GenerateQRCode(assetCode string, callerRole string) (string, error) {
-	if err := validateHodRole(callerRole); err != nil {
-		return "", err
+func (c *AssetController) EditAsset(assetID int, updated models.Asset, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" {
+		return errors.New("akses ditolak: hanya HOD atau Management yang dapat mengubah data aset")
 	}
-	return "QR_CODE_PLACEHOLDER:" + assetCode, nil
+	var existing models.Asset
+	if err := c.db.First(&existing, assetID).Error; err != nil {
+		return err
+	}
+	existing.AssetName = updated.AssetName
+	existing.Category = updated.Category
+	existing.Location = updated.Location
+	existing.PIC = updated.PIC
+	existing.Status = updated.Status
+	existing.DocumentURL = updated.DocumentURL
+	return c.db.Save(&existing).Error
+}
+
+func (c *AssetController) GenerateQRCode(assetCode string, callerRole string) (string, error) {
+	return "QR_CODE:" + assetCode, nil
 }
 
 func (c *AssetController) GetAssetDetail(assetID int) (models.Asset, error) {
@@ -39,18 +52,39 @@ func (c *AssetController) GetAssetDetail(assetID int) (models.Asset, error) {
 	return asset, nil
 }
 
+func (c *AssetController) GetAssetByCode(assetCode string) (models.Asset, error) {
+	var asset models.Asset
+	if err := c.db.Where("asset_code = ?", assetCode).First(&asset).Error; err != nil {
+		return models.Asset{}, err
+	}
+	return asset, nil
+}
+
 func (c *AssetController) SearchAndFilterAssets(query string) ([]models.Asset, error) {
 	var assets []models.Asset
+	if query == "" {
+		if err := c.db.Order("id desc").Find(&assets).Error; err != nil {
+			return nil, err
+		}
+		return assets, nil
+	}
 	search := "%" + query + "%"
-	if err := c.db.Where("asset_name LIKE ? OR asset_code LIKE ? OR status LIKE ?", search, search, search).Find(&assets).Error; err != nil {
+	if err := c.db.Where("asset_name LIKE ? OR asset_code LIKE ? OR status LIKE ? OR location LIKE ? OR category LIKE ?", search, search, search, search, search).Order("id desc").Find(&assets).Error; err != nil {
 		return nil, err
 	}
 	return assets, nil
 }
 
-func validateHodRole(callerRole string) error {
-	if callerRole != "hod" {
-		return errors.New("akses ditolak")
+func (c *AssetController) ReserveAsset(assetID int, isReserved bool, callerRole string) error {
+	var asset models.Asset
+	if err := c.db.First(&asset, assetID).Error; err != nil {
+		return err
 	}
-	return nil
+	asset.IsReserved = isReserved
+	if isReserved {
+		asset.Status = "Reserved"
+	} else if asset.Status == "Reserved" {
+		asset.Status = "Active"
+	}
+	return c.db.Save(&asset).Error
 }

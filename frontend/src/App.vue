@@ -1,55 +1,54 @@
 <template>
-  <div class="app-container">
-    <aside class="sidebar">
-      <h2>AsetKu</h2>
-      <nav>
-        <ul>
-          <li><router-link to="/dashboard">Dashboard</router-link></li>
-          <li><router-link to="/assets">Manajemen Aset</router-link></li>
-          <li><router-link to="/workorders">Work Order</router-link></li>
-          <li><router-link to="/utility">Utility Monitoring</router-link></li>
-        </ul>
-      </nav>
-    </aside>
+  <div class="app-layout">
+    <HeaderNavbar v-if="showNavbar" @open-qr-scanner="showQrScanner = true" />
 
-    <main class="main-content">
-      <router-view />
+    <main class="main-wrapper">
+      <router-view @open-qr-scanner="showQrScanner = true" />
     </main>
+
+    <QrScannerModal :show="showQrScanner" @close="showQrScanner = false" />
   </div>
 </template>
 
-<script>
-export default {
-  name: 'App'
-}
+<script setup>
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import HeaderNavbar from './components/HeaderNavbar.vue'
+import QrScannerModal from './components/QrScannerModal.vue'
+
+const route = useRoute()
+const showQrScanner = ref(false)
+
+const showNavbar = computed(() => {
+  return route.path !== '/login'
+})
 </script>
 
 <style>
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color-scheme: light;
 }
-.sidebar {
-  width: 220px;
-  background-color: #0f172a;
-  color: white;
-  padding: 20px;
-}
-.sidebar ul {
-  list-style: none;
+
+body {
+  margin: 0;
   padding: 0;
-}
-.sidebar li {
-  margin-bottom: 12px;
-}
-.sidebar a {
-  color: #cbd5e1;
-  text-decoration: none;
-}
-.main-content {
-  flex: 1;
   background-color: #f8fafc;
-  padding: 24px;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-wrapper {
+  flex: 1;
+}
+
+* {
+  box-sizing: border-box;
 }
 </style>

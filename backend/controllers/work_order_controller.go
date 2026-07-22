@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"time"
 	"sistem-asetku-backend/models"
 
 	"gorm.io/gorm"
@@ -16,49 +17,65 @@ func NewWorkOrderController(db *gorm.DB) *WorkOrderController {
 }
 
 func (c *WorkOrderController) CreateWorkOrder(data models.WorkOrder, callerRole string) error {
-	if callerRole != "hod" {
-		return errors.New("akses ditolak")
+	if data.Priority == "" {
+		data.Priority = "Medium"
 	}
 	data.Status = "Open"
 	return c.db.Create(&data).Error
 }
 
-func (c *WorkOrderController) AssignWorker(woID int, engineerID int, callerRole string) error {
-	if err := validateHodRole(callerRole); err != nil {
-		return err
+func (c *WorkOrderController) GetAllWorkOrders() ([]models.WorkOrder, error) {
+	var list []models.WorkOrder
+	if err := c.db.Order("id desc").Find(&list).Error; err != nil {
+		return nil, err
 	}
-	return c.assignWorkerToOrder(woID, engineerID)
+	return list, nil
 }
 
-func (c *WorkOrderController) assignWorkerToOrder(woID int, engineerID int) error {
-	tx := c.db.Begin()
-	if tx.Error != nil {
-		return tx.Error
+func (c *WorkOrderController) AssignWorker(woID int, engineerID int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" {
+		return errors.New("akses ditolak: hanya HOD atau Management yang dapat menugaskan teknisi")
 	}
-
 	var workOrder models.WorkOrder
-	if err := tx.First(&workOrder, woID).Error; err != nil {
-		tx.Rollback()
+	if err := c.db.First(&workOrder, woID).Error; err != nil {
 		return err
 	}
-
 	workOrder.EngineerID = engineerID
 	workOrder.Status = "In Progress"
-
-	if err := tx.Save(&workOrder).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit().Error
+	return c.db.Save(&workOrder).Error
 }
 
-func (c *WorkOrderController) UpdateWOStatus(woID int, status string, callerRole string) error {
-	if err := validateHodRole(callerRole); err != nil {
+func (c *WorkOrderController) UpdateWOStatus(woID int, status string, actionTaken string, cost int, callerRole string) error {
+	var workOrder models.WorkOrder
+	if err := c.db.First(&workOrder, woID).Error; err != nil {
 		return err
 	}
+	workOrder.Status = status
+	if actionTaken != "" {
+		workOrder.ActionTaken = actionTaken
+	}
+	if cost > 0 {
+		workOrder.Cost = cost
+	}
+	return c.db.Save(&workOrder).Error
+}
 
-	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Update("status", status).Error
+func (c *WorkOrderController) CancelWorkOrder(woID int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" {
+		return errors.New("akses ditolak: hanya HOD atau Management yang dapat membatalkan Work Order")
+	}
+	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Update("status", "Cancelled").Error
+}
+
+func (c *WorkOrderController) CloseWorkOrder(woID int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" {
+		return errors.New("akses ditolak: hanya HOD atau Management yang dapat menutup Work Order")
+	}
+	now := time.Now()
+	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Updates(map[string]interface{}{
+		"status":    "Closed",
+		"closed_at": &now,
+	}).Error
 }
 
 func (c *WorkOrderController) GetWorkOrderStatus(woID int) string {
