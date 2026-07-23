@@ -23,12 +23,22 @@
   - **User Profile Modal**: Displays avatar, name, concise role label, session badge, and permission rights.
   - **Floating Toast UI Notifications**: Clean toast notifications in the bottom-right corner for all action feedback.
 
-### 6. 📋 Activity Log Overhaul & Status "Finish"
+### 6. 📋 Activity Log Overhaul, Edit/Delete & Status "Finish"
 - **Unified Activity Log**: `GET /activitylogs` updated to return completed Work Orders (`Finish` / `Completed`) and completed Maintenance history (`MaintenanceHistory`) in a structured single payload.
-- **ActivityLog UI**: Redesigned `ActivityLog.vue` with 3 summary metrics cards (Finished WO count, Maintenance count, Total Maintenance cost), two separate detailed tables, and real-time multi-column search filtering.
+- **ActivityLog UI**: Redesigned `ActivityLog.vue` with 3 summary metrics cards (Finished WO count, Maintenance count, Total Maintenance cost), two separate detailed tables, edit/delete actions, and real-time multi-column search filtering.
 - **Status "Closed" -> "Finish"**: Updated Work Order completion status lifecycle across backend (`CloseWorkOrder`), controllers, routes, `WorkOrder.vue`, and `StatusBadge.vue` to use **`Finish`**.
 
-### 7. 🔐 Session Security Enforcements
+### 7. 📄 Integrated Single Button "Laporan & Export" & PDF Print Fix
+- **Header Button Unification**: Combined header buttons into **`📄 Laporan & Export`** on `WorkOrder.vue` & `ActivityLog.vue`. Clicking this button opens the preview modal containing **`📊 Export ke Excel (.xlsx)`** and **`🖨️ Cetak Dokumen Laporan (PDF / Print)`**.
+- **Blank Print Fix**: Decoupled report modals outside `.page-container` in DOM layout so print media queries hiding page containers leave official report documents 100% visible and formatted without blank pages.
+
+### 8. 📱 QR Code Live Scanner, Image Upload (`jsQR`) & Client-Side Canvas Generator
+- **`jsQR` Library Integration**: Integrated `jsQR` pure JavaScript decoder reading 2D QR matrix pixels directly from HTML5 Canvas `ImageData` for 100% reliable camera & image upload decoding.
+- **CPU Throttling & Audio Feedback**: Throttled camera scan loop to a 400ms interval with 320x240 frame downscaling (0% CPU lag) and added Web Audio API synth beep feedback on detection.
+- **Client-Side QR Generator**: Generated crisp 2D QR codes pure client-side on canvas (`generateQrDataUrl`) without external network dependencies.
+
+### 9. ✏️ UI Text Simplification & Session Security
+- Shortened all subtitles, header descriptions, modal titles, and placeholders across the web app to be ultra-concise and direct.
 - Standardized `sessionStorage` usage for tokens and user details so opening a new browser tab/window enforces fresh re-authentication.
 
 ---

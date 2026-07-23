@@ -12,10 +12,10 @@ Aplikasi ini dirancang khusus untuk efisiensi operasional hotel dan tim *Enginee
    * **Kontrol Penuh (Full System Control)** atas seluruh aset, Work Order, penugasan, jadwal PM, user management, dan audit log.
 
 2. **⭐ Head of Department (`hod`) Engineer**
-   * Pimpinan operasional engineering: Registrasi & Edit Aset, Penugasan Teknisi (*Assign Worker*), Penutupan Tiket (*Finish Work Order*), **Hapus Work Order**, **Hapus Aset**, **Hapus & Edit PM Schedule**, Cetak Laporan Bulanan & Export Excel.
+   * Pimpinan operasional engineering: Registrasi & Edit Aset, Penugasan Teknisi (*Assign Worker*), Penutupan Tiket (*Finish Work Order*), **Hapus Work Order**, **Hapus Aset**, **Hapus & Edit PM Schedule**, Edit/Hapus Activity Log, Cetak Laporan & Export Excel.
 
 3. **👔 Management Engineer (`management` / Supervisor)**
-   * Supervisor operasional: Monitoring Aset, Penugasan Teknisi, Update Status, Mutasi Lokasi, Hapus WO/Aset/PM, Cetak Laporan & Export Excel.
+   * Supervisor operasional: Monitoring Aset, Penugasan Teknisi, Update Status, Mutasi Lokasi, Hapus WO/Aset/PM/Log, Cetak Laporan & Export Excel.
 
 4. **🛠️ Staff Engineer (`engineer` / Teknisi Lapangan)**
    * Pemeliharaan & Perbaikan: Update progres pengerjaan tiket, isi rincian tindakan perbaikan, biaya, dan penyelesaian *Checklist Preventive Maintenance*.
@@ -27,11 +27,12 @@ Aplikasi ini dirancang khusus untuk efisiensi operasional hotel dan tim *Enginee
 
 ## 🚀 Fitur Utama & Keunggulan Sistem
 
-* **📋 Activity Log Terintegrasi**: Menyajikan seluruh riwayat **Work Order Selesai (Finish)** dan **Riwayat Maintenance Selesai** secara real-time lengkap dengan kartu ringkasan (summary cards), total biaya perbaikan, dan pencarian serbaguna.
-* **✅ Status Tiket "Finish"**: Tahap akhir penutupan tiket perbaikan secara resmi dilabeli sebagai **Finish** menggantikan istilah 'Closed'.
-* **📊 Export Laporan ke Excel (.xlsx)**: Rekapitulasi Laporan Bulanan Work Order dapat diunduh ke file spreadsheet Microsoft Excel terstruktur beserta kalkulasi total biaya.
-* **🖨️ Cetak PDF A4 Landscape (Mendatar)**: Hasil cetak laporan bulanan otomatis mendeteksi kertas A4 Landscape tanpa signature box, terpotong, atau tampilan blank.
-* **🗑️ Manajemen Penghapusan Data (WO, Aset, PM)**: Fitur hapus data permanen dari MySQL dengan *Optimistic UI Update* yang responsif.
+* **📱 Pemindai & Dekoder QR Code Real-Time (`jsQR`)**: Memindai stiker QR Code Aset via kamera WebCam live maupun **Upload Foto QR** dengan dekode piksel JavaScript `jsQR`, audio *beep* respon, dan optimasi delay (0% CPU lag).
+* **🖨️ Generator QR Code Client-Side**: Menggenerasi gambar 2D QR Code aset secara murni di peramban (*client-side canvas*) bebas error dan siap cetak stiker.
+* **📄 Integrated Single Button "Laporan & Export"**: Menyatukan tombol laporan di header halaman Work Order & Activity Log menjadi **`📄 Laporan & Export`** yang membuka pratinjau dokumen lengkap dengan opsi cetak PDF & export Excel (.xlsx).
+* **📋 Activity Log Terintegrasi**: Menyajikan riwayat **Work Order Selesai (Finish)** dan **Maintenance Selesai** lengkap dengan fitur Edit, Hapus, pencarian serbaguna, dan ringkasan total biaya.
+* **✅ Status Tiket "Finish"**: Tahap akhir penutupan tiket perbaikan secara resmi dilabeli sebagai **Finish**.
+* **🗑️ Manajemen Penghapusan Data (WO, Aset, PM, Log)**: Penghapusan data permanen dari MySQL dengan *Optimistic UI Update* yang responsif.
 * **👤 Custom UI Profile & Floating Toast**: Notifikasi respon aksi dan tampilan profil pengguna berbentuk UI Modal & Floating Toast modern tanpa `alert()` bawaan browser.
 * **🔒 Keamanan Sesi Browser (`sessionStorage`)**: Sesi login otomatis terhapus saat tab atau browser ditutup untuk keamanan data hotel.
 
@@ -49,7 +50,7 @@ Aplikasi ini dirancang khusus untuk efisiensi operasional hotel dan tim *Enginee
 
 ## 🛠️ Tech Stack & Deployment Target
 
-* **Frontend**: Vue 3 (Vite) + Vanilla CSS System (Modern & Responsive UI)
+* **Frontend**: Vue 3 (Vite) + Vanilla CSS System + `jsQR` (Modern & Responsive UI)
 * **Backend**: Go (Golang) + `net/http` + GORM ORM + JWT Auth + Bcrypt
 * **Database**: MySQL / MariaDB (Auto-Migration GORM)
 * **Deployment Target**: On-Premise Server (Windows Server / Linux Docker Container)
