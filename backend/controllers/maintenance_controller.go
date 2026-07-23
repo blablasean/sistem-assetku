@@ -16,17 +16,47 @@ func NewMaintenanceController(db *gorm.DB) *MaintenanceController {
 }
 
 func (c *MaintenanceController) CreatePMSchedule(schedule models.PreventiveMaintenance, callerRole string) error {
-	if callerRole != "hod" {
-		return errors.New("akses ditolak")
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat membuat jadwal PM")
 	}
 	return c.db.Create(&schedule).Error
 }
 
-func (c *MaintenanceController) SubmitPMChecklist(pmID int, checklist string, callerRole string) error {
-	if callerRole != "engineer" && callerRole != "hod" {
-		return errors.New("akses ditolak")
+func (c *MaintenanceController) EditPMSchedule(pmID int, updated models.PreventiveMaintenance, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat mengubah jadwal PM")
 	}
+	var schedule models.PreventiveMaintenance
+	if err := c.db.First(&schedule, pmID).Error; err != nil {
+		return err
+	}
+	if updated.ScheduleType != "" {
+		schedule.ScheduleType = updated.ScheduleType
+	}
+	if updated.ChecklistData != "" {
+		schedule.ChecklistData = updated.ChecklistData
+	}
+	if !updated.NextRun.IsZero() {
+		schedule.NextRun = updated.NextRun
+	}
+	return c.db.Save(&schedule).Error
+}
 
+func (c *MaintenanceController) DeletePMSchedule(pmID int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus jadwal PM")
+	}
+	res := c.db.Where("id = ?", pmID).Delete(&models.PreventiveMaintenance{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return errors.New("jadwal PM tidak ditemukan di database")
+	}
+	return nil
+}
+
+func (c *MaintenanceController) SubmitPMChecklist(pmID int, checklist string, callerRole string) error {
 	var schedule models.PreventiveMaintenance
 	if err := c.db.First(&schedule, pmID).Error; err != nil {
 		return err

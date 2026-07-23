@@ -88,3 +88,17 @@ func (c *AssetController) ReserveAsset(assetID int, isReserved bool, callerRole 
 	}
 	return c.db.Save(&asset).Error
 }
+
+func (c *AssetController) DeleteAsset(assetID int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus aset")
+	}
+	res := c.db.Where("id = ?", assetID).Delete(&models.Asset{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return errors.New("aset tidak ditemukan di database")
+	}
+	return nil
+}

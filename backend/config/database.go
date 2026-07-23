@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"sistem-asetku-backend/models"
+	"sistem-asetku-backend/utils"
 )
 
 var DB *gorm.DB
@@ -44,7 +45,7 @@ func InitDatabase() error {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&loc=Local&timeout=%s", user, pass, host, port, dbname, connectTimeoutStr)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Error),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -59,6 +60,73 @@ func InitDatabase() error {
 
 	log.Println("✓ Database models auto-migrated successfully")
 
+	// Seed initial default users and hotel assets if database is empty
+	if err := SeedInitialData(db); err != nil {
+		log.Printf("⚠️ Warning seeding database: %v\n", err)
+	}
+
+	return nil
+}
+
+// SeedInitialData seeds default users and initial sample data for hotel assets and work orders
+func SeedInitialData(db *gorm.DB) error {
+	hashedPassword, err := utils.HashPassword("password")
+	if err != nil || hashedPassword == "" {
+		hashedPassword = "$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu"
+	}
+
+	// 1. Initial Users (4 Roles)
+	users := []models.User{
+		{Username: "mgr_eng", Password: hashedPassword, Name: "Budi (Supervisor)", Role: "management"},
+		{Username: "hod_eng", Password: hashedPassword, Name: "Pak Alex (HOD Engineer)", Role: "hod"},
+		{Username: "tech_deni", Password: hashedPassword, Name: "Deni (Staff Engineer)", Role: "engineer"},
+		{Username: "staff_frontdesk", Password: hashedPassword, Name: "Rina (Staff Front Desk)", Role: "external"},
+		{Username: "admin", Password: hashedPassword, Name: "Administrator Hotel", Role: "management"},
+	}
+	for _, u := range users {
+		var existing models.User
+		if err := db.Where("username = ?", u.Username).First(&existing).Error; err != nil {
+			db.Create(&u)
+		} else {
+			db.Model(&existing).Updates(map[string]interface{}{
+				"password": hashedPassword,
+				"name":     u.Name,
+				"role":     u.Role,
+			})
+		}
+	}
+
+	// Check if assets exist
+	var assetCount int64
+	db.Model(&models.Asset{}).Count(&assetCount)
+	if assetCount == 0 {
+		assets := []models.Asset{
+			{AssetCode: "AST-RM301-AC", AssetName: "AC Split Daikin 1.5 PK", Category: "HVAC / AC", Location: "Kamar 301", PIC: "Deni (Tech)", Status: "Active"},
+			{AssetCode: "AST-RM102-TV", AssetName: "Smart TV LG 43 Inch", Category: "Elektronik & TV", Location: "Kamar 102", PIC: "Front Desk Team", Status: "Active"},
+			{AssetCode: "AST-KCH-CHILLER", AssetName: "Chiller Dapur Utama", Category: "Kitchen Equipment", Location: "Kitchen Dapur", PIC: "Kitchen Chef", Status: "Maintenance"},
+			{AssetCode: "AST-GEN-01", AssetName: "Generator Unit Cummins 500kVA", Category: "Mesin & Generator", Location: "Power House", PIC: "Engineering Supervisor", Status: "Active", IsReserved: true},
+			{AssetCode: "AST-LBY-SOFA", AssetName: "Set Sofa Premium Leather", Category: "Mebel & Furniture", Location: "Lobby Lounge", PIC: "Housekeeping", Status: "Active"},
+		}
+		for _, a := range assets {
+			db.Create(&a)
+		}
+	}
+
+	// Check if work orders exist
+	var woCount int64
+	db.Model(&models.WorkOrder{}).Count(&woCount)
+	if woCount == 0 {
+		workOrders := []models.WorkOrder{
+			{AssetID: 1, Location: "Kamar 301", Priority: "Emergency", Description: "AC Kamar 301 bocor air dan tidak dingin", Status: "In Progress", RequesterID: 4, EngineerID: 3},
+			{AssetID: 3, Location: "Kitchen Dapur", Priority: "High", Description: "Chiller Dapur Utama suhu naik ke -5°C", Status: "Open", RequesterID: 4, EngineerID: 0},
+			{AssetID: 2, Location: "Kamar 102", Priority: "Medium", Description: "Smart TV HDMI port tidak terdeteksi", Status: "Closed", RequesterID: 4, EngineerID: 3},
+		}
+		for _, wo := range workOrders {
+			db.Create(&wo)
+		}
+	}
+
+	log.Println("✓ Initial default users and hotel sample data seeded & verified successfully")
 	return nil
 }
 

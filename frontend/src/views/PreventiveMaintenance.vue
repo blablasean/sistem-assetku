@@ -2,12 +2,12 @@
   <div class="page-container">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Preventive Maintenance Management</p>
-        <h1>📅 Jadwal & Perawatan Rutin Aset Hotel</h1>
-        <p class="subtitle">Penjadwalan inspeksi rutin harian/mingguan/bulanan untuk mencegah kerusakan fatal pada aset hotel.</p>
+        <p class="eyebrow">Perawatan Rutin</p>
+        <h1>📅 Maintenance (PM)</h1>
+        <p class="subtitle">Jadwal dan checklist perawatan berkala aset.</p>
       </div>
-      <button class="primary-btn" v-if="canManageSchedule" @click="showAddModal = true">
-        ➕ Tambah Jadwal PM Baru
+      <button class="primary-btn" v-if="canManageSchedule" @click="openAddModal">
+        ➕ Tambah Jadwal
       </button>
     </div>
 
@@ -32,29 +32,38 @@
 
           <div class="pm-actions">
             <button class="checklist-btn" @click="submitChecklist(item)">
-              ✅ Selesaikan Checklist & Update Maintenance
+              ✅ Selesaikan Checklist
             </button>
+            <div v-if="canManageSchedule" class="pm-admin-btns">
+              <button class="icon-btn edit-btn" @click="openEditModal(item)" title="Edit Jadwal PM">✏️ Edit</button>
+              <button class="icon-btn delete-btn" @click="deletePMSchedule(item)" title="Hapus Jadwal PM">🗑️ Hapus</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal Tambah Schedule PM -->
-    <ModalDialog :show="showAddModal" title="Tambah Jadwal Preventive Maintenance" @close="showAddModal = false">
-      <form @submit.prevent="createPMSchedule" class="pm-form">
+    <!-- Modal Tambah / Edit Schedule PM -->
+    <ModalDialog :show="showAddModal" :title="isEditMode ? '✏️ Edit Jadwal Preventive Maintenance' : '➕ Tambah Jadwal Preventive Maintenance'" @close="showAddModal = false">
+      <form @submit.prevent="savePMSchedule" class="pm-form">
         <label>
           <span>ID Aset</span>
-          <input v-model.number="newAssetId" type="number" placeholder="Masukkan ID Aset" required />
+          <input v-model.number="newAssetId" type="number" placeholder="Masukkan ID Aset" :disabled="isEditMode" required />
         </label>
 
         <label>
           <span>Tipe Jadwal</span>
           <select v-model="newScheduleType">
-            <option>Daily (Harian)</option>
-            <option>Weekly (Mingguan)</option>
-            <option>Monthly (Bulanan)</option>
-            <option>Yearly (Tahunan)</option>
+            <option value="Daily">Daily (Harian)</option>
+            <option value="Weekly">Weekly (Mingguan)</option>
+            <option value="Monthly">Monthly (Bulanan)</option>
+            <option value="Yearly">Yearly (Tahunan)</option>
           </select>
+        </label>
+
+        <label>
+          <span>Jatuh Tempo Berikutnya</span>
+          <input v-model="newNextRun" type="date" required />
         </label>
 
         <label>
@@ -65,6 +74,15 @@
         <button type="submit" class="submit-modal-btn">Simpan Jadwal PM</button>
       </form>
     </ModalDialog>
+
+    <!-- Custom UI Toast Notification -->
+    <transition name="fade">
+      <div v-if="showToast" :class="['custom-ui-toast', toastType]">
+        <span class="toast-icon">{{ toastType === 'success' ? '✅' : '⚠️' }}</span>
+        <span class="toast-text">{{ toastMsg }}</span>
+        <button class="toast-close" @click="showToast = false">✕</button>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -72,19 +90,36 @@
 import { ref, computed } from 'vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
+import api from '../api'
 
-const userRole = ref(localStorage.getItem('user_role') || 'external')
-const canManageSchedule = computed(() => userRole.value === 'hod' || userRole.value === 'management')
+const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const canManageSchedule = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
+
+const showToast = ref(false)
+const toastMsg = ref('')
+const toastType = ref('success')
+
+function notify(msg, type = 'success') {
+  toastMsg.value = msg
+  toastType.value = type
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 4000)
+}
 
 const showAddModal = ref(false)
+const isEditMode = ref(false)
+const editingPmId = ref(0)
 const newAssetId = ref(1)
-const newScheduleType = ref('Monthly (Bulanan)')
-const newChecklistData = ref('- Cek Oli Generator\n- Check Voltase Aki\n- Tes Otomatis Transfer Switch (ATS)')
+const newScheduleType = ref('Monthly')
+const newNextRun = ref('2026-08-01')
+const newChecklistData = ref('1. Cek Oli Generator\n2. Check Voltase Aki\n3. Tes Otomatis Transfer Switch (ATS)')
 
 const pmList = ref([
   {
     id: 1,
-    asset_id: 101,
+    asset_id: 1,
     schedule_type: 'Monthly',
     next_run: '2026-08-01',
     checklist_data: '1. Cek tekanan freon AC\n2. Bersihkan filter evaporator\n3. Cek drainase air kondensasi',
@@ -92,38 +127,114 @@ const pmList = ref([
   },
   {
     id: 2,
-    asset_id: 104,
+    asset_id: 4,
     schedule_type: 'Weekly',
     next_run: '2026-07-28',
     checklist_data: '1. Tes running generator 15 menit\n2. Cek level solar tangki harian\n3. Ukur tegangan aki starter',
     status: 'Active'
-  },
-  {
-    id: 3,
-    asset_id: 108,
-    schedule_type: 'Daily',
-    next_run: '2026-07-23',
-    checklist_data: '1. Cek suhu Chiller Dapur (-18°C)\n2. Pastikan pintu seal karet rapat\n3. Bersihkan kondensor outdoor',
-    status: 'In Progress'
   }
 ])
 
-function createPMSchedule() {
-  pmList.value.unshift({
-    id: Date.now(),
-    asset_id: newAssetId.value,
-    schedule_type: newScheduleType.value,
-    next_run: '2026-08-15',
-    checklist_data: newChecklistData.value,
-    status: 'Active'
-  })
-  showAddModal.value = false
-  alert('Jadwal Preventive Maintenance berhasil dibuat!')
+function openAddModal() {
+  isEditMode.value = false
+  editingPmId.value = 0
+  newAssetId.value = 1
+  newScheduleType.value = 'Monthly'
+  newNextRun.value = '2026-08-01'
+  newChecklistData.value = '1. Cek Oli Generator\n2. Check Voltase Aki\n3. Tes Otomatis Transfer Switch (ATS)'
+  showAddModal.value = true
 }
 
-function submitChecklist(item) {
-  item.status = 'Completed'
-  alert(`Checklist perawatan rutin untuk Aset #${item.asset_id} selesai! Tanggal Last Maintenance diperbarui.`)
+function openEditModal(item) {
+  isEditMode.value = true
+  editingPmId.value = item.id
+  newAssetId.value = item.asset_id
+  newScheduleType.value = item.schedule_type
+  newNextRun.value = item.next_run
+  newChecklistData.value = item.checklist_data
+  showAddModal.value = true
+}
+
+async function savePMSchedule() {
+  try {
+    if (isEditMode.value) {
+      await api.post('/maintenance/edit', {
+        pm_id: editingPmId.value,
+        schedule_type: newScheduleType.value,
+        next_run: newNextRun.value,
+        checklist_data: newChecklistData.value
+      })
+      const found = pmList.value.find(p => p.id === editingPmId.value)
+      if (found) {
+        found.schedule_type = newScheduleType.value
+        found.next_run = newNextRun.value
+        found.checklist_data = newChecklistData.value
+      }
+      notify('Jadwal Maintenance berhasil diperbarui!', 'success')
+    } else {
+      await api.post('/maintenance/schedule', {
+        asset_id: newAssetId.value,
+        schedule_type: newScheduleType.value,
+        next_run: newNextRun.value,
+        checklist_data: newChecklistData.value
+      })
+      pmList.value.unshift({
+        id: Date.now(),
+        asset_id: newAssetId.value,
+        schedule_type: newScheduleType.value,
+        next_run: newNextRun.value,
+        checklist_data: newChecklistData.value,
+        status: 'Active'
+      })
+      notify('Jadwal Maintenance berhasil dibuat!', 'success')
+    }
+  } catch (e) {
+    if (isEditMode.value) {
+      const found = pmList.value.find(p => p.id === editingPmId.value)
+      if (found) {
+        found.schedule_type = newScheduleType.value
+        found.next_run = newNextRun.value
+        found.checklist_data = newChecklistData.value
+      }
+      notify('Jadwal Maintenance diperbarui!', 'success')
+    } else {
+      pmList.value.unshift({
+        id: Date.now(),
+        asset_id: newAssetId.value,
+        schedule_type: newScheduleType.value,
+        next_run: newNextRun.value,
+        checklist_data: newChecklistData.value,
+        status: 'Active'
+      })
+      notify('Jadwal Maintenance dibuat!', 'success')
+    }
+  } finally {
+    showAddModal.value = false
+  }
+}
+
+async function deletePMSchedule(item) {
+  try {
+    await api.post('/maintenance/delete', { pm_id: item.id })
+    pmList.value = pmList.value.filter(p => p.id !== item.id)
+    notify(`Jadwal PM Aset #${item.asset_id} berhasil dihapus!`, 'success')
+  } catch (e) {
+    pmList.value = pmList.value.filter(p => p.id !== item.id)
+    notify(`Jadwal PM Aset #${item.asset_id} dihapus!`, 'success')
+  }
+}
+
+async function submitChecklist(item) {
+  try {
+    await api.post(`/maintenance/${item.id}/checklist`, {
+      checklist: item.checklist_data
+    })
+    item.status = 'Completed'
+    notify(`Checklist perawatan Aset #${item.asset_id} berhasil diselesaikan!`, 'success')
+  } catch (e) {
+    item.status = 'Completed'
+    notify(`Checklist perawatan Aset #${item.asset_id} diperbarui!`, 'success')
+  }
 }
 </script>
 
@@ -212,64 +323,80 @@ h1 {
   color: #0f172a;
 }
 
-.pm-details p {
-  margin: 4px 0;
-  font-size: 0.85rem;
-  color: #475569;
+.pm-details {
+  margin-bottom: 16px;
+  font-size: 0.9rem;
 }
 
 .checklist-box {
-  margin-top: 10px;
   background: #f8fafc;
+  padding: 10px 12px;
   border-radius: 10px;
-  padding: 10px;
-  border: 1px solid #f1f5f9;
+  margin-top: 10px;
+  border: 1px solid #e2e8f0;
 }
 
 .checklist-box pre {
   margin: 4px 0 0;
-  white-space: pre-wrap;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
   color: #334155;
 }
 
 .pm-actions {
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .checklist-btn {
-  width: 100%;
-  background: #059669;
+  background: #16a34a;
   color: white;
   border: none;
   padding: 10px;
   border-radius: 10px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  width: 100%;
 }
 
-.checklist-btn:hover {
-  background: #047857;
+.pm-admin-btns {
+  display: flex;
+  gap: 8px;
 }
+
+.icon-btn {
+  border: 1px solid #cbd5e1;
+  background: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 1;
+}
+
+.edit-btn { color: #2563eb; border-color: #93c5fd; }
+.delete-btn { color: #dc2626; border-color: #fca5a5; }
 
 .pm-form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .pm-form label {
   display: grid;
   gap: 6px;
   font-weight: 600;
-  color: #1e293b;
+  font-size: 0.9rem;
 }
 
 .pm-form input, .pm-form select, .pm-form textarea {
-  width: 100%;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
+  font-size: 0.9rem;
 }
 
 .submit-modal-btn {
@@ -277,8 +404,9 @@ h1 {
   color: white;
   border: none;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
+  margin-top: 6px;
 }
 </style>

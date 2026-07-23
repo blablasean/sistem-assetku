@@ -1,10 +1,10 @@
 <template>
-  <div class="dashboard-screen">
+  <div class="dashboard-screen page-container">
     <div class="dashboard-topbar">
       <div>
-        <p class="eyebrow">AsetKu Hotel Portal</p>
+        <p class="eyebrow">AsetKu Portal</p>
         <h1>Halo, {{ userName }}</h1>
-        <p class="subtitle">Ringkasan operasional manajemen aset hotel & pelacakan tiket perbaikan terkini.</p>
+        <p class="subtitle">Ringkasan operasional aset & tiket perbaikan terkini.</p>
       </div>
 
       <div class="quick-action-bar">
@@ -22,39 +22,31 @@
       <article class="summary-card card-primary" @click="$router.push('/assets')">
         <div>
           <p class="card-title">Total Aset Hotel</p>
-          <p class="card-value">128</p>
+          <p class="card-value">{{ totalAssetsCount }}</p>
         </div>
-        <p class="card-note">85% Aset Berfungsi Normal</p>
+        <p class="card-note">Data Real Terdaftar di Database</p>
       </article>
 
       <article class="summary-card card-secondary" @click="$router.push('/workorders')">
         <div>
           <p class="card-title">Work Order Aktif</p>
-          <p class="card-value">14</p>
+          <p class="card-value">{{ activeWorkOrdersCount }}</p>
         </div>
-        <p class="card-note">4 Tiket Darurat (Emergency)</p>
+        <p class="card-note">{{ emergencyCount }} Tiket Darurat (Emergency)</p>
       </article>
 
       <article class="summary-card card-accent" @click="$router.push('/maintenance')">
         <div>
           <p class="card-title">Jadwal Perawatan Rutin</p>
-          <p class="card-value">8</p>
+          <p class="card-value">{{ workOrders.length }}</p>
         </div>
-        <p class="card-note">Penjadwalan PM Minggu Ini</p>
-      </article>
-
-      <article class="summary-card card-dark" @click="$router.push('/utility')">
-        <div>
-          <p class="card-title">Utility Monitoring</p>
-          <p class="card-value">Normal</p>
-        </div>
-        <p class="card-note">Listrik & Air PDAM Terkendali</p>
+        <p class="card-note">Tiket Kerusakan Terdaftar</p>
       </article>
     </div>
 
     <!-- Main Grid -->
     <div class="dashboard-grid">
-      <section class="activity-panel">
+      <section class="activity-panel card-panel">
         <div class="panel-header">
           <div>
             <p class="panel-label">Work Order Terkini</p>
@@ -63,7 +55,7 @@
           <button class="secondary-button" @click="$router.push('/workorders')">Lihat Semua</button>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive dashboard-wo-scroll">
           <table>
             <thead>
               <tr>
@@ -76,18 +68,18 @@
             </thead>
             <tbody>
               <tr v-for="item in workOrders" :key="item.id">
-                <td>#WO-{{ item.id }}</td>
-                <td>📍 {{ item.location }}</td>
-                <td><StatusBadge :status="item.priority" /></td>
-                <td>{{ item.description }}</td>
-                <td><StatusBadge :status="item.status" /></td>
+                <td class="nowrap-cell">#WO-{{ item.id }}</td>
+                <td class="nowrap-cell">📍 {{ item.location }}</td>
+                <td class="nowrap-cell"><StatusBadge :status="item.priority" /></td>
+                <td class="desc-cell">{{ item.description }}</td>
+                <td class="nowrap-cell"><StatusBadge :status="item.status" /></td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <section class="insights-panel">
+      <section class="insights-panel card-panel">
         <div class="panel-header">
           <div>
             <p class="panel-label">Ringkasan Kondisi</p>
@@ -95,11 +87,13 @@
           </div>
         </div>
 
-        <div class="insights-list">
-          <div class="insight-card" v-for="stat in quickStats" :key="stat.label">
-            <p class="insight-title">{{ stat.label }}</p>
-            <p class="insight-value">{{ stat.value }}</p>
-            <p class="insight-note">{{ stat.note }}</p>
+        <div class="insights-scroll-container">
+          <div class="insights-list">
+            <div class="insight-card" v-for="stat in quickStats" :key="stat.label">
+              <p class="insight-title">{{ stat.label }}</p>
+              <p class="insight-value">{{ stat.value }}</p>
+              <p class="insight-note">{{ stat.note }}</p>
+            </div>
           </div>
         </div>
       </section>
@@ -108,12 +102,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import StatusBadge from '../components/StatusBadge.vue'
+import api from '../api'
 
 const router = useRouter()
-const userName = ref(localStorage.getItem('user_name') || 'User Hotel')
+const userName = ref(sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'User Hotel')
 
 defineEmits(['open-qr-scanner'])
 
@@ -121,54 +116,62 @@ function goToReportWO() {
   router.push('/workorders')
 }
 
-const workOrders = [
-  { id: 1, location: 'Kamar 301', priority: 'Emergency', description: 'AC Kamar 301 bocor air dan tidak dingin', status: 'In Progress' },
-  { id: 2, location: 'Kitchen Dapur', priority: 'High', description: 'Chiller Dapur Utama suhu naik ke -5°C', status: 'Open' },
-  { id: 3, location: 'Kamar 102', priority: 'Medium', description: 'Smart TV HDMI port tidak terdeteksi', status: 'Closed' },
-  { id: 4, location: 'Lobby Lounge', priority: 'Low', description: 'Kaki sofa kendor perlu dikencangkan', status: 'Open' }
-]
+const workOrders = ref([])
+const totalAssetsCount = ref(0)
+const activeWorkOrdersCount = ref(0)
+const emergencyCount = ref(0)
 
-const quickStats = [
-  { label: 'Aset Aktif', value: '106 Unit', note: 'Siap digunakan di area hotel' },
-  { label: 'Aset Maintenance', value: '12 Unit', note: 'Sedang dalam perawatan rutin' },
-  { label: 'Kerusakan Terlapor', value: '4 Unit', note: 'Menunggu respon teknisi' }
-]
+const quickStats = ref([
+  { label: 'Total Aset Terdaftar', value: '0 Unit', note: 'Jumlah total aset di database' },
+  { label: 'Aset Berfungsi Normal', value: '0 Unit', note: 'Aset berstatus Active' },
+  { label: 'Dalam Perawatan', value: '0 Unit', note: 'Aset berstatus Maintenance' },
+  { label: 'Aset Rusak', value: '0 Unit', note: 'Aset berstatus Damaged' }
+])
+
+async function fetchDashboardData() {
+  try {
+    const [woRes, assetRes] = await Promise.all([
+      api.get('/workorders').catch(() => null),
+      api.get('/assets').catch(() => null)
+    ])
+
+    if (woRes?.data?.data && Array.isArray(woRes.data.data)) {
+      workOrders.value = woRes.data.data
+      activeWorkOrdersCount.value = woRes.data.data.filter(w => w.status !== 'Closed' && w.status !== 'Cancelled').length
+      emergencyCount.value = woRes.data.data.filter(w => w.priority === 'Emergency' && w.status !== 'Closed').length
+    }
+
+    if (assetRes?.data?.data && Array.isArray(assetRes.data.data)) {
+      totalAssetsCount.value = assetRes.data.data.length
+      const activeCount = assetRes.data.data.filter(a => a.status === 'Active').length
+      const maintCount = assetRes.data.data.filter(a => a.status === 'Maintenance').length
+      const damagedCount = assetRes.data.data.filter(a => a.status === 'Damaged').length
+
+      quickStats.value = [
+        { label: 'Total Aset Terdaftar', value: `${totalAssetsCount.value} Unit`, note: 'Terdaftar di database hotel' },
+        { label: 'Aset Berfungsi Normal', value: `${activeCount} Unit`, note: 'Status: Active' },
+        { label: 'Dalam Perawatan (PM)', value: `${maintCount} Unit`, note: 'Status: Maintenance' },
+        { label: 'Aset Rusak (Damaged)', value: `${damagedCount} Unit`, note: 'Status: Damaged' }
+      ]
+    }
+  } catch (e) {
+    console.error('Error fetching dashboard data:', e)
+  }
+}
+
+onMounted(() => {
+  fetchDashboardData()
+})
 </script>
 
 <style scoped>
-.dashboard-screen {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 24px;
-}
-
 .dashboard-topbar {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 24px;
   align-items: center;
-  margin-bottom: 32px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.8rem;
-  color: #2563eb;
-  font-weight: 700;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(1.8rem, 2.5vw, 2.5rem);
-  color: #0f172a;
-}
-
-.subtitle {
-  margin: 6px 0 0;
-  color: #64748b;
+  margin-bottom: 28px;
 }
 
 .quick-action-bar {
@@ -225,7 +228,6 @@ h1 {
 .card-primary { background: linear-gradient(135deg, #2563eb, #3b82f6); }
 .card-secondary { background: linear-gradient(135deg, #d97706, #f59e0b); }
 .card-accent { background: linear-gradient(135deg, #059669, #10b981); }
-.card-dark { background: linear-gradient(135deg, #334155, #475569); }
 
 .card-title {
   margin: 0;
@@ -251,20 +253,11 @@ h1 {
   gap: 24px;
 }
 
-.activity-panel,
-.insights-panel {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
-}
-
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .panel-label {
@@ -279,68 +272,84 @@ h1 {
 .activity-panel h2,
 .insights-panel h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   color: #0f172a;
 }
 
 .secondary-button {
   border: 1px solid #cbd5e1;
   border-radius: 10px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   background: #ffffff;
   color: #334155;
   font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+/* Dashboard Scrollable Tables and Scrollable Insights Panel */
+.dashboard-wo-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 12px;
 }
 
-thead th {
-  text-align: left;
-  color: #475569;
-  font-size: 0.85rem;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
+.dashboard-wo-scroll table th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 5;
+  white-space: nowrap;
 }
 
-tbody td {
-  padding: 12px;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.85rem;
+.nowrap-cell {
+  white-space: nowrap;
+}
+
+.desc-cell {
+  white-space: nowrap;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.insights-scroll-container {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .insights-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .insight-card {
   background: #f8fafc;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid #f1f5f9;
 }
 
 .insight-title {
-  margin: 0 0 6px;
-  color: #475569;
-  font-size: 0.85rem;
+  margin: 0 0 4px;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .insight-value {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   color: #0f172a;
 }
 
 .insight-note {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 0.8rem;
+  margin: 2px 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
 }
 
 @media (max-width: 960px) {

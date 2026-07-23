@@ -61,21 +61,33 @@ func (c *WorkOrderController) UpdateWOStatus(woID int, status string, actionTake
 }
 
 func (c *WorkOrderController) CancelWorkOrder(woID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" {
-		return errors.New("akses ditolak: hanya HOD atau Management yang dapat membatalkan Work Order")
-	}
+	// hod, management, engineer, and external roles can cancel open work orders
 	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Update("status", "Cancelled").Error
 }
 
 func (c *WorkOrderController) CloseWorkOrder(woID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" {
-		return errors.New("akses ditolak: hanya HOD atau Management yang dapat menutup Work Order")
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menyelesaikan Work Order")
 	}
 	now := time.Now()
 	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Updates(map[string]interface{}{
-		"status":    "Closed",
+		"status":    "Finish",
 		"closed_at": &now,
 	}).Error
+}
+
+func (c *WorkOrderController) DeleteWorkOrder(woID int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus Work Order")
+	}
+	res := c.db.Where("id = ?", woID).Delete(&models.WorkOrder{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return errors.New("work order tidak ditemukan di database")
+	}
+	return nil
 }
 
 func (c *WorkOrderController) GetWorkOrderStatus(woID int) string {

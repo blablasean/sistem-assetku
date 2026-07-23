@@ -5,10 +5,10 @@ const api = axios.create({
   timeout: 5000,
 })
 
-// Request interceptor - add token to every request
+// Request interceptor - add token from sessionStorage or localStorage
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -19,17 +19,15 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor - handle token expiration and errors
+// Response interceptor - handle 401 unauthorized status cleanly
 api.interceptors.response.use(
   (response) => {
     return response
   },
   (error) => {
-    // Handle 401 unauthorized - token expired or invalid
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('username')
-      // Redirect to login if not already there
+      sessionStorage.clear()
+      localStorage.clear()
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
@@ -39,4 +37,3 @@ api.interceptors.response.use(
 )
 
 export default api
-

@@ -37,7 +37,7 @@ const normalizedStatus = computed(() => {
 .damaged, .emergency, .high { background: #fee2e2; color: #991b1b; }
 .open { background: #e0f2fe; color: #075985; }
 .under-review { background: #f3e8ff; color: #6b21a8; }
-.completed, .closed { background: #d1fae5; color: #065f46; }
+.completed, .closed, .finish { background: #d1fae5; color: #065f46; }
 .cancelled, .retired { background: #f1f5f9; color: #475569; }
 .reserved { background: #ffedd5; color: #9a3412; }
 .medium { background: #e0e7ff; color: #3730a3; }

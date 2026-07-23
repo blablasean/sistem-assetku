@@ -1,5 +1,33 @@
 # CHANGELOG - Sistem AsetKu Fixes & Updates
 
+## 🌟 Version 1.2.0 - Hotel Management & Operations Release
+
+### 1. 📊 Export Laporan Bulanan ke Excel (.xlsx / .xls)
+- Added **`📊 Export Excel`** feature generating formatted Excel tables complete with header titles, blue column headers, BOM encoding, numeric formatting, and total cost summary row.
+
+### 2. 🖨️ Formatted A4 Landscape PDF Printing
+- Added `@page { size: A4 landscape; margin: 8mm 10mm; }` enforcing auto-detection of A4 Landscape paper.
+- Decoupled report modal from `.page-container` in DOM layout so top UI tables are hidden while the official report table renders with 100% full-width gridlines and zero truncation.
+
+### 3. 🗑️ Full System Data Deletion Controls
+- **Work Order Deletion**: Added `POST /workorders/delete` endpoint and `🗑️ Hapus` button for `hod`, `management`, and `admin`.
+- **Asset Deletion**: Added `POST /assets/delete` endpoint and `🗑️` button for `hod`, `management`, and `admin`.
+- **Preventive Maintenance Schedule Deletion**: Added `POST /maintenance/delete` endpoint and `🗑️ Hapus` button.
+- Enforced GORM explicit query syntax (`c.db.Where("id = ?", id).Delete(...)`) and *Optimistic UI Updates* for instant row removal.
+
+### 4. ✏️ Edit Preventive Maintenance Schedules
+- Added `POST /maintenance/edit` endpoint and `✏️ Edit` modal allowing HOD, Management, and Admin to edit PM schedule frequency (Daily/Weekly/Monthly/Yearly), next due date (`next_run`), and inspection checklist items.
+
+### 5. 👤 Custom UI Profile & Floating Toast Notifications
+- Replaced all browser `alert()` popups with:
+  - **User Profile Modal**: Displays avatar, name, concise role label, session badge, and permission rights.
+  - **Floating Toast UI Notifications**: Clean toast notifications in the bottom-right corner for all action feedback.
+
+### 6. 🔐 Session Security Enforcements
+- Standardized `sessionStorage` usage for tokens and user details so opening a new browser tab/window enforces fresh re-authentication.
+
+---
+
 ## 🌟 Version 1.1.0 - Hotel Operational Release
 
 ### 1. 👥 4 User Roles & Access Rights (RBAC Matrix)

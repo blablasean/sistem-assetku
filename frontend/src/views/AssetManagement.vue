@@ -2,14 +2,14 @@
   <div class="page-container">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Inventory & Asset Tracking</p>
-        <h1>📦 Manajemen Aset Hotel</h1>
-        <p class="subtitle">Registrasi aset, mutasi lokasi (kamar/ruangan), pencatatan PIC, QR code, dan dokumen garansi.</p>
+        <p class="eyebrow">Aset Hotel</p>
+        <h1>📦 Manajemen Aset</h1>
+        <p class="subtitle">Daftar inventaris aset, lokasi, PIC, dan riwayat mutasi.</p>
       </div>
 
       <div class="header-actions" v-if="canCreateAsset">
         <button class="primary-btn" @click="openAddModal">
-          ➕ Registrasi Aset Baru
+          ➕ Tambah Aset
         </button>
       </div>
     </div>
@@ -75,6 +75,9 @@
                 <button class="icon-btn edit-btn" v-if="canCreateAsset" @click="openEditModal(asset)" title="Edit Aset">
                   ✏️
                 </button>
+                <button class="icon-btn delete-btn" v-if="canDeleteAsset" @click="deleteAsset(asset)" title="Hapus Aset Permanen">
+                  🗑️
+                </button>
               </td>
             </tr>
             <tr v-if="displayedAssets.length === 0">
@@ -84,6 +87,15 @@
         </table>
       </div>
     </div>
+
+    <!-- Custom UI Toast Notification -->
+    <transition name="fade">
+      <div v-if="showToast" :class="['custom-ui-toast', toastType]">
+        <span class="toast-icon">{{ toastType === 'success' ? '✅' : '⚠️' }}</span>
+        <span class="toast-text">{{ toastMsg }}</span>
+        <button class="toast-close" @click="showToast = false">✕</button>
+      </div>
+    </transition>
 
     <!-- Modal Registrasi / Edit Aset -->
     <ModalDialog :show="showAssetModal" :title="isEditMode ? '✏️ Edit Data Aset' : '➕ Registrasi Aset Baru'" @close="showAssetModal = false">
@@ -191,16 +203,25 @@ import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
 
-const userRole = ref(localStorage.getItem('user_role') || 'external')
-const canCreateAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management')
+const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const canCreateAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
+const canDeleteAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 
-const assets = ref([
-  { id: 1, asset_code: 'AST-RM301-AC', asset_name: 'AC Split Daikin 1.5 PK', category: 'HVAC / AC', location: 'Kamar 301', pic: 'Deni (Tech)', status: 'Active', is_reserved: false },
-  { id: 2, asset_code: 'AST-RM102-TV', asset_name: 'Smart TV LG 43 Inch', category: 'Elektronik & TV', location: 'Kamar 102', pic: 'Front Desk Team', status: 'Active', is_reserved: false },
-  { id: 3, asset_code: 'AST-KCH-CHILLER', asset_name: 'Chiller Dapur Utama', category: 'Kitchen Equipment', location: 'Kitchen Dapur', pic: 'Kitchen Chef', status: 'Maintenance', is_reserved: false },
-  { id: 4, asset_code: 'AST-GEN-01', asset_name: 'Generator Unit Cummins 500kVA', category: 'Mesin & Generator', location: 'Power House', pic: 'Engineering Supervisor', status: 'Active', is_reserved: true },
-  { id: 5, asset_code: 'AST-LBY-SOFA', asset_name: 'Set Sofa Premium Leather', category: 'Mebel & Furniture', location: 'Lobby Lounge', pic: 'Housekeeping', status: 'Active', is_reserved: false }
-])
+const showToast = ref(false)
+const toastMsg = ref('')
+const toastType = ref('success')
+
+function notify(msg, type = 'success') {
+  toastMsg.value = msg
+  toastType.value = type
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 4000)
+}
+
+const assets = ref([])
+const isLoading = ref(false)
 
 const searchQuery = ref('')
 const filterStatus = ref('')
@@ -224,8 +245,8 @@ const displayedAssets = computed(() => {
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     list = list.filter(a => 
-      a.asset_name.toLowerCase().includes(q) || 
-      a.asset_code.toLowerCase().includes(q) || 
+      (a.asset_name && a.asset_name.toLowerCase().includes(q)) || 
+      (a.asset_code && a.asset_code.toLowerCase().includes(q)) || 
       (a.location && a.location.toLowerCase().includes(q)) ||
       (a.pic && a.pic.toLowerCase().includes(q))
     )
@@ -234,7 +255,7 @@ const displayedAssets = computed(() => {
     list = list.filter(a => a.status === filterStatus.value)
   }
   if (sortBy.value === 'name-asc') {
-    list.sort((a, b) => a.asset_name.localeCompare(b.asset_name))
+    list.sort((a, b) => (a.asset_name || '').localeCompare(b.asset_name || ''))
   } else if (sortBy.value === 'location-asc') {
     list.sort((a, b) => (a.location || '').localeCompare(b.location || ''))
   } else {
@@ -244,13 +265,19 @@ const displayedAssets = computed(() => {
 })
 
 async function fetchAssets() {
+  isLoading.value = true
   try {
     const res = await api.get('/assets')
-    if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+    if (res.data?.data && Array.isArray(res.data.data)) {
       assets.value = res.data.data
+    } else {
+      assets.value = []
     }
   } catch (e) {
-    // Keep initial mock list
+    console.error('Failed to fetch assets from backend:', e)
+    assets.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -267,14 +294,30 @@ function openEditModal(asset) {
 }
 
 async function saveAsset() {
-  if (isEditMode.value) {
-    const idx = assets.value.findIndex(a => a.id === formAsset.value.id)
-    if (idx !== -1) assets.value[idx] = { ...formAsset.value }
-  } else {
-    assets.value.unshift({ ...formAsset.value, id: Date.now() })
+  try {
+    if (isEditMode.value) {
+      await api.put(`/assets?id=${formAsset.value.id}`, formAsset.value)
+      notify('Perubahan data aset berhasil disimpan!', 'success')
+    } else {
+      await api.post('/assets', formAsset.value)
+      notify('Aset baru berhasil didaftarkan!', 'success')
+    }
+    showAssetModal.value = false
+    await fetchAssets()
+  } catch (e) {
+    notify('Gagal menyimpan aset: ' + (e.response?.data?.message || e.message), 'error')
   }
-  showAssetModal.value = false
-  alert(isEditMode.value ? 'Perubahan aset berhasil disimpan!' : 'Aset baru berhasil didaftarkan!')
+}
+
+async function deleteAsset(asset) {
+  try {
+    await api.post('/assets/delete', { asset_id: asset.id })
+    assets.value = assets.value.filter(a => a.id !== asset.id)
+    notify(`Aset "${asset.asset_name}" berhasil dihapus permanen!`, 'success')
+    await fetchAssets()
+  } catch (e) {
+    notify('Gagal menghapus aset: ' + (e.response?.data?.message || e.message), 'error')
+  }
 }
 
 function openMutationModal(asset) {
@@ -285,12 +328,21 @@ function openMutationModal(asset) {
   showMutModal.value = true
 }
 
-function submitMutation() {
+async function submitMutation() {
   if (!selectedAssetForMut.value) return
-  selectedAssetForMut.value.location = mutNewLocation.value
-  selectedAssetForMut.value.pic = mutPIC.value
-  showMutModal.value = false
-  alert(`Mutasi aset "${selectedAssetForMut.value.asset_name}" ke ${mutNewLocation.value} berhasil dicatat!`)
+  try {
+    await api.post('/mutations', {
+      asset_id: selectedAssetForMut.value.id,
+      new_location: mutNewLocation.value,
+      new_pic: mutPIC.value,
+      reason: mutReason.value
+    })
+    showMutModal.value = false
+    notify(`Mutasi aset "${selectedAssetForMut.value.asset_name}" ke ${mutNewLocation.value} berhasil dicatat!`, 'success')
+    await fetchAssets()
+  } catch (e) {
+    notify('Gagal mencatat mutasi: ' + (e.response?.data?.message || e.message), 'error')
+  }
 }
 
 function openQrPrint(asset) {

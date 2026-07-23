@@ -3,12 +3,14 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"sistem-asetku-backend/controllers"
 	"sistem-asetku-backend/middlewares"
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
-	"strconv"
-	"strings"
 
 	"gorm.io/gorm"
 )
@@ -44,6 +46,7 @@ func RegisterRoutes(
 
 	mux.Handle("/assets/code", middlewares.AuthMiddleware(handleGetAssetByCode(assetCtrl)))
 	mux.Handle("/assets/reserve", middlewares.AuthMiddleware(handleReserveAsset(assetCtrl)))
+	mux.Handle("/assets/delete", middlewares.AuthMiddleware(handleDeleteAsset(assetCtrl)))
 
 	// asset detail and history - use prefix "/assets/"
 	mux.Handle("/assets/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -87,6 +90,7 @@ func RegisterRoutes(
 	mux.Handle("/workorders/status", middlewares.AuthMiddleware(handleUpdateWorkOrderStatus(workOrderCtrl)))
 	mux.Handle("/workorders/close", middlewares.AuthMiddleware(handleCloseWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/cancel", middlewares.AuthMiddleware(handleCancelWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/delete", middlewares.AuthMiddleware(handleDeleteWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -100,6 +104,8 @@ func RegisterRoutes(
 
 	// Maintenance
 	mux.Handle("/maintenance/schedule", middlewares.AuthMiddleware(handleCreatePMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/edit", middlewares.AuthMiddleware(handleEditPMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/delete", middlewares.AuthMiddleware(handleDeletePMSchedule(maintenanceCtrl)))
 	mux.Handle("/maintenance/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tail := strings.TrimPrefix(r.URL.Path, "/maintenance/")
 		if strings.HasSuffix(tail, "/checklist") && r.Method == http.MethodPost {
@@ -147,14 +153,18 @@ func handleLogin(authCtrl *controllers.AuthController) http.HandlerFunc {
 			return
 		}
 
-		token, err := authCtrl.Login(payload.Username, payload.Password)
+		token, user, err := authCtrl.Login(payload.Username, payload.Password)
 		if err != nil {
-			utils.SendError(w, http.StatusUnauthorized, "Login failed", err.Error())
+			utils.SendError(w, http.StatusUnauthorized, "Login gagal: Username atau password salah", err.Error())
 			return
 		}
 
-		utils.SendSuccess(w, http.StatusOK, "Login successful", map[string]string{
-			"token": token,
+		utils.SendSuccess(w, http.StatusOK, "Login successful", map[string]interface{}{
+			"token":    token,
+			"role":     user.Role,
+			"name":     user.Name,
+			"username": user.Username,
+			"id":       user.ID,
 		})
 	}
 }
@@ -298,6 +308,31 @@ func handleReserveAsset(assetCtrl *controllers.AssetController) http.HandlerFunc
 		}
 
 		utils.SendSuccess(w, http.StatusOK, "Asset reservation updated", payload)
+	}
+}
+
+func handleDeleteAsset(assetCtrl *controllers.AssetController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			AssetID int `json:"asset_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := assetCtrl.DeleteAsset(payload.AssetID, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to delete asset", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Asset deleted successfully", payload)
 	}
 }
 
@@ -529,14 +564,46 @@ func handleCloseWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.H
 	}
 }
 
-func handleGetActivityLogs(db *gorm.DB) http.HandlerFunc {
+func handleDeleteWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var logs []models.ActivityLog
-		if err := db.Order("id desc").Limit(50).Find(&logs).Error; err != nil {
-			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch activity logs", err.Error())
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			WOID int `json:"wo_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
-		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", logs)
+
+		if err := workOrderCtrl.DeleteWorkOrder(payload.WOID, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to delete work order", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Work order deleted successfully", payload)
+	}
+}
+
+func handleGetActivityLogs(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Fetch finished / completed Work Orders
+		var finishedWOs []models.WorkOrder
+		db.Where("status IN ('Finish','Completed','Closed')").Order("id desc").Limit(50).Find(&finishedWOs)
+
+		// Fetch all maintenance history entries
+		var maintenanceHistory []models.MaintenanceHistory
+		db.Order("id desc").Limit(50).Find(&maintenanceHistory)
+
+		result := map[string]interface{}{
+			"work_orders":         finishedWOs,
+			"maintenance_history": maintenanceHistory,
+		}
+		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", result)
 	}
 }
 
@@ -629,5 +696,69 @@ func handleGetMaintenanceHistory(maintenanceCtrl *controllers.MaintenanceControl
 		}
 
 		utils.SendSuccess(w, http.StatusOK, "Maintenance history retrieved successfully", history)
+	}
+}
+
+func handleEditPMSchedule(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			PMID          int    `json:"pm_id"`
+			ScheduleType  string `json:"schedule_type"`
+			ChecklistData string `json:"checklist_data"`
+			NextRun       string `json:"next_run"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		var parsedNextRun time.Time
+		if payload.NextRun != "" {
+			parsedNextRun, _ = time.Parse("2006-01-02", payload.NextRun)
+		}
+
+		updated := models.PreventiveMaintenance{
+			ScheduleType:  payload.ScheduleType,
+			ChecklistData: payload.ChecklistData,
+			NextRun:       parsedNextRun,
+		}
+
+		if err := maintenanceCtrl.EditPMSchedule(payload.PMID, updated, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to edit PM schedule", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "PM schedule updated successfully", payload)
+	}
+}
+
+func handleDeletePMSchedule(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			PMID int `json:"pm_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := maintenanceCtrl.DeletePMSchedule(payload.PMID, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to delete PM schedule", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "PM schedule deleted successfully", payload)
 	}
 }
