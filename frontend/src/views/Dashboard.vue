@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">AsetKu Portal</p>
         <h1>Halo, {{ userName }}</h1>
-        <p class="subtitle">Ringkasan operasional aset & tiket perbaikan terkini.</p>
+        <p class="subtitle">Ringkasan operasional hotel.</p>
       </div>
 
       <div class="quick-action-bar">

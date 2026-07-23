@@ -23,7 +23,12 @@
   - **User Profile Modal**: Displays avatar, name, concise role label, session badge, and permission rights.
   - **Floating Toast UI Notifications**: Clean toast notifications in the bottom-right corner for all action feedback.
 
-### 6. 🔐 Session Security Enforcements
+### 6. 📋 Activity Log Overhaul & Status "Finish"
+- **Unified Activity Log**: `GET /activitylogs` updated to return completed Work Orders (`Finish` / `Completed`) and completed Maintenance history (`MaintenanceHistory`) in a structured single payload.
+- **ActivityLog UI**: Redesigned `ActivityLog.vue` with 3 summary metrics cards (Finished WO count, Maintenance count, Total Maintenance cost), two separate detailed tables, and real-time multi-column search filtering.
+- **Status "Closed" -> "Finish"**: Updated Work Order completion status lifecycle across backend (`CloseWorkOrder`), controllers, routes, `WorkOrder.vue`, and `StatusBadge.vue` to use **`Finish`**.
+
+### 7. 🔐 Session Security Enforcements
 - Standardized `sessionStorage` usage for tokens and user details so opening a new browser tab/window enforces fresh re-authentication.
 
 ---

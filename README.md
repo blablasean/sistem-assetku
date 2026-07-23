@@ -12,7 +12,7 @@ Aplikasi ini dirancang khusus untuk efisiensi operasional hotel dan tim *Enginee
    * **Kontrol Penuh (Full System Control)** atas seluruh aset, Work Order, penugasan, jadwal PM, user management, dan audit log.
 
 2. **⭐ Head of Department (`hod`) Engineer**
-   * Pimpinan operasional engineering: Registrasi & Edit Aset, Penugasan Teknisi (*Assign Worker*), Penutupan Tiket (*Close WO*), **Hapus Work Order**, **Hapus Aset**, **Hapus & Edit PM Schedule**, Cetak Laporan Bulanan & Export Excel.
+   * Pimpinan operasional engineering: Registrasi & Edit Aset, Penugasan Teknisi (*Assign Worker*), Penutupan Tiket (*Finish Work Order*), **Hapus Work Order**, **Hapus Aset**, **Hapus & Edit PM Schedule**, Cetak Laporan Bulanan & Export Excel.
 
 3. **👔 Management Engineer (`management` / Supervisor)**
    * Supervisor operasional: Monitoring Aset, Penugasan Teknisi, Update Status, Mutasi Lokasi, Hapus WO/Aset/PM, Cetak Laporan & Export Excel.
@@ -27,6 +27,8 @@ Aplikasi ini dirancang khusus untuk efisiensi operasional hotel dan tim *Enginee
 
 ## 🚀 Fitur Utama & Keunggulan Sistem
 
+* **📋 Activity Log Terintegrasi**: Menyajikan seluruh riwayat **Work Order Selesai (Finish)** dan **Riwayat Maintenance Selesai** secara real-time lengkap dengan kartu ringkasan (summary cards), total biaya perbaikan, dan pencarian serbaguna.
+* **✅ Status Tiket "Finish"**: Tahap akhir penutupan tiket perbaikan secara resmi dilabeli sebagai **Finish** menggantikan istilah 'Closed'.
 * **📊 Export Laporan ke Excel (.xlsx)**: Rekapitulasi Laporan Bulanan Work Order dapat diunduh ke file spreadsheet Microsoft Excel terstruktur beserta kalkulasi total biaya.
 * **🖨️ Cetak PDF A4 Landscape (Mendatar)**: Hasil cetak laporan bulanan otomatis mendeteksi kertas A4 Landscape tanpa signature box, terpotong, atau tampilan blank.
 * **🗑️ Manajemen Penghapusan Data (WO, Aset, PM)**: Fitur hapus data permanen dari MySQL dengan *Optimistic UI Update* yang responsif.
@@ -40,7 +42,7 @@ Aplikasi ini dirancang khusus untuk efisiensi operasional hotel dan tim *Enginee
 1. **Pelaporan Kerusakan**: Staff hotel melapor kerusakan aset di ruangan/kamar dengan menentukan **Lokasi** dan **Priority** (*Low, Medium, High, Emergency*). Bisa diajukan langsung atau melalui hasil pemindaian **QR Code** aset.
 2. **Penugasan**: HOD / Management Engineer meninjau prioritas lalu menugaskan teknisi (*Assign Worker*).
 3. **Pengerjaan**: Staff Engineer menerima penugasan, mengerjakan perbaikan (*In Progress*), dan memasukkan rincian biaya & tindakan perbaikan.
-4. **Review & Closed**: HOD/Management mereview pengerjaan lalu menutup tiket (*Close Work Order*).
+4. **Review & Finish**: HOD/Management/Admin mereview pengerjaan lalu menyelesaikan tiket (*Finish Work Order*).
 5. **Pelacakan Mutasi Lokasi**: Pencatatan resmi perpindahan fisik aset dari ruang awal ke lokasi baru beserta penanggung jawab (PIC) sehingga riwayat lokasi tidak hilang.
 
 ---

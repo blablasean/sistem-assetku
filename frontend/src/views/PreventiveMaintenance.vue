@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">Perawatan Rutin</p>
         <h1>📅 Maintenance (PM)</h1>
-        <p class="subtitle">Jadwal dan checklist perawatan berkala aset.</p>
+        <p class="subtitle">Jadwal perawatan berkala.</p>
       </div>
       <button class="primary-btn" v-if="canManageSchedule" @click="openAddModal">
         ➕ Tambah Jadwal
@@ -19,11 +19,11 @@
               <span class="schedule-type-badge">{{ item.schedule_type }}</span>
               <h3 class="pm-asset-title">Aset #{{ item.asset_id }}</h3>
             </div>
-            <StatusBadge :status="item.status" />
+            <StatusBadge :status="item.status || 'Active'" />
           </div>
 
           <div class="pm-details">
-            <p><strong>Jatuh Tempo Berikutnya:</strong> ⏰ {{ item.next_run }}</p>
+            <p><strong>Jatuh Tempo Berikutnya:</strong> ⏰ {{ formatDate(item.next_run) }}</p>
             <div class="checklist-box">
               <p><strong>Checklist Inspeksi:</strong></p>
               <pre>{{ item.checklist_data }}</pre>
@@ -39,6 +39,10 @@
               <button class="icon-btn delete-btn" @click="deletePMSchedule(item)" title="Hapus Jadwal PM">🗑️ Hapus</button>
             </div>
           </div>
+        </div>
+
+        <div v-if="pmList.length === 0" class="empty-state">
+          Belum ada jadwal Preventive Maintenance di database.
         </div>
       </div>
     </div>
@@ -87,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
@@ -116,24 +120,32 @@ const newScheduleType = ref('Monthly')
 const newNextRun = ref('2026-08-01')
 const newChecklistData = ref('1. Cek Oli Generator\n2. Check Voltase Aki\n3. Tes Otomatis Transfer Switch (ATS)')
 
-const pmList = ref([
-  {
-    id: 1,
-    asset_id: 1,
-    schedule_type: 'Monthly',
-    next_run: '2026-08-01',
-    checklist_data: '1. Cek tekanan freon AC\n2. Bersihkan filter evaporator\n3. Cek drainase air kondensasi',
-    status: 'Active'
-  },
-  {
-    id: 2,
-    asset_id: 4,
-    schedule_type: 'Weekly',
-    next_run: '2026-07-28',
-    checklist_data: '1. Tes running generator 15 menit\n2. Cek level solar tangki harian\n3. Ukur tegangan aki starter',
-    status: 'Active'
+const pmList = ref([])
+const isLoading = ref(false)
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  if (typeof dateStr === 'string' && dateStr.includes('T')) {
+    return dateStr.split('T')[0]
   }
-])
+  return dateStr
+}
+
+async function fetchPMSchedules() {
+  isLoading.value = true
+  try {
+    const res = await api.get('/maintenance/schedules')
+    if (res.data?.data && Array.isArray(res.data.data)) {
+      pmList.value = res.data.data
+    } else {
+      pmList.value = []
+    }
+  } catch (e) {
+    console.error('Failed to fetch PM schedules:', e)
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function openAddModal() {
   isEditMode.value = false
@@ -150,7 +162,7 @@ function openEditModal(item) {
   editingPmId.value = item.id
   newAssetId.value = item.asset_id
   newScheduleType.value = item.schedule_type
-  newNextRun.value = item.next_run
+  newNextRun.value = formatDate(item.next_run)
   newChecklistData.value = item.checklist_data
   showAddModal.value = true
 }
@@ -164,12 +176,6 @@ async function savePMSchedule() {
         next_run: newNextRun.value,
         checklist_data: newChecklistData.value
       })
-      const found = pmList.value.find(p => p.id === editingPmId.value)
-      if (found) {
-        found.schedule_type = newScheduleType.value
-        found.next_run = newNextRun.value
-        found.checklist_data = newChecklistData.value
-      }
       notify('Jadwal Maintenance berhasil diperbarui!', 'success')
     } else {
       await api.post('/maintenance/schedule', {
@@ -178,36 +184,11 @@ async function savePMSchedule() {
         next_run: newNextRun.value,
         checklist_data: newChecklistData.value
       })
-      pmList.value.unshift({
-        id: Date.now(),
-        asset_id: newAssetId.value,
-        schedule_type: newScheduleType.value,
-        next_run: newNextRun.value,
-        checklist_data: newChecklistData.value,
-        status: 'Active'
-      })
       notify('Jadwal Maintenance berhasil dibuat!', 'success')
     }
+    await fetchPMSchedules()
   } catch (e) {
-    if (isEditMode.value) {
-      const found = pmList.value.find(p => p.id === editingPmId.value)
-      if (found) {
-        found.schedule_type = newScheduleType.value
-        found.next_run = newNextRun.value
-        found.checklist_data = newChecklistData.value
-      }
-      notify('Jadwal Maintenance diperbarui!', 'success')
-    } else {
-      pmList.value.unshift({
-        id: Date.now(),
-        asset_id: newAssetId.value,
-        schedule_type: newScheduleType.value,
-        next_run: newNextRun.value,
-        checklist_data: newChecklistData.value,
-        status: 'Active'
-      })
-      notify('Jadwal Maintenance dibuat!', 'success')
-    }
+    notify('Gagal menyimpan Jadwal PM: ' + (e.response?.data?.message || e.message), 'error')
   } finally {
     showAddModal.value = false
   }
@@ -216,11 +197,10 @@ async function savePMSchedule() {
 async function deletePMSchedule(item) {
   try {
     await api.post('/maintenance/delete', { pm_id: item.id })
-    pmList.value = pmList.value.filter(p => p.id !== item.id)
-    notify(`Jadwal PM Aset #${item.asset_id} berhasil dihapus!`, 'success')
+    notify(`Jadwal PM Aset #${item.asset_id} berhasil dihapus dari database!`, 'success')
+    await fetchPMSchedules()
   } catch (e) {
-    pmList.value = pmList.value.filter(p => p.id !== item.id)
-    notify(`Jadwal PM Aset #${item.asset_id} dihapus!`, 'success')
+    notify('Gagal menghapus Jadwal PM: ' + (e.response?.data?.message || e.message), 'error')
   }
 }
 
@@ -231,11 +211,15 @@ async function submitChecklist(item) {
     })
     item.status = 'Completed'
     notify(`Checklist perawatan Aset #${item.asset_id} berhasil diselesaikan!`, 'success')
+    await fetchPMSchedules()
   } catch (e) {
-    item.status = 'Completed'
-    notify(`Checklist perawatan Aset #${item.asset_id} diperbarui!`, 'success')
+    notify('Gagal menyelesaikan checklist: ' + (e.response?.data?.message || e.message), 'error')
   }
 }
+
+onMounted(() => {
+  fetchPMSchedules()
+})
 </script>
 
 <style scoped>
@@ -408,5 +392,13 @@ h1 {
   font-weight: 700;
   cursor: pointer;
   margin-top: 6px;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+  font-size: 0.95rem;
 }
 </style>

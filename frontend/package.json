@@ -8,12 +8,16 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": ["asset-management", "vue3"],
+  "keywords": [
+    "asset-management",
+    "vue3"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "vue": "^3.5.39",
     "axios": "^1.6.0",
+    "jsqr": "^1.4.0",
+    "vue": "^3.5.39",
     "vue-router": "^4.2.0"
   },
   "devDependencies": {

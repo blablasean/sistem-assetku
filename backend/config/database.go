@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -123,6 +124,31 @@ func SeedInitialData(db *gorm.DB) error {
 		}
 		for _, wo := range workOrders {
 			db.Create(&wo)
+		}
+	}
+
+	// Check if PM schedules exist
+	var pmCount int64
+	db.Model(&models.PreventiveMaintenance{}).Count(&pmCount)
+	if pmCount == 0 {
+		pmList := []models.PreventiveMaintenance{
+			{
+				AssetID:       1,
+				ScheduleType:  "Monthly",
+				NextRun:       time.Now().AddDate(0, 1, 0),
+				ChecklistData: "1. Cek tekanan freon AC\n2. Bersihkan filter evaporator\n3. Cek drainase air kondensasi",
+				Status:        "Active",
+			},
+			{
+				AssetID:       4,
+				ScheduleType:  "Weekly",
+				NextRun:       time.Now().AddDate(0, 0, 7),
+				ChecklistData: "1. Tes running generator 15 menit\n2. Cek level solar tangki harian\n3. Ukur tegangan aki starter",
+				Status:        "Active",
+			},
+		}
+		for _, pm := range pmList {
+			db.Create(&pm)
 		}
 	}
 

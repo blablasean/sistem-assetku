@@ -5,15 +5,12 @@
         <div>
           <p class="eyebrow">Work Order</p>
           <h1>🔧 Work Order Hotel</h1>
-          <p class="subtitle">Pelaporan perbaikan kerusakan aset, penugasan teknisi, dan pemantauan status.</p>
+          <p class="subtitle">Pelaporan & perbaikan kerusakan.</p>
         </div>
 
         <div class="header-action-group">
-          <button class="export-excel-btn" @click="exportToExcel" title="Download Excel">
-            📊 Export Excel
-          </button>
-          <button class="print-report-btn" @click="showReportModal = true">
-            🖨️ Cetak Laporan
+          <button class="print-report-btn" @click="showReportModal = true" title="Prinjau & Export Laporan Bulanan">
+            📄 Laporan & Export
           </button>
           <button class="primary-btn" @click="showCreateModal = true">
             🚨 Buat WO

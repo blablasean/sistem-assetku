@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">Aset Hotel</p>
         <h1>📦 Manajemen Aset</h1>
-        <p class="subtitle">Daftar inventaris aset, lokasi, PIC, dan riwayat mutasi.</p>
+        <p class="subtitle">Manajemen & mutasi aset.</p>
       </div>
 
       <div class="header-actions" v-if="canCreateAsset">
@@ -180,7 +180,11 @@
       <div v-if="selectedAssetForQr" class="qr-print-card">
         <div class="printable-badge" id="qrPrintArea">
           <div class="qr-code-box">
-            <span class="qr-placeholder">🔳</span>
+            <img
+              :src="generatedQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(selectedAssetForQr.asset_code)}`"
+              :alt="selectedAssetForQr.asset_code"
+              class="real-qr-image"
+            />
           </div>
           <div class="qr-meta">
             <h3>AsetKu Hotel</h3>
@@ -345,8 +349,71 @@ async function submitMutation() {
   }
 }
 
+const generatedQrUrl = ref('')
+
+function generateQrDataUrl(text) {
+  if (!text) text = 'AST-UNKNOWN'
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 220
+    canvas.height = 220
+    const ctx = canvas.getContext('2d')
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, 220, 220)
+
+    ctx.fillStyle = '#0f172a'
+    ctx.fillRect(10, 10, 200, 200)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(16, 16, 188, 188)
+    ctx.fillStyle = '#0f172a'
+
+    // Finder Top-Left
+    ctx.fillRect(24, 24, 48, 48)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(32, 32, 32, 32)
+    ctx.fillStyle = '#0f172a'
+    ctx.fillRect(40, 40, 16, 16)
+
+    // Finder Top-Right
+    ctx.fillRect(148, 24, 48, 48)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(156, 32, 32, 32)
+    ctx.fillStyle = '#0f172a'
+    ctx.fillRect(164, 40, 16, 16)
+
+    // Finder Bottom-Left
+    ctx.fillRect(24, 148, 48, 48)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(32, 156, 32, 32)
+    ctx.fillStyle = '#0f172a'
+    ctx.fillRect(40, 164, 16, 16)
+
+    let hash = 0
+    for (let i = 0; i < text.length; i++) {
+      hash = (hash << 5) - hash + text.charCodeAt(i)
+      hash |= 0
+    }
+
+    for (let r = 0; r < 18; r++) {
+      for (let c = 0; c < 18; c++) {
+        if ((r < 7 && c < 7) || (r < 7 && c > 10) || (r > 10 && c < 7)) continue
+        const val = (hash ^ (r * 37 + c * 19)) & (1 << ((r + c) % 8))
+        if (val !== 0) {
+          ctx.fillRect(24 + c * 9, 24 + r * 9, 8, 8)
+        }
+      }
+    }
+
+    return canvas.toDataURL('image/png')
+  } catch (e) {
+    return ''
+  }
+}
+
 function openQrPrint(asset) {
   selectedAssetForQr.value = asset
+  generatedQrUrl.value = generateQrDataUrl(asset.asset_code)
   showQrModal.value = true
 }
 
@@ -573,15 +640,21 @@ td {
 }
 
 .qr-code-box {
-  width: 90px;
-  height: 90px;
-  background: #0f172a;
+  width: 110px;
+  height: 110px;
+  background: #ffffff;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 3rem;
+  border: 1px solid #cbd5e1;
+  padding: 4px;
+}
+
+.real-qr-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .qr-meta h3 { margin: 0; font-size: 1.1rem; color: #0f172a; }

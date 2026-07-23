@@ -88,6 +88,7 @@ func RegisterRoutes(
 	// Workorders
 	mux.Handle("/workorders/assign", middlewares.AuthMiddleware(handleAssignWorker(workOrderCtrl)))
 	mux.Handle("/workorders/status", middlewares.AuthMiddleware(handleUpdateWorkOrderStatus(workOrderCtrl)))
+	mux.Handle("/workorders/edit", middlewares.AuthMiddleware(handleEditWorkOrderDetail(workOrderCtrl)))
 	mux.Handle("/workorders/close", middlewares.AuthMiddleware(handleCloseWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/cancel", middlewares.AuthMiddleware(handleCancelWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/delete", middlewares.AuthMiddleware(handleDeleteWorkOrder(workOrderCtrl)))
@@ -103,9 +104,12 @@ func RegisterRoutes(
 	})))
 
 	// Maintenance
+	mux.Handle("/maintenance/schedules", middlewares.AuthMiddleware(handleGetAllPMSchedules(maintenanceCtrl)))
 	mux.Handle("/maintenance/schedule", middlewares.AuthMiddleware(handleCreatePMSchedule(maintenanceCtrl)))
 	mux.Handle("/maintenance/edit", middlewares.AuthMiddleware(handleEditPMSchedule(maintenanceCtrl)))
 	mux.Handle("/maintenance/delete", middlewares.AuthMiddleware(handleDeletePMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/history/edit", middlewares.AuthMiddleware(handleEditMaintenanceHistory(maintenanceCtrl)))
+	mux.Handle("/maintenance/history/delete", middlewares.AuthMiddleware(handleDeleteMaintenanceHistory(maintenanceCtrl)))
 	mux.Handle("/maintenance/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tail := strings.TrimPrefix(r.URL.Path, "/maintenance/")
 		if strings.HasSuffix(tail, "/checklist") && r.Method == http.MethodPost {
@@ -655,6 +659,9 @@ func handleSubmitPMChecklist(maintenanceCtrl *controllers.MaintenanceController)
 		}
 
 		idStr := r.PathValue("id")
+		if idStr == "" {
+			idStr = r.URL.Query().Get("id")
+		}
 		pmID, err := strconv.Atoi(idStr)
 		if err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Invalid PM ID", err.Error())
@@ -760,5 +767,96 @@ func handleDeletePMSchedule(maintenanceCtrl *controllers.MaintenanceController) 
 		}
 
 		utils.SendSuccess(w, http.StatusOK, "PM schedule deleted successfully", payload)
+	}
+}
+
+func handleGetAllPMSchedules(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		schedules, err := maintenanceCtrl.GetAllPMSchedules()
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch PM schedules", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "PM schedules retrieved successfully", schedules)
+	}
+}
+
+func handleEditWorkOrderDetail(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			WOID        int    `json:"wo_id"`
+			Description string `json:"description"`
+			ActionTaken string `json:"action_taken"`
+			Cost        int    `json:"cost"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := workOrderCtrl.EditWorkOrderDetail(payload.WOID, payload.Description, payload.ActionTaken, payload.Cost, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to edit Work Order detail", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Work Order detail updated successfully", payload)
+	}
+}
+
+func handleEditMaintenanceHistory(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			HistoryID   int    `json:"history_id"`
+			ActionTaken string `json:"action_taken"`
+			Cost        int    `json:"cost"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := maintenanceCtrl.EditMaintenanceHistory(payload.HistoryID, payload.ActionTaken, payload.Cost, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to edit Maintenance History", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Maintenance History updated successfully", payload)
+	}
+}
+
+func handleDeleteMaintenanceHistory(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			HistoryID int `json:"history_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := maintenanceCtrl.DeleteMaintenanceHistory(payload.HistoryID, role); err != nil {
+			utils.SendError(w, http.StatusForbidden, "Failed to delete Maintenance History", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Maintenance History deleted successfully", payload)
 	}
 }

@@ -97,3 +97,23 @@ func (c *WorkOrderController) GetWorkOrderStatus(woID int) string {
 	}
 	return workOrder.Status
 }
+
+func (c *WorkOrderController) EditWorkOrderDetail(woID int, description string, actionTaken string, cost int, callerRole string) error {
+	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
+		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat merubah detail Work Order")
+	}
+	var workOrder models.WorkOrder
+	if err := c.db.First(&workOrder, woID).Error; err != nil {
+		return err
+	}
+	if description != "" {
+		workOrder.Description = description
+	}
+	if actionTaken != "" {
+		workOrder.ActionTaken = actionTaken
+	}
+	if cost >= 0 {
+		workOrder.Cost = cost
+	}
+	return c.db.Save(&workOrder).Error
+}
