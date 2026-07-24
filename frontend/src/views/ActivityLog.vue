@@ -38,6 +38,13 @@
             <p class="sbox-value">Rp {{ formatNumber(totalMaintenanceCost) }}</p>
           </div>
         </div>
+        <div class="sbox orange">
+          <span class="sbox-icon">🔀</span>
+          <div>
+            <p class="sbox-label">Total Mutasi Aset</p>
+            <p class="sbox-value">{{ mutations.length }} Mutasi</p>
+          </div>
+        </div>
       </div>
 
       <!-- Search -->
@@ -117,6 +124,40 @@
               </tr>
               <tr v-if="filteredMH.length === 0">
                 <td :colspan="canManage ? 6 : 5" class="empty-state">Tidak ada data.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 3: Mutation History -->
+      <div class="card-panel" style="margin-top: 24px;">
+        <h2 class="section-title">🔀 Riwayat Mutasi Aset</h2>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Aset ID</th>
+                <th>Lokasi Sebelumnya</th>
+                <th>Lokasi Baru</th>
+                <th>PIC / Departemen</th>
+                <th>Alasan Mutasi</th>
+                <th>Tanggal Mutasi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="mut in filteredMutations" :key="mut.id">
+                <td><span class="wo-id">#MUT-{{ mut.id }}</span></td>
+                <td>Aset #{{ mut.asset_id }}</td>
+                <td>📍 {{ mut.previous_location || '—' }}</td>
+                <td><span class="location-new">📍 {{ mut.new_location || '—' }}</span></td>
+                <td>🏢 {{ mut.new_pic || '—' }}</td>
+                <td class="desc-cell" :title="mut.reason">{{ mut.reason || '—' }}</td>
+                <td class="time-col">{{ formatDate(mut.mutation_date) }}</td>
+              </tr>
+              <tr v-if="filteredMutations.length === 0">
+                <td colspan="7" class="empty-state">Belum ada riwayat mutasi aset.</td>
               </tr>
             </tbody>
           </table>
@@ -289,6 +330,7 @@ function notify(msg, type = 'success') {
 const searchFilter = ref('')
 const finishedWOs = ref([])
 const maintenanceHistory = ref([])
+const mutations = ref([])
 const isLoading = ref(false)
 
 const showReportModal = ref(false)
@@ -333,6 +375,18 @@ const filteredMH = computed(() => {
   )
 })
 
+const filteredMutations = computed(() => {
+  const q = searchFilter.value.toLowerCase()
+  if (!q) return mutations.value
+  return mutations.value.filter(mut =>
+    (mut.new_location && mut.new_location.toLowerCase().includes(q)) ||
+    (mut.previous_location && mut.previous_location.toLowerCase().includes(q)) ||
+    (mut.new_pic && mut.new_pic.toLowerCase().includes(q)) ||
+    (mut.reason && mut.reason.toLowerCase().includes(q)) ||
+    String(mut.asset_id).includes(q)
+  )
+})
+
 function formatNumber(num) {
   return (num || 0).toLocaleString('id-ID')
 }
@@ -355,6 +409,7 @@ async function fetchLogs() {
     if (res.data?.data) {
       finishedWOs.value = res.data.data.work_orders || []
       maintenanceHistory.value = res.data.data.maintenance_history || []
+      mutations.value = res.data.data.mutations || []
     }
   } catch (e) {
     console.error('Failed to fetch activity logs:', e)
@@ -645,6 +700,12 @@ h1 {
 .sbox.green { border-left: 4px solid #16a34a; }
 .sbox.blue  { border-left: 4px solid #2563eb; }
 .sbox.purple { border-left: 4px solid #7c3aed; }
+.sbox.orange { border-left: 4px solid #d97706; }
+
+.location-new {
+  color: #16a34a;
+  font-weight: 700;
+}
 
 .sbox-icon {
   font-size: 1.8rem;

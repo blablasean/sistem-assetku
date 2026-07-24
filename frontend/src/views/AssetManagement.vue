@@ -213,8 +213,7 @@
 
         <p class="qr-instruction">Tempelkan stiker QR Code ini pada unit fisik aset untuk akses cepat scan.</p>
         <div class="qr-btn-group">
-          <button class="submit-modal-btn secondary-btn" @click="downloadQrStickerPng">📸 Unduh Stiker PNG</button>
-          <button class="submit-modal-btn" @click="printQrCard">🖨️ Cetak Stiker QR</button>
+          <button class="submit-modal-btn" @click="downloadQrStickerPng">📸 Unduh Stiker PNG</button>
         </div>
       </div>
     </ModalDialog>

@@ -16,15 +16,15 @@ func NewMaintenanceController(db *gorm.DB) *MaintenanceController {
 }
 
 func (c *MaintenanceController) CreatePMSchedule(schedule models.PreventiveMaintenance, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat membuat jadwal PM")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat membuat jadwal Preventive Maintenance")
 	}
 	return c.db.Create(&schedule).Error
 }
 
 func (c *MaintenanceController) EditPMSchedule(pmID int, updated models.PreventiveMaintenance, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat mengubah jadwal PM")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mengubah jadwal Preventive Maintenance")
 	}
 	var schedule models.PreventiveMaintenance
 	if err := c.db.First(&schedule, pmID).Error; err != nil {
@@ -43,8 +43,8 @@ func (c *MaintenanceController) EditPMSchedule(pmID int, updated models.Preventi
 }
 
 func (c *MaintenanceController) DeletePMSchedule(pmID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus jadwal PM")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menghapus jadwal Preventive Maintenance")
 	}
 	res := c.db.Where("id = ?", pmID).Delete(&models.PreventiveMaintenance{})
 	if res.Error != nil {
@@ -95,8 +95,8 @@ func (c *MaintenanceController) GetAllPMSchedules() ([]models.PreventiveMaintena
 }
 
 func (c *MaintenanceController) EditMaintenanceHistory(historyID int, actionTaken string, cost int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat merubah riwayat maintenance")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mengubah riwayat maintenance")
 	}
 	var mh models.MaintenanceHistory
 	if err := c.db.First(&mh, historyID).Error; err != nil {
@@ -112,8 +112,8 @@ func (c *MaintenanceController) EditMaintenanceHistory(historyID int, actionTake
 }
 
 func (c *MaintenanceController) DeleteMaintenanceHistory(historyID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus riwayat maintenance")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menghapus riwayat maintenance")
 	}
 	res := c.db.Where("id = ?", historyID).Delete(&models.MaintenanceHistory{})
 	if res.Error != nil {

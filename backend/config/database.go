@@ -62,6 +62,16 @@ func InitDatabase() error {
 	// Ensure avatar column is LONGTEXT to hold Base64 images
 	db.Exec("ALTER TABLE users MODIFY COLUMN avatar LONGTEXT NULL;")
 
+	// Fix mutations table: drop old integer pic_id FK, use string pic column instead
+	db.Exec("ALTER TABLE mutations ADD COLUMN IF NOT EXISTS pic VARCHAR(255) DEFAULT '';")
+	db.Exec("ALTER TABLE mutations MODIFY COLUMN previous_location VARCHAR(255) DEFAULT '';")
+	db.Exec("ALTER TABLE mutations MODIFY COLUMN mutation_date DATETIME NULL DEFAULT NULL;")
+	// Drop the old pic_id column if it still exists (was NOT NULL, now replaced by pic string)
+	db.Exec("ALTER TABLE mutations MODIFY COLUMN pic_id INT DEFAULT 0;")
+	db.Exec("ALTER TABLE mutations DROP FOREIGN KEY IF EXISTS fk_mutations_pic;")
+	db.Exec("ALTER TABLE mutations DROP INDEX IF EXISTS fk_mutations_pic;")
+	db.Exec("ALTER TABLE mutations DROP COLUMN IF EXISTS pic_id;")
+
 	log.Println("✓ Database models auto-migrated successfully")
 
 	// Seed initial default users and hotel assets if database is empty

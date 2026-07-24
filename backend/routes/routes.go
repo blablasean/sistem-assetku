@@ -389,7 +389,7 @@ func handleGetAssetHistory(mutationCtrl *controllers.MutationController) http.Ha
 func handleCreateMutation(mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		role := "hod"
+		role := "external"
 		if claims != nil && claims.Role != "" {
 			role = claims.Role
 		}
@@ -401,7 +401,7 @@ func handleCreateMutation(mutationCtrl *controllers.MutationController) http.Han
 		}
 
 		if err := mutationCtrl.CreateMutation(payload, role); err != nil {
-			utils.SendError(w, http.StatusForbidden, "Failed to create mutation", err.Error())
+			utils.SendError(w, http.StatusInternalServerError, "Failed to create mutation", err.Error())
 			return
 		}
 
@@ -636,9 +636,14 @@ func handleGetActivityLogs(db *gorm.DB) http.HandlerFunc {
 		var maintenanceHistory []models.MaintenanceHistory
 		db.Order("id desc").Limit(50).Find(&maintenanceHistory)
 
+		// Fetch all mutation history
+		var mutations []models.Mutation
+		db.Order("mutation_date desc").Limit(100).Find(&mutations)
+
 		result := map[string]interface{}{
 			"work_orders":         finishedWOs,
 			"maintenance_history": maintenanceHistory,
+			"mutations":           mutations,
 		}
 		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", result)
 	}

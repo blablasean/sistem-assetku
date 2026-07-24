@@ -8,6 +8,36 @@ import (
 	"gorm.io/gorm"
 )
 
+// isAdmin returns true if the caller is an admin
+func isAdmin(role string) bool {
+	return role == "admin"
+}
+
+// canManageAssets: admin, hod, management
+func canManageAssets(role string) bool {
+	return role == "admin" || role == "hod" || role == "management"
+}
+
+// canMutate: admin, hod
+func canMutate(role string) bool {
+	return role == "admin" || role == "hod"
+}
+
+// canAssignEngineer: admin, hod, management
+func canAssignEngineerRole(role string) bool {
+	return role == "admin" || role == "hod" || role == "management"
+}
+
+// canUpdateProgress: admin, hod, management, engineer
+func canUpdateProgressRole(role string) bool {
+	return role == "admin" || role == "hod" || role == "management" || role == "engineer"
+}
+
+// canCloseOrDeleteWO: admin, hod, management
+func canCloseOrDeleteWO(role string) bool {
+	return role == "admin" || role == "hod" || role == "management"
+}
+
 type WorkOrderController struct {
 	db *gorm.DB
 }
@@ -33,8 +63,8 @@ func (c *WorkOrderController) GetAllWorkOrders() ([]models.WorkOrder, error) {
 }
 
 func (c *WorkOrderController) AssignWorker(woID int, engineerID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" {
-		return errors.New("akses ditolak: hanya HOD atau Management yang dapat menugaskan teknisi")
+	if !canAssignEngineerRole(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menugaskan teknisi")
 	}
 	var workOrder models.WorkOrder
 	if err := c.db.First(&workOrder, woID).Error; err != nil {
@@ -46,6 +76,9 @@ func (c *WorkOrderController) AssignWorker(woID int, engineerID int, callerRole 
 }
 
 func (c *WorkOrderController) UpdateWOStatus(woID int, status string, actionTaken string, cost int, callerRole string) error {
+	if !canUpdateProgressRole(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, Supervisor, atau Teknisi (Engineer) yang dapat mengupdate progres Work Order")
+	}
 	var workOrder models.WorkOrder
 	if err := c.db.First(&workOrder, woID).Error; err != nil {
 		return err
@@ -61,13 +94,13 @@ func (c *WorkOrderController) UpdateWOStatus(woID int, status string, actionTake
 }
 
 func (c *WorkOrderController) CancelWorkOrder(woID int, callerRole string) error {
-	// hod, management, engineer, and external roles can cancel open work orders
+	// All roles can cancel their own open work orders
 	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Update("status", "Cancelled").Error
 }
 
 func (c *WorkOrderController) CloseWorkOrder(woID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menyelesaikan Work Order")
+	if !canCloseOrDeleteWO(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menyelesaikan Work Order")
 	}
 	now := time.Now()
 	return c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Updates(map[string]interface{}{
@@ -77,8 +110,8 @@ func (c *WorkOrderController) CloseWorkOrder(woID int, callerRole string) error 
 }
 
 func (c *WorkOrderController) DeleteWorkOrder(woID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus Work Order")
+	if !canCloseOrDeleteWO(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menghapus Work Order")
 	}
 	res := c.db.Where("id = ?", woID).Delete(&models.WorkOrder{})
 	if res.Error != nil {
@@ -99,8 +132,8 @@ func (c *WorkOrderController) GetWorkOrderStatus(woID int) string {
 }
 
 func (c *WorkOrderController) EditWorkOrderDetail(woID int, description string, actionTaken string, cost int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat merubah detail Work Order")
+	if !canCloseOrDeleteWO(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mengubah detail Work Order")
 	}
 	var workOrder models.WorkOrder
 	if err := c.db.First(&workOrder, woID).Error; err != nil {

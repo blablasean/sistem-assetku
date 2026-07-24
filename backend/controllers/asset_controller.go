@@ -17,15 +17,15 @@ func NewAssetController(db *gorm.DB) *AssetController {
 }
 
 func (c *AssetController) RegistrasiAsset(newAsset models.Asset, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" {
-		return errors.New("akses ditolak: hanya HOD atau Management yang dapat mendaftarkan aset")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mendaftarkan aset baru")
 	}
 	return c.db.Create(&newAsset).Error
 }
 
 func (c *AssetController) EditAsset(assetID int, updated models.Asset, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" {
-		return errors.New("akses ditolak: hanya HOD atau Management yang dapat mengubah data aset")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mengubah data aset")
 	}
 	var existing models.Asset
 	if err := c.db.First(&existing, assetID).Error; err != nil {
@@ -90,8 +90,8 @@ func (c *AssetController) ReserveAsset(assetID int, isReserved bool, callerRole 
 }
 
 func (c *AssetController) DeleteAsset(assetID int, callerRole string) error {
-	if callerRole != "hod" && callerRole != "management" && callerRole != "admin" {
-		return errors.New("akses ditolak: hanya HOD, Management, atau Admin yang dapat menghapus aset")
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menghapus aset")
 	}
 	res := c.db.Where("id = ?", assetID).Delete(&models.Asset{})
 	if res.Error != nil {

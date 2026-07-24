@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"sistem-asetku-backend/models"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -16,10 +17,35 @@ func NewMutationController(db *gorm.DB) *MutationController {
 }
 
 func (c *MutationController) CreateMutation(data models.Mutation, callerRole string) error {
-	if callerRole != "hod" {
-		return errors.New("akses ditolak")
+	// Only admin and hod can create mutations
+	if !canMutate(callerRole) {
+		return errors.New("akses ditolak: hanya Admin atau HOD yang dapat membuat mutasi lokasi aset")
 	}
-	return c.db.Create(&data).Error
+
+	// Auto-fill mutation date if missing
+	if data.MutationDate.IsZero() {
+		data.MutationDate = time.Now()
+	}
+
+	// Fetch current asset location to fill previous_location automatically
+	if data.PreviousLocation == "" {
+		var asset models.Asset
+		if err := c.db.First(&asset, data.AssetID).Error; err == nil {
+			data.PreviousLocation = asset.Location
+		}
+	}
+
+	// Save mutation record
+	if err := c.db.Create(&data).Error; err != nil {
+		return err
+	}
+
+	// Update the asset's current location to new location
+	if err := c.db.Model(&models.Asset{}).Where("id = ?", data.AssetID).Update("location", data.NewLocation).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *MutationController) GetLocationHistory(assetID int) ([]models.Mutation, error) {
