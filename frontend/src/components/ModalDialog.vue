@@ -25,8 +25,8 @@ defineEmits(['close'])
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -37,14 +37,15 @@ defineEmits(['close'])
 .modal-card {
   width: 100%;
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 2px !important;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  animation: popIn 0.2s ease-out;
+  animation: popIn 0.15s ease-out;
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -52,34 +53,37 @@ defineEmits(['close'])
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 20px;
+  background: #0f172a;
+  color: #ffffff;
+  border-bottom: 2px solid #d97706;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.15rem;
-  color: #0f172a;
+  font-size: 1.05rem;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .close-btn {
   background: transparent;
   border: none;
   font-size: 1.1rem;
-  color: #64748b;
+  color: #cbd5e1;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 2px 8px;
+  border-radius: 2px !important;
 }
 
 .close-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #1e293b;
+  color: #ffffff;
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 20px;
   max-height: 80vh;
   overflow-y: auto;
 }

@@ -59,6 +59,9 @@ func InitDatabase() error {
 		return fmt.Errorf("failed to auto-migrate models: %w", err)
 	}
 
+	// Ensure avatar column is LONGTEXT to hold Base64 images
+	db.Exec("ALTER TABLE users MODIFY COLUMN avatar LONGTEXT NULL;")
+
 	log.Println("✓ Database models auto-migrated successfully")
 
 	// Seed initial default users and hotel assets if database is empty
@@ -71,18 +74,21 @@ func InitDatabase() error {
 
 // SeedInitialData seeds default users and initial sample data for hotel assets and work orders
 func SeedInitialData(db *gorm.DB) error {
-	hashedPassword, err := utils.HashPassword("password")
+	hashedPassword, err := utils.HashPassword("admin123")
 	if err != nil || hashedPassword == "" {
 		hashedPassword = "$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu"
 	}
 
-	// 1. Initial Users (4 Roles)
+	// Update ALL existing users in database so their password becomes 'admin123'
+	db.Model(&models.User{}).Where("1 = 1").Update("password", hashedPassword)
+
+	// Initial Default Users for All 5 System Roles (Password: admin123)
 	users := []models.User{
-		{Username: "mgr_eng", Password: hashedPassword, Name: "Budi (Supervisor)", Role: "management"},
+		{Username: "admin", Password: hashedPassword, Name: "Administrator Utama Hotel", Role: "admin"},
 		{Username: "hod_eng", Password: hashedPassword, Name: "Pak Alex (HOD Engineer)", Role: "hod"},
-		{Username: "tech_deni", Password: hashedPassword, Name: "Deni (Staff Engineer)", Role: "engineer"},
-		{Username: "staff_frontdesk", Password: hashedPassword, Name: "Rina (Staff Front Desk)", Role: "external"},
-		{Username: "admin", Password: hashedPassword, Name: "Administrator Hotel", Role: "management"},
+		{Username: "spv_eng", Password: hashedPassword, Name: "Pak Hendra (Supervisor)", Role: "management"},
+		{Username: "teknisi_budi", Password: hashedPassword, Name: "Budi Santoso (Teknisi)", Role: "engineer"},
+		{Username: "staff_frontdesk", Password: hashedPassword, Name: "Rina (Staff Front Office)", Role: "dept_frontoffice"},
 	}
 	for _, u := range users {
 		var existing models.User
@@ -118,9 +124,9 @@ func SeedInitialData(db *gorm.DB) error {
 	db.Model(&models.WorkOrder{}).Count(&woCount)
 	if woCount == 0 {
 		workOrders := []models.WorkOrder{
-			{AssetID: 1, Location: "Kamar 301", Priority: "Emergency", Description: "AC Kamar 301 bocor air dan tidak dingin", Status: "In Progress", RequesterID: 4, EngineerID: 3},
-			{AssetID: 3, Location: "Kitchen Dapur", Priority: "High", Description: "Chiller Dapur Utama suhu naik ke -5°C", Status: "Open", RequesterID: 4, EngineerID: 0},
-			{AssetID: 2, Location: "Kamar 102", Priority: "Medium", Description: "Smart TV HDMI port tidak terdeteksi", Status: "Closed", RequesterID: 4, EngineerID: 3},
+			{AssetID: 1, Category: "HVAC / AC", Location: "Kamar 301", Priority: "Emergency", Description: "AC Kamar 301 bocor air dan tidak dingin", Status: "In Progress", RequesterID: 4, EngineerID: 3},
+			{AssetID: 3, Category: "Kitchen Equipment", Location: "Kitchen Dapur", Priority: "High", Description: "Chiller Dapur Utama suhu naik ke -5°C", Status: "Open", RequesterID: 4, EngineerID: 0},
+			{AssetID: 2, Category: "Elektronik & TV", Location: "Kamar 102", Priority: "Medium", Description: "Smart TV HDMI port tidak terdeteksi", Status: "Closed", RequesterID: 4, EngineerID: 3},
 		}
 		for _, wo := range workOrders {
 			db.Create(&wo)

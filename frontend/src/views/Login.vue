@@ -97,11 +97,13 @@ async function login() {
     sessionStorage.setItem('token', token)
     sessionStorage.setItem('user_role', role)
     sessionStorage.setItem('user_name', name)
+    sessionStorage.setItem('username', data.username || username.value)
 
     // Sync to localStorage for current active session
     localStorage.setItem('token', token)
     localStorage.setItem('user_role', role)
     localStorage.setItem('user_name', name)
+    localStorage.setItem('username', data.username || username.value)
 
     router.push('/dashboard')
   } catch (err) {

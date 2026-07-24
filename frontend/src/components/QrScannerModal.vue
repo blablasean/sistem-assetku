@@ -1,17 +1,16 @@
 <template>
   <ModalDialog :show="show" title="📱 Pemindai QR Code Aset" maxWidth="540px" @close="handleClose">
     <div class="qr-scanner-content">
-      <!-- Camera Live Stream & Viewfinder -->
+      <!-- Camera Live Stream & Viewfinder Container -->
       <div class="camera-simulator">
-        <video ref="videoRef" class="live-video" autoplay playsinline muted v-show="isCameraActive"></video>
-        <canvas ref="canvasRef" style="display: none;"></canvas>
+        <div id="qr-reader" class="html5-qr-wrapper" v-show="isCameraActive"></div>
 
-        <div class="scanner-frame" :class="{ 'scan-success': scanSuccessAnim }">
-          <div class="laser-line"></div>
+        <div v-if="!isCameraActive" class="scanner-frame-placeholder" :class="{ 'scan-success': scanSuccessAnim }">
           <div class="corner top-left"></div>
           <div class="corner top-right"></div>
           <div class="corner bottom-left"></div>
           <div class="corner bottom-right"></div>
+          <p class="placeholder-text">📷 Tekan "Buka Kamera" atau "Upload Foto QR"</p>
         </div>
 
         <p class="scan-instruction">
@@ -76,9 +75,9 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onUnmounted } from 'vue'
+import { ref, watch, computed, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import jsQR from 'jsqr'
+import { Html5Qrcode } from 'html5-qrcode'
 import ModalDialog from './ModalDialog.vue'
 import StatusBadge from './StatusBadge.vue'
 import api from '../api'
@@ -90,12 +89,9 @@ const props = defineProps({
 const emit = defineEmits(['close', 'report-wo'])
 const router = useRouter()
 
-const videoRef = ref(null)
-const canvasRef = ref(null)
 const isCameraActive = ref(false)
 const scanSuccessAnim = ref(false)
-let mediaStream = null
-let scanAnimFrame = null
+let html5QrcodeInstance = null
 
 const scannedCode = ref('')
 const loading = ref(false)
@@ -118,75 +114,79 @@ watch(() => props.show, (newVal) => {
 })
 
 async function startCamera() {
+  await stopCamera()
+  errorMsg.value = ''
   try {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
-      })
-      if (videoRef.value) {
-        videoRef.value.srcObject = mediaStream
+    isCameraActive.value = true
+    await nextTick()
+    html5QrcodeInstance = new Html5Qrcode("qr-reader")
+
+    let cameraConfig = { facingMode: "environment" }
+    try {
+      const cameras = await Html5Qrcode.getCameras()
+      if (cameras && cameras.length > 0) {
+        const backCam = cameras.find(c => /back|rear|environment/i.test(c.label))
+        cameraConfig = backCam ? backCam.id : cameras[0].id
       }
-      isCameraActive.value = true
-      startScanLoop()
+    } catch (e) {
+      console.warn('Get cameras list fallback:', e)
     }
-  } catch (err) {
-    console.warn('WebCam camera access not allowed or unavailable:', err)
-    isCameraActive.value = false
-  }
-}
 
-function decodeQrFromCanvas(canvas) {
-  if (!canvas || !canvas.width || !canvas.height) return null
-  try {
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    if (!imgData || !imgData.data || !imgData.width || !imgData.height) return null
-
-    // Attempt 1: Standard QR scan
-    let code = jsQR(imgData.data, imgData.width, imgData.height, {
-      inversionAttempts: 'dontInvert'
-    })
-    if (code && code.data) return code.data
-
-    // Attempt 2: Inverted QR scan
-    code = jsQR(imgData.data, imgData.width, imgData.height, {
-      inversionAttempts: 'onlyInvert'
-    })
-    if (code && code.data) return code.data
-  } catch (e) {
-    console.warn('jsQR decoding error:', e)
-  }
-  return null
-}
-
-let scanTimer = null
-
-function startScanLoop() {
-  if (!isCameraActive.value) return
-  if (scanTimer) clearInterval(scanTimer)
-
-  scanTimer = setInterval(() => {
-    if (!isCameraActive.value || loading.value) return
-
-    if (videoRef.value && videoRef.value.readyState === videoRef.value.HAVE_ENOUGH_DATA) {
-      if (canvasRef.value) {
-        const canvas = canvasRef.value
-        const w = videoRef.value.videoWidth || 320
-        const h = videoRef.value.videoHeight || 240
-        if (w > 0 && h > 0) {
-          canvas.width = w
-          canvas.height = h
-          const ctx = canvas.getContext('2d', { willReadFrequently: true })
-          ctx.drawImage(videoRef.value, 0, 0, w, h)
-
-          const decoded = decodeQrFromCanvas(canvas)
-          if (decoded && decoded !== scannedCode.value) {
-            onQrDetected(decoded)
-          }
+    await html5QrcodeInstance.start(
+      cameraConfig,
+      {
+        fps: 10,
+        qrbox: (w, h) => {
+          const min = Math.min(w || 250, h || 250)
+          return { width: Math.max(160, Math.floor(min * 0.75)), height: Math.max(160, Math.floor(min * 0.75)) }
         }
+      },
+      (decodedText) => {
+        if (decodedText && decodedText !== scannedCode.value) {
+          onQrDetected(decodedText)
+        }
+      },
+      () => {}
+    )
+  } catch (err) {
+    console.warn('Camera start error:', err)
+    // Fallback try with facingMode user / default
+    try {
+      if (html5QrcodeInstance) {
+        await html5QrcodeInstance.start(
+          { facingMode: "user" },
+          { fps: 10, qrbox: { width: 200, height: 200 } },
+          (decodedText) => {
+            if (decodedText && decodedText !== scannedCode.value) {
+              onQrDetected(decodedText)
+            }
+          },
+          () => {}
+        )
+        isCameraActive.value = true
+        return
       }
+    } catch (fallbackErr) {
+      console.warn('Camera fallback failed:', fallbackErr)
     }
-  }, 400) // Throttled to 400ms -> smooth & fast!
+    isCameraActive.value = false
+    errorMsg.value = 'Kamera WebCam tidak dapat diakses. Silakan gunakan tombol Upload Foto QR.'
+  }
+}
+
+async function stopCamera() {
+  if (html5QrcodeInstance) {
+    try {
+      if (html5QrcodeInstance.isScanning) {
+        await html5QrcodeInstance.stop()
+      }
+      html5QrcodeInstance.clear()
+    } catch (e) {
+      console.warn('Error stopping html5Qrcode:', e)
+    }
+    html5QrcodeInstance = null
+  }
+  isCameraActive.value = false
 }
 
 function triggerBeep() {
@@ -216,18 +216,6 @@ function onQrDetected(code) {
   }, 2000)
 }
 
-function stopCamera() {
-  if (scanTimer) {
-    clearInterval(scanTimer)
-    scanTimer = null
-  }
-  if (mediaStream) {
-    mediaStream.getTracks().forEach(track => track.stop())
-    mediaStream = null
-  }
-  isCameraActive.value = false
-}
-
 function handleClose() {
   stopCamera()
   emit('close')
@@ -248,42 +236,30 @@ async function handleFileUpload(event) {
   errorMsg.value = ''
   assetDetail.value = null
 
-  // 1. Check filename for asset code pattern (e.g. AST-LBY-SOFA, AST-RM301-AC)
+  try {
+    await stopCamera()
+    isCameraActive.value = true
+    await nextTick()
+
+    const tempScanner = new Html5Qrcode("qr-reader")
+    const decodedText = await tempScanner.scanFile(file, true)
+    if (decodedText) {
+      onQrDetected(decodedText)
+      return
+    }
+  } catch (err) {
+    console.warn('File decode error:', err)
+  }
+
+  // Check filename fallback for AST-code pattern
   const fnMatch = file.name.match(/(AST-[A-Z0-9-]+)/i)
   if (fnMatch && fnMatch[1]) {
     onQrDetected(fnMatch[1].toUpperCase())
     return
   }
 
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const img = new Image()
-    img.crossOrigin = 'Anonymous'
-    img.onload = () => {
-      if (canvasRef.value) {
-        const canvas = canvasRef.value
-        const w = img.naturalWidth || img.width || 400
-        const h = img.naturalHeight || img.height || 400
-        if (w > 0 && h > 0) {
-          canvas.width = w
-          canvas.height = h
-          const ctx = canvas.getContext('2d', { willReadFrequently: true })
-          ctx.drawImage(img, 0, 0, w, h)
-
-          const decoded = decodeQrFromCanvas(canvas)
-          if (decoded) {
-            onQrDetected(decoded)
-            return
-          }
-        }
-      }
-
-      loading.value = false
-      errorMsg.value = 'Foto terunggah, namun QR Code tidak terdeteksi otomatis. Silakan ketik Kode Aset (Contoh: AST-LBY-SOFA) di bawah.'
-    }
-    img.src = e.target.result
-  }
-  reader.readAsDataURL(file)
+  loading.value = false
+  errorMsg.value = 'Foto terunggah, namun QR Code tidak terbaca. Pastikan foto stiker QR terlihat jelas.'
 }
 
 async function handleSearch() {
@@ -329,8 +305,9 @@ onUnmounted(() => {
 
 .camera-simulator {
   background: #0f172a;
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 2px !important;
+  border: 1px solid #334155;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -338,56 +315,48 @@ onUnmounted(() => {
   color: white;
   position: relative;
   overflow: hidden;
-  min-height: 220px;
+  min-height: 240px;
 }
 
-.live-video {
-  position: absolute;
-  top: 0;
-  left: 0;
+.html5-qr-wrapper {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.65;
+  max-width: 380px;
+  border-radius: 2px !important;
+  border: 1px solid #334155;
+  overflow: hidden;
+  margin-bottom: 10px;
 }
 
-.scanner-frame {
-  width: 150px;
-  height: 150px;
-  border: 2px dashed rgba(56, 189, 248, 0.6);
+.scanner-frame-placeholder {
+  width: 180px;
+  height: 180px;
+  border: 2px dashed rgba(245, 158, 11, 0.6);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
-  transition: all 0.3s ease;
+  margin-bottom: 12px;
+  border-radius: 2px !important;
+  padding: 12px;
 }
 
-.scanner-frame.scan-success {
+.placeholder-text {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  text-align: center;
+  font-weight: 600;
+}
+
+.scanner-frame-placeholder.scan-success {
   border-color: #10b981;
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
-}
-
-.laser-line {
-  position: absolute;
-  width: 100%;
-  height: 3px;
-  background: #38bdf8;
-  box-shadow: 0 0 12px #38bdf8;
-  animation: scan 2s infinite ease-in-out;
-}
-
-@keyframes scan {
-  0% { top: 5%; }
-  50% { top: 90%; }
-  100% { top: 5%; }
 }
 
 .corner {
   position: absolute;
   width: 16px;
   height: 16px;
-  border-color: #38bdf8;
+  border-color: #f59e0b;
   border-style: solid;
 }
 
@@ -397,17 +366,14 @@ onUnmounted(() => {
 .bottom-right { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
 
 .scan-instruction {
-  margin: 14px 0 6px;
+  margin: 8px 0 10px;
   font-size: 0.8rem;
   color: #e2e8f0;
   text-align: center;
-  z-index: 2;
   font-weight: 600;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 
 .camera-controls {
-  z-index: 2;
   margin-top: 4px;
   display: flex;
   gap: 8px;
@@ -416,20 +382,22 @@ onUnmounted(() => {
 .cam-btn {
   background: #2563eb;
   color: white;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  border: 1px solid #1d4ed8;
+  padding: 8px 14px;
+  border-radius: 2px !important;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .stop-cam {
   background: #dc2626;
+  border-color: #b91c1c;
 }
 
 .file-btn {
   background: #0284c7;
+  border-color: #0369a1;
   display: inline-flex;
   align-items: center;
 }
@@ -437,7 +405,7 @@ onUnmounted(() => {
 .manual-input-section label {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #334155;
+  color: #0f172a;
   display: block;
   margin-bottom: 6px;
 }
@@ -451,16 +419,16 @@ onUnmounted(() => {
   flex: 1;
   padding: 10px 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  border-radius: 2px !important;
+  font-size: 0.88rem;
 }
 
 .input-group button {
-  background: #2563eb;
+  background: #0f172a;
   color: white;
-  border: none;
+  border: 1px solid #1e293b;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: 2px !important;
   font-weight: 700;
   cursor: pointer;
 }
@@ -468,16 +436,17 @@ onUnmounted(() => {
 .error-banner {
   background: #fef2f2;
   color: #991b1b;
-  padding: 12px;
-  border-radius: 10px;
+  border: 1px solid #fca5a5;
+  padding: 10px 14px;
+  border-radius: 2px !important;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
 .scanned-result-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px !important;
   padding: 16px;
 }
 
@@ -492,6 +461,39 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.05rem;
   color: #0f172a;
+  font-weight: 700;
+}
+
+.asset-code-badge {
+  font-size: 0.75rem;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 2px 8px;
+  border-radius: 2px !important;
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.res-body p {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.res-actions {
+  margin-top: 14px;
+}
+
+.report-wo-btn {
+  width: 100%;
+  background: #dc2626;
+  color: white;
+  border: 1px solid #b91c1c;
+  padding: 10px;
+  border-radius: 2px !important;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .asset-code-badge {

@@ -31,6 +31,9 @@
       <router-link to="/activitylogs" class="nav-item">
         <span class="nav-icon">📋</span> Activity Log
       </router-link>
+      <router-link to="/users" class="nav-item" v-if="userRole === 'admin'">
+        <span class="nav-icon">👥</span> User Management
+      </router-link>
     </nav>
 
     <!-- Mobile Drawer Overlay -->
@@ -61,6 +64,9 @@
           <router-link to="/activitylogs" class="drawer-item">
             <span>📋</span> Activity Log
           </router-link>
+          <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'">
+            <span>👥</span> User Management
+          </router-link>
 
           <div class="drawer-divider"></div>
           <button class="drawer-item logout" @click="handleLogout">
@@ -79,10 +85,13 @@
       <!-- Account Dropdown (Desktop) -->
       <div class="account-dropdown-wrapper desktop-only">
         <button class="account-trigger" @click="toggleDropdown">
-          <div class="user-avatar">{{ userInitial }}</div>
+          <div class="user-avatar">
+            <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
+            <span v-else>{{ userInitial }}</span>
+          </div>
           <div class="user-info">
             <span class="user-name">{{ userName }}</span>
-            <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
+            <span class="user-role-sub">{{ roleLabel }}</span>
           </div>
           <span class="dropdown-arrow">▼</span>
         </button>
@@ -94,7 +103,7 @@
           </div>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" @click="showProfile">
-            <span>👤</span> Profil Saya
+            <span>👤</span> Profil Saya & Foto
           </button>
           <button class="dropdown-item logout-item" @click="handleLogout">
             <span>🚪</span> Keluar (Logout)
@@ -103,33 +112,49 @@
       </div>
     </div>
     <!-- Custom User Profile Modal UI -->
-    <ModalDialog :show="showProfileModal" title="👤 Profil Pengguna" maxWidth="450px" @close="showProfileModal = false">
-      <div class="profile-card-content">
-        <div class="profile-avatar-large">{{ userInitial }}</div>
-        <h3>{{ userName }}</h3>
-        <p class="profile-role-badge" :class="userRole">{{ roleLabel }}</p>
-        
-        <div class="profile-details-grid">
-          <div class="pdetail-item">
-            <span>Role / Jabatan</span>
-            <strong>{{ roleLabel }}</strong>
+    <ModalDialog :show="showProfileModal" title="👤 Foto & Profil Saya" maxWidth="450px" @close="showProfileModal = false">
+      <form @submit.prevent="updateUserProfile" class="profile-card-content">
+        <div class="avatar-edit-wrapper">
+          <div class="profile-avatar-large">
+            <img v-if="editProfileAvatar" :src="editProfileAvatar" class="avatar-img-large" />
+            <span v-else>{{ userInitial }}</span>
           </div>
-          <div class="pdetail-item">
-            <span>Status Sesi</span>
-            <strong class="status-active-badge">🟢 Aktif</strong>
-          </div>
-          <div class="pdetail-item">
-            <span>Hapus Work Order</span>
-            <strong>{{ (userRole === 'hod' || userRole === 'admin' || userRole === 'management') ? 'Diizinkan' : 'Tidak' }}</strong>
-          </div>
-          <div class="pdetail-item">
-            <span>Kontrol Sistem</span>
-            <strong>{{ userRole === 'admin' ? 'Akses Penuh' : 'Akses Standar' }}</strong>
-          </div>
+          <label class="upload-avatar-btn">
+            📷 Upload Foto Profil
+            <input type="file" accept="image/*" @change="onAvatarFileSelected" style="display:none" />
+          </label>
         </div>
 
-        <button class="submit-modal-btn close-profile-btn" @click="showProfileModal = false">Tutup Profil</button>
-      </div>
+        <!-- Read-only Info Display -->
+        <div class="profile-read-only-box">
+          <div class="pro-info-row">
+            <span>Nama Lengkap:</span>
+            <strong>{{ userName }}</strong>
+          </div>
+          <div class="pro-info-row">
+            <span>Role / Jabatan:</span>
+            <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
+          </div>
+          <div class="pro-info-row">
+            <span>Status Akun:</span>
+            <strong class="status-active-badge">🟢 Aktif</strong>
+          </div>
+          <p class="admin-only-notice">
+            ℹ️ Perubahan nama & password hanya dapat dilakukan oleh Administrator dari menu User Management.
+          </p>
+        </div>
+
+        <div v-if="profileMsg" class="profile-msg-banner" :class="profileMsgType">
+          {{ profileMsg }}
+        </div>
+
+        <div class="profile-actions-row">
+          <button type="button" class="action-btn-sharp cancel-btn" @click="showProfileModal = false">Batal</button>
+          <button type="submit" class="action-btn-sharp primary-btn" :disabled="isUpdatingProfile">
+            {{ isUpdatingProfile ? 'Menyimpan...' : 'Simpan Foto Profil' }}
+          </button>
+        </div>
+      </form>
     </ModalDialog>
   </header>
 </template>
@@ -138,6 +163,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import ModalDialog from './ModalDialog.vue'
+import api from '../api'
 
 const router = useRouter()
 
@@ -147,6 +173,14 @@ const showProfileModal = ref(false)
 
 const userName = ref(sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'User Hotel')
 const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const userAvatar = ref(sessionStorage.getItem('user_avatar') || localStorage.getItem('user_avatar') || '')
+
+const editProfileName = ref(userName.value)
+const editProfilePassword = ref('')
+const editProfileAvatar = ref(userAvatar.value)
+const isUpdatingProfile = ref(false)
+const profileMsg = ref('')
+const profileMsgType = ref('success')
 
 const isLoggedIn = computed(() => !!(sessionStorage.getItem('token') || localStorage.getItem('token')))
 
@@ -158,8 +192,16 @@ const roleLabel = computed(() => {
   const map = {
     admin: 'Administrator',
     hod: 'HOD Engineer',
-    management: 'Supervisor',
+    management: 'Supervisor Engineer',
     engineer: 'Staff Engineer',
+    dept_akunting: 'Departement Akunting',
+    dept_spa: 'Departement Spa',
+    dept_sales: 'Department Sales',
+    dept_hr: 'Department Human Resources',
+    dept_fb_kitchen: 'Department Food Beverage Kitchen',
+    dept_fb_service: 'Department Food Beverage Service',
+    dept_housekeeping: 'Department House Keeping',
+    dept_frontoffice: 'Department Front Office',
     external: 'Staff Hotel'
   }
   return map[userRole.value] || 'User Hotel'
@@ -170,7 +212,54 @@ function toggleDropdown() {
 }
 
 function showProfile() {
+  editProfileName.value = userName.value
+  editProfilePassword.value = ''
+  editProfileAvatar.value = userAvatar.value
+  profileMsg.value = ''
   showProfileModal.value = true
+}
+
+function onAvatarFileSelected(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Ukuran foto melebihi 2MB. Silakan gunakan foto yang lebih kecil.')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = (evt) => {
+    editProfileAvatar.value = evt.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+async function updateUserProfile() {
+  isUpdatingProfile.value = true
+  profileMsg.value = ''
+  try {
+    const res = await api.post('/auth/profile', {
+      name: editProfileName.value,
+      password: editProfilePassword.value,
+      avatar: editProfileAvatar.value
+    })
+    userName.value = editProfileName.value
+    userAvatar.value = editProfileAvatar.value
+    sessionStorage.setItem('user_name', editProfileName.value)
+    localStorage.setItem('user_name', editProfileName.value)
+    sessionStorage.setItem('user_avatar', editProfileAvatar.value)
+    localStorage.setItem('user_avatar', editProfileAvatar.value)
+
+    profileMsg.value = 'Profil & Foto Anda berhasil diperbarui!'
+    profileMsgType.value = 'success'
+    setTimeout(() => {
+      showProfileModal.value = false
+    }, 1500)
+  } catch (e) {
+    profileMsg.value = 'Gagal menyimpan profil: ' + (e.response?.data?.message || e.message)
+    profileMsgType.value = 'error'
+  } finally {
+    isUpdatingProfile.value = false
+  }
 }
 
 function handleLogout() {
@@ -201,12 +290,12 @@ onUnmounted(() => {
   justify-content: space-between;
   background: #0f172a;
   color: #ffffff;
-  padding: 10px 16px;
-  border-bottom: 1px solid #1e293b;
+  padding: 10px 20px;
+  border-bottom: 2px solid #d97706;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .navbar-left {
@@ -221,9 +310,9 @@ onUnmounted(() => {
   border: 1px solid #334155;
   color: white;
   font-size: 1.3rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 2px !important;
   cursor: pointer;
 }
 
@@ -234,28 +323,33 @@ onUnmounted(() => {
 }
 
 .brand-logo {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   background: #1e293b;
   padding: 4px 8px;
-  border-radius: 10px;
+  border-radius: 2px !important;
+  border: 1px solid #334155;
 }
 
 .brand-title {
   display: block;
   font-size: 1.15rem;
   font-weight: 800;
-  color: #38bdf8;
+  color: #f59e0b;
   line-height: 1.1;
+  letter-spacing: 0.5px;
 }
 
 .brand-sub {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: #cbd5e1;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .navbar-links {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .nav-item {
@@ -265,15 +359,17 @@ onUnmounted(() => {
   color: #cbd5e1;
   text-decoration: none;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 2px !important;
   font-size: 0.85rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
 }
 
 .nav-item:hover, .nav-item.router-link-active {
   background: #1e293b;
-  color: #38bdf8;
+  color: #f59e0b;
+  border-color: #334155;
 }
 
 .navbar-user {
@@ -283,15 +379,15 @@ onUnmounted(() => {
 }
 
 .qr-quick-btn {
-  background: linear-gradient(135deg, #0284c7, #0369a1);
+  background: #2563eb;
   color: white;
-  border: none;
+  border: 1px solid #1d4ed8;
   padding: 8px 14px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.85rem;
+  border-radius: 2px !important;
+  font-weight: 700;
+  font-size: 0.82rem;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 38px;
 }
 
 .account-dropdown-wrapper {
@@ -301,45 +397,58 @@ onUnmounted(() => {
 .account-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #1e293b;
   border: 1px solid #334155;
   color: white;
-  padding: 5px 10px;
-  border-radius: 10px;
+  padding: 6px 12px;
+  border-radius: 2px !important;
   cursor: pointer;
+  height: 44px;
 }
 
 .user-avatar {
-  width: 30px;
-  height: 30px;
-  background: #38bdf8;
-  color: #0f172a;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  background: #d97706;
+  color: #ffffff;
+  border-radius: 2px !important;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  line-height: 1.2;
 }
 
 .user-name {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
 }
 
-.role-badge {
-  font-size: 0.65rem;
-  padding: 1px 5px;
-  border-radius: 4px;
+.user-role-sub {
+  font-size: 0.72rem;
   font-weight: 600;
-  text-transform: uppercase;
+  color: #f59e0b;
+  margin: 2px 0 0 0;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+  display: block;
 }
 
 .role-badge.management { background: #ea580c; color: white; }
@@ -355,13 +464,13 @@ onUnmounted(() => {
 .dropdown-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   width: 200px;
-  background: #1e293b;
+  background: #0f172a;
   border: 1px solid #334155;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-  padding: 6px 0;
+  border-radius: 2px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  padding: 4px 0;
   z-index: 200;
 }
 
@@ -408,8 +517,8 @@ onUnmounted(() => {
 .mobile-drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(2px);
   z-index: 300;
   display: flex;
 }
@@ -421,7 +530,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 20px;
-  border-right: 1px solid #1e293b;
+  border-right: 2px solid #d97706;
 }
 
 .drawer-header {
@@ -451,7 +560,7 @@ onUnmounted(() => {
 .drawer-links {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .drawer-item {
@@ -460,19 +569,20 @@ onUnmounted(() => {
   gap: 10px;
   color: #cbd5e1;
   text-decoration: none;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 2px !important;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   width: 100%;
   text-align: left;
 }
 
 .drawer-item.router-link-active {
   background: #1e293b;
-  color: #38bdf8;
+  color: #f59e0b;
+  border-color: #334155;
 }
 
 .drawer-divider {
@@ -508,67 +618,72 @@ onUnmounted(() => {
 }
 
 .profile-avatar-large {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
-  color: white;
-  font-size: 2rem;
+  width: 64px;
+  height: 64px;
+  border-radius: 2px !important;
+  background: #0f172a;
+  border: 2px solid #d97706;
+  color: #f59e0b;
+  font-size: 1.8rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 12px;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
 }
 
 .profile-card-content h3 {
   margin: 0 0 4px;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   color: #0f172a;
+  font-weight: 700;
 }
 
 .profile-role-badge {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 999px;
-  margin-bottom: 20px;
+  padding: 3px 10px;
+  border-radius: 2px !important;
+  margin-bottom: 18px;
 }
 
 .profile-role-badge.admin, .profile-role-badge.hod {
   background: #fef3c7;
   color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .profile-role-badge.management {
   background: #dbeafe;
   color: #1e40af;
+  border: 1px solid #bfdbfe;
 }
 
 .profile-role-badge.engineer {
   background: #dcfce7;
   color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
 .profile-role-badge.external {
   background: #f1f5f9;
   color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .profile-details-grid {
   width: 100%;
   display: grid;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 18px;
   text-align: left;
 }
 
 .pdetail-item {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 2px !important;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -589,16 +704,135 @@ onUnmounted(() => {
 }
 
 .submit-modal-btn {
-  background: #2563eb;
+  background: #0f172a;
   color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 12px;
+  border: 1px solid #1e293b;
+  padding: 10px;
+  border-radius: 2px !important;
   font-weight: 700;
   cursor: pointer;
 }
 
 .close-profile-btn {
   width: 100%;
+}
+
+.avatar-img-nav {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px !important;
+}
+
+.avatar-edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.avatar-img-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px !important;
+}
+
+.upload-avatar-btn {
+  margin-top: 8px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 6px 12px;
+  border-radius: 2px !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.profile-form-sharp {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.profile-form-sharp label span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.profile-msg-banner {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 2px !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.profile-msg-banner.success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.profile-msg-banner.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.profile-actions-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.profile-read-only-box {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px !important;
+  padding: 14px;
+  margin-bottom: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pro-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.pro-info-row span {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pro-info-row strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.admin-only-notice {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-style: italic;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 8px;
+  line-height: 1.3;
 }
 </style>

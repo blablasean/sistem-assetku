@@ -109,23 +109,28 @@
           <input v-model="formAsset.asset_name" placeholder="Contoh: AC Split Daikin 1.5 PK" required />
         </label>
         <label>
-          <span>Kategori</span>
-          <select v-model="formAsset.category">
-            <option>HVAC / AC</option>
-            <option>Elektronik & TV</option>
-            <option>Mebel & Furniture</option>
-            <option>Plumbing & Sanitasi</option>
-            <option>Mesin & Generator</option>
-            <option>Kitchen Equipment</option>
-          </select>
+          <span>Kategori Aset</span>
+          <input v-model="formAsset.category" placeholder="Contoh: HVAC / AC, Kendaraan Operasional, Audio System, dll." required />
         </label>
         <label>
           <span>Lokasi Penempatan / Kamar</span>
           <input v-model="formAsset.location" placeholder="Contoh: Kamar 301, Kitchen Dapur Utama, Chiller Room" required />
         </label>
         <label>
-          <span>PIC Penanggung Jawab</span>
-          <input v-model="formAsset.pic" placeholder="Contoh: Supervisor Engineering" />
+          <span>PIC Penanggung Jawab (Departemen)</span>
+          <select v-model="formAsset.pic" required>
+            <option value="" disabled>-- Pilih Departemen PIC --</option>
+            <option value="Front Office">Front Office</option>
+            <option value="House Keeping">House Keeping</option>
+            <option value="Food Beverage Service">Food Beverage Service</option>
+            <option value="Food Beverage Kitchen">Food Beverage Kitchen</option>
+            <option value="Human Resource">Human Resource</option>
+            <option value="Sales">Sales</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Spa">Spa</option>
+            <option value="Akunting">Akunting</option>
+            <option value="IT">IT</option>
+          </select>
         </label>
         <label>
           <span>Status Kondisi Aset</span>
@@ -162,8 +167,20 @@
             <input v-model="mutNewLocation" placeholder="Contoh: Kamar 205, Lobby Lounge" required />
           </label>
           <label>
-            <span>PIC Penanggung Jawab Baru</span>
-            <input v-model="mutPIC" placeholder="Nama PIC baru" required />
+            <span>PIC Penanggung Jawab Baru (Departemen)</span>
+            <select v-model="mutPIC" required>
+              <option value="" disabled>-- Pilih Departemen PIC Baru --</option>
+              <option value="Front Office">Front Office</option>
+              <option value="House Keeping">House Keeping</option>
+              <option value="Food Beverage Service">Food Beverage Service</option>
+              <option value="Food Beverage Kitchen">Food Beverage Kitchen</option>
+              <option value="Human Resource">Human Resource</option>
+              <option value="Sales">Sales</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Spa">Spa</option>
+              <option value="Akunting">Akunting</option>
+              <option value="IT">IT</option>
+            </select>
           </label>
           <label>
             <span>Alasan Perpindahan / Mutasi</span>
@@ -195,7 +212,10 @@
         </div>
 
         <p class="qr-instruction">Tempelkan stiker QR Code ini pada unit fisik aset untuk akses cepat scan.</p>
-        <button class="submit-modal-btn" @click="printQrCard">🖨️ Cetak Stiker QR</button>
+        <div class="qr-btn-group">
+          <button class="submit-modal-btn secondary-btn" @click="downloadQrStickerPng">📸 Unduh Stiker PNG</button>
+          <button class="submit-modal-btn" @click="printQrCard">🖨️ Cetak Stiker QR</button>
+        </div>
       </div>
     </ModalDialog>
   </div>
@@ -203,6 +223,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import QRCode from 'qrcode'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
@@ -233,7 +254,7 @@ const sortBy = ref('id-desc')
 
 const showAssetModal = ref(false)
 const isEditMode = ref(false)
-const formAsset = ref({ id: 0, asset_code: '', asset_name: '', category: 'HVAC / AC', location: '', pic: '', status: 'Active', document_url: '' })
+const formAsset = ref({ id: 0, asset_code: '', asset_name: '', category: '', location: '', pic: '', status: 'Active', document_url: '' })
 
 const showMutModal = ref(false)
 const selectedAssetForMut = ref(null)
@@ -287,7 +308,7 @@ async function fetchAssets() {
 
 function openAddModal() {
   isEditMode.value = false
-  formAsset.value = { id: 0, asset_code: 'AST-RM' + Math.floor(100 + Math.random() * 900) + '-UNIT', asset_name: '', category: 'HVAC / AC', location: '', pic: '', status: 'Active', document_url: '' }
+  formAsset.value = { id: 0, asset_code: 'AST-RM' + Math.floor(100 + Math.random() * 900) + '-UNIT', asset_name: '', category: '', location: '', pic: 'Engineering', status: 'Active', document_url: '' }
   showAssetModal.value = true
 }
 
@@ -327,7 +348,7 @@ async function deleteAsset(asset) {
 function openMutationModal(asset) {
   selectedAssetForMut.value = asset
   mutNewLocation.value = ''
-  mutPIC.value = asset.pic || ''
+  mutPIC.value = asset.pic || 'Engineering'
   mutReason.value = ''
   showMutModal.value = true
 }
@@ -351,74 +372,101 @@ async function submitMutation() {
 
 const generatedQrUrl = ref('')
 
-function generateQrDataUrl(text) {
-  if (!text) text = 'AST-UNKNOWN'
-  try {
-    const canvas = document.createElement('canvas')
-    canvas.width = 220
-    canvas.height = 220
-    const ctx = canvas.getContext('2d')
-
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, 220, 220)
-
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(10, 10, 200, 200)
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(16, 16, 188, 188)
-    ctx.fillStyle = '#0f172a'
-
-    // Finder Top-Left
-    ctx.fillRect(24, 24, 48, 48)
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(32, 32, 32, 32)
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(40, 40, 16, 16)
-
-    // Finder Top-Right
-    ctx.fillRect(148, 24, 48, 48)
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(156, 32, 32, 32)
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(164, 40, 16, 16)
-
-    // Finder Bottom-Left
-    ctx.fillRect(24, 148, 48, 48)
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(32, 156, 32, 32)
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(40, 164, 16, 16)
-
-    let hash = 0
-    for (let i = 0; i < text.length; i++) {
-      hash = (hash << 5) - hash + text.charCodeAt(i)
-      hash |= 0
-    }
-
-    for (let r = 0; r < 18; r++) {
-      for (let c = 0; c < 18; c++) {
-        if ((r < 7 && c < 7) || (r < 7 && c > 10) || (r > 10 && c < 7)) continue
-        const val = (hash ^ (r * 37 + c * 19)) & (1 << ((r + c) % 8))
-        if (val !== 0) {
-          ctx.fillRect(24 + c * 9, 24 + r * 9, 8, 8)
-        }
-      }
-    }
-
-    return canvas.toDataURL('image/png')
-  } catch (e) {
-    return ''
-  }
-}
-
-function openQrPrint(asset) {
+async function openQrPrint(asset) {
   selectedAssetForQr.value = asset
-  generatedQrUrl.value = generateQrDataUrl(asset.asset_code)
+  try {
+    generatedQrUrl.value = await QRCode.toDataURL(asset.asset_code || 'AST-UNKNOWN', {
+      width: 260,
+      margin: 2,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    })
+  } catch (err) {
+    console.error('QRCode.toDataURL error:', err)
+    generatedQrUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(asset.asset_code)}`
+  }
   showQrModal.value = true
 }
 
 function printQrCard() {
   window.print()
+}
+
+async function downloadQrStickerPng() {
+  if (!selectedAssetForQr.value) return
+  const asset = selectedAssetForQr.value
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 420
+  canvas.height = 560
+  const ctx = canvas.getContext('2d')
+
+  // Background card
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  
+  // Outer Border
+  ctx.strokeStyle = '#0f172a'
+  ctx.lineWidth = 6
+  ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24)
+
+  // Header Banner
+  ctx.fillStyle = '#0f172a'
+  ctx.fillRect(12, 12, canvas.width - 24, 70)
+
+  ctx.fillStyle = '#f59e0b'
+  ctx.font = 'bold 22px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('ASETKU HOTEL STICKER', canvas.width / 2, 56)
+
+  // Load and Draw QR Code Image
+  const qrImg = new Image()
+  qrImg.crossOrigin = 'Anonymous'
+  qrImg.src = generatedQrUrl.value || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(asset.asset_code)}`
+  
+  await new Promise((resolve) => {
+    qrImg.onload = resolve
+    qrImg.onerror = resolve
+  })
+
+  ctx.drawImage(qrImg, (canvas.width - 220) / 2, 105, 220, 220)
+
+  // Asset Details Text
+  ctx.textAlign = 'center'
+
+  // Code
+  ctx.fillStyle = '#d97706'
+  ctx.font = 'bold 22px monospace'
+  ctx.fillText(asset.asset_code || '', canvas.width / 2, 360)
+
+  // Name
+  ctx.fillStyle = '#0f172a'
+  ctx.font = 'bold 20px sans-serif'
+  const nameText = (asset.asset_name || '').length > 26 ? asset.asset_name.substring(0, 26) + '...' : asset.asset_name
+  ctx.fillText(nameText, canvas.width / 2, 400)
+
+  // Location & PIC
+  ctx.fillStyle = '#475569'
+  ctx.font = '16px sans-serif'
+  ctx.fillText(`📍 ${asset.location || 'Area Hotel'}`, canvas.width / 2, 440)
+  ctx.fillText(`👤 PIC: ${asset.pic || 'Engineering'}`, canvas.width / 2, 475)
+
+  // Footer Subtext
+  ctx.fillStyle = '#94a3b8'
+  ctx.font = '12px sans-serif'
+  ctx.fillText('PROPERTY OF HOTEL ASSET MANAGEMENT', canvas.width / 2, 520)
+
+  // Trigger PNG download
+  const imageURI = canvas.toDataURL('image/png')
+  const link = document.createElement('a')
+  link.download = `Stiker_QR_${asset.asset_code}.png`
+  link.href = imageURI
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  notify(`Stiker QR ${asset.asset_code} berhasil diunduh sebagai gambar PNG!`, 'success')
 }
 
 function viewDetail(asset) {
@@ -666,5 +714,18 @@ td {
   font-size: 0.85rem;
   color: #64748b;
   text-align: center;
+}
+
+.qr-btn-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+.secondary-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
 }
 </style>

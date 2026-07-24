@@ -5,11 +5,14 @@ import "time"
 type WorkOrder struct {
 	ID          int        `gorm:"primaryKey;autoIncrement;type:int" json:"id"`
 	AssetID     int        `gorm:"not null;type:int" json:"asset_id"`
+	Category    string     `gorm:"default:'HVAC / AC'" json:"category"`
 	Location    string     `gorm:"default:''" json:"location"`
 	Priority    string     `gorm:"default:'Medium'" json:"priority"` // Low, Medium, High, Emergency
 	Description string     `gorm:"not null" json:"description"`
 	Status      string     `gorm:"not null;default:'Open'" json:"status"` // Open, In Progress, Under Review, Completed, Closed, Cancelled
 	RequesterID int        `gorm:"not null;type:int" json:"requester_id"`
+	RequestedBy string     `gorm:"default:''" json:"requested_by"`
+	Department  string     `gorm:"default:''" json:"department"`
 	EngineerID  int        `gorm:"default:0;type:int" json:"engineer_id"`
 	ActionTaken string     `gorm:"default:''" json:"action_taken"`
 	Cost        int        `gorm:"default:0" json:"cost"`

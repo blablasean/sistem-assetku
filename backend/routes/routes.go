@@ -29,6 +29,7 @@ func RegisterRoutes(
 	mux.HandleFunc("/", handleHome)
 	mux.HandleFunc("/auth/login", handleLogin(authCtrl))
 	mux.HandleFunc("/auth/register", handleRegister(db))
+	mux.Handle("/auth/profile", middlewares.AuthMiddleware(handleUpdateProfile(db)))
 
 	// Protected endpoints (single handler per path; switch by method)
 	mux.Handle("/assets", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +96,7 @@ func RegisterRoutes(
 	mux.Handle("/workorders", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			handleCreateWorkOrder(workOrderCtrl)(w, r)
+			handleCreateWorkOrder(db, workOrderCtrl)(w, r)
 		case http.MethodGet:
 			handleGetWorkOrders(workOrderCtrl)(w, r)
 		default:
@@ -134,6 +135,12 @@ func RegisterRoutes(
 	// Activity logs
 	mux.Handle("/activitylogs", middlewares.AuthMiddleware(handleGetActivityLogs(db)))
 
+	// User Management endpoints (Admin)
+	mux.Handle("/users/create", middlewares.AuthMiddleware(handleCreateUser(db)))
+	mux.Handle("/users/edit", middlewares.AuthMiddleware(handleEditUser(db)))
+	mux.Handle("/users/delete", middlewares.AuthMiddleware(handleDeleteUser(db)))
+	mux.Handle("/users", middlewares.AuthMiddleware(handleGetAllUsers(db)))
+
 	return mux
 }
 
@@ -169,6 +176,7 @@ func handleLogin(authCtrl *controllers.AuthController) http.HandlerFunc {
 			"name":     user.Name,
 			"username": user.Username,
 			"id":       user.ID,
+			"avatar":   user.Avatar,
 		})
 	}
 }
@@ -420,17 +428,21 @@ func handleGetMutationHistory(mutationCtrl *controllers.MutationController) http
 	}
 }
 
-func handleCreateWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+func handleCreateWorkOrder(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "external"
 		userID := 1
+		username := "user_hotel"
 		if claims != nil {
 			if claims.Role != "" {
 				role = claims.Role
 			}
 			if claims.UserID > 0 {
 				userID = claims.UserID
+			}
+			if claims.Username != "" {
+				username = claims.Username
 			}
 		}
 
@@ -442,6 +454,27 @@ func handleCreateWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 
 		if payload.RequesterID == 0 {
 			payload.RequesterID = userID
+		}
+
+		// Always fetch the exact user record from DB to guarantee accurate username & department
+		if userID > 0 {
+			var user models.User
+			if err := db.First(&user, userID).Error; err == nil {
+				if payload.RequestedBy == "" || payload.RequestedBy == "user_hotel" {
+					payload.RequestedBy = user.Username
+				}
+				if payload.Department == "" || payload.Department == "external" {
+					payload.Department = user.Role
+				}
+				role = user.Role
+			}
+		}
+
+		if payload.RequestedBy == "" {
+			payload.RequestedBy = username
+		}
+		if payload.Department == "" {
+			payload.Department = role
 		}
 
 		if err := workOrderCtrl.CreateWorkOrder(payload, role); err != nil {
@@ -858,5 +891,178 @@ func handleDeleteMaintenanceHistory(maintenanceCtrl *controllers.MaintenanceCont
 		}
 
 		utils.SendSuccess(w, http.StatusOK, "Maintenance History deleted successfully", payload)
+	}
+}
+
+func handleGetAllUsers(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var users []models.User
+		if err := db.Order("id desc").Find(&users).Error; err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
+			return
+		}
+		for i := range users {
+			users[i].Password = ""
+		}
+		utils.SendSuccess(w, http.StatusOK, "Users retrieved successfully", users)
+	}
+}
+
+func handleCreateUser(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims == nil || claims.Role != "admin" {
+			utils.SendError(w, http.StatusForbidden, "Akses ditolak: Hanya Admin yang dapat menambah pengguna baru", "Access denied")
+			return
+		}
+
+		var payload struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Name     string `json:"name"`
+			Role     string `json:"role"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if strings.TrimSpace(payload.Username) == "" || strings.TrimSpace(payload.Password) == "" || strings.TrimSpace(payload.Name) == "" {
+			utils.SendError(w, http.StatusBadRequest, "Data pengguna tidak lengkap", "Username, Password, and Name required")
+			return
+		}
+
+		hashedPassword, err := utils.HashPassword(payload.Password)
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to hash password", err.Error())
+			return
+		}
+
+		user := models.User{
+			Username: payload.Username,
+			Password: hashedPassword,
+			Name:     payload.Name,
+			Role:     payload.Role,
+		}
+
+		if err := db.Create(&user).Error; err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Gagal membuat pengguna (username mungkin sudah digunakan)", err.Error())
+			return
+		}
+
+		user.Password = ""
+		utils.SendSuccess(w, http.StatusCreated, "Pengguna baru berhasil dibuat!", user)
+	}
+}
+
+func handleEditUser(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims == nil || claims.Role != "admin" {
+			utils.SendError(w, http.StatusForbidden, "Akses ditolak: Hanya Admin yang dapat mengubah data pengguna", "Access denied")
+			return
+		}
+
+		var payload struct {
+			UserID   int    `json:"user_id"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Name     string `json:"name"`
+			Role     string `json:"role"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		var user models.User
+		if err := db.First(&user, payload.UserID).Error; err != nil {
+			utils.SendError(w, http.StatusNotFound, "Pengguna tidak ditemukan", err.Error())
+			return
+		}
+
+		user.Name = payload.Name
+		user.Role = payload.Role
+		if strings.TrimSpace(payload.Username) != "" {
+			user.Username = payload.Username
+		}
+		if strings.TrimSpace(payload.Password) != "" {
+			hashedPassword, err := utils.HashPassword(payload.Password)
+			if err == nil {
+				user.Password = hashedPassword
+			}
+		}
+
+		if err := db.Save(&user).Error; err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Gagal menyimpan perubahan pengguna", err.Error())
+			return
+		}
+
+		user.Password = ""
+		utils.SendSuccess(w, http.StatusOK, "Data pengguna berhasil diperbarui!", user)
+	}
+}
+
+func handleDeleteUser(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims == nil || claims.Role != "admin" {
+			utils.SendError(w, http.StatusForbidden, "Akses ditolak: Hanya Admin yang dapat menghapus pengguna", "Access denied")
+			return
+		}
+
+		var payload struct {
+			UserID int `json:"user_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if payload.UserID == claims.UserID {
+			utils.SendError(w, http.StatusBadRequest, "Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif!", "Self deletion prohibited")
+			return
+		}
+
+		if err := db.Where("id = ?", payload.UserID).Delete(&models.User{}).Error; err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Gagal menghapus pengguna", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Pengguna berhasil dihapus permanen!", payload)
+	}
+}
+
+func handleUpdateProfile(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims == nil || claims.UserID == 0 {
+			utils.SendError(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
+			return
+		}
+
+		var payload struct {
+			Avatar string `json:"avatar"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		var user models.User
+		if err := db.First(&user, claims.UserID).Error; err != nil {
+			utils.SendError(w, http.StatusNotFound, "Pengguna tidak ditemukan", err.Error())
+			return
+		}
+
+		user.Avatar = payload.Avatar
+
+		if err := db.Save(&user).Error; err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Gagal memperbarui foto profil", err.Error())
+			return
+		}
+
+		user.Password = ""
+		utils.SendSuccess(w, http.StatusOK, "Foto profil Anda berhasil diperbarui!", user)
 	}
 }

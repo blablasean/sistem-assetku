@@ -5,15 +5,17 @@ import AssetManagement from '../views/AssetManagement.vue'
 import WorkOrder from '../views/WorkOrder.vue'
 import PreventiveMaintenance from '../views/PreventiveMaintenance.vue'
 import ActivityLog from '../views/ActivityLog.vue'
+import UserManagement from '../views/UserManagement.vue'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
   { path: '/login', component: Login, meta: { public: true } },
   { path: '/dashboard', component: Dashboard },
-  { path: '/assets', component: AssetManagement, meta: { roles: ['management', 'hod', 'engineer'] } },
+  { path: '/assets', component: AssetManagement, meta: { roles: ['management', 'hod', 'engineer', 'admin'] } },
   { path: '/workorders', component: WorkOrder },
-  { path: '/maintenance', component: PreventiveMaintenance, meta: { roles: ['management', 'hod', 'engineer'] } },
+  { path: '/maintenance', component: PreventiveMaintenance, meta: { roles: ['management', 'hod', 'engineer', 'admin'] } },
   { path: '/activitylogs', component: ActivityLog },
+  { path: '/users', component: UserManagement, meta: { roles: ['admin'] } },
 ]
 
 const router = createRouter({

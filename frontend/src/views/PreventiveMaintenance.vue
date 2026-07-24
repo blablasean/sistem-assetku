@@ -51,8 +51,13 @@
     <ModalDialog :show="showAddModal" :title="isEditMode ? '✏️ Edit Jadwal Preventive Maintenance' : '➕ Tambah Jadwal Preventive Maintenance'" @close="showAddModal = false">
       <form @submit.prevent="savePMSchedule" class="pm-form">
         <label>
-          <span>ID Aset</span>
-          <input v-model.number="newAssetId" type="number" placeholder="Masukkan ID Aset" :disabled="isEditMode" required />
+          <span>Pilih Kode Aset Terdaftar</span>
+          <select v-model.number="newAssetId" :disabled="isEditMode" required>
+            <option value="" disabled>-- Pilih Kode Aset Terdaftar --</option>
+            <option v-for="asset in registeredAssets" :key="asset.id" :value="asset.id">
+              {{ asset.asset_code }} — {{ asset.asset_name }} (📍 {{ asset.location }})
+            </option>
+          </select>
         </label>
 
         <label>
@@ -61,6 +66,7 @@
             <option value="Daily">Daily (Harian)</option>
             <option value="Weekly">Weekly (Mingguan)</option>
             <option value="Monthly">Monthly (Bulanan)</option>
+            <option value="Quarterly">Quarterly (Per 3 Bulan)</option>
             <option value="Yearly">Yearly (Tahunan)</option>
           </select>
         </label>
@@ -71,8 +77,8 @@
         </label>
 
         <label>
-          <span>Checklist Item (Per Baris)</span>
-          <textarea v-model="newChecklistData" rows="4" placeholder="- Cek Freon AC&#10;- Bersihkan Filter Air&#10;- Tes Tegangan Generator"></textarea>
+          <span>Checklist Item (Inspeksi Per Baris)</span>
+          <textarea v-model="newChecklistData" rows="4" placeholder="Contoh: 1. Cek tekanan freon AC&#10;2. Bersihkan filter evaporator&#10;3. Cek drainase air kondensasi" required></textarea>
         </label>
 
         <button type="submit" class="submit-modal-btn">Simpan Jadwal PM</button>
@@ -112,16 +118,30 @@ function notify(msg, type = 'success') {
   }, 4000)
 }
 
+const todayDateStr = new Date().toISOString().split('T')[0]
+
+const registeredAssets = ref([])
 const showAddModal = ref(false)
 const isEditMode = ref(false)
 const editingPmId = ref(0)
-const newAssetId = ref(1)
+const newAssetId = ref('')
 const newScheduleType = ref('Monthly')
-const newNextRun = ref('2026-08-01')
-const newChecklistData = ref('1. Cek Oli Generator\n2. Check Voltase Aki\n3. Tes Otomatis Transfer Switch (ATS)')
+const newNextRun = ref(todayDateStr)
+const newChecklistData = ref('')
 
 const pmList = ref([])
 const isLoading = ref(false)
+
+async function fetchRegisteredAssets() {
+  try {
+    const res = await api.get('/assets')
+    if (res.data?.data && Array.isArray(res.data.data)) {
+      registeredAssets.value = res.data.data
+    }
+  } catch (e) {
+    console.error('Failed to fetch registered assets:', e)
+  }
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -150,10 +170,10 @@ async function fetchPMSchedules() {
 function openAddModal() {
   isEditMode.value = false
   editingPmId.value = 0
-  newAssetId.value = 1
+  newAssetId.value = registeredAssets.value[0]?.id || ''
   newScheduleType.value = 'Monthly'
-  newNextRun.value = '2026-08-01'
-  newChecklistData.value = '1. Cek Oli Generator\n2. Check Voltase Aki\n3. Tes Otomatis Transfer Switch (ATS)'
+  newNextRun.value = new Date().toISOString().split('T')[0]
+  newChecklistData.value = ''
   showAddModal.value = true
 }
 
@@ -219,6 +239,7 @@ async function submitChecklist(item) {
 
 onMounted(() => {
   fetchPMSchedules()
+  fetchRegisteredAssets()
 })
 </script>
 

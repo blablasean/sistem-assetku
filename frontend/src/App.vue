@@ -30,17 +30,43 @@ const showNavbar = computed(() => {
 
 <style>
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Open Sans', 'Nunito', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color-scheme: light;
+  --primary-navy: #0f172a;
+  --accent-blue: #1e40af;
+  --gold-accent: #d97706;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Global Professional Industrial Hotel Design - Sharp Crisp Corners (No Rounded Edges) */
+*,
+button,
+input,
+select,
+textarea,
+div,
+section,
+.card,
+.modal-container,
+.modal-content,
+.btn,
+.badge,
+.status-badge,
+.search-bar,
+.scanner-frame,
+.html5-qr-wrapper,
+.summary-card,
+.stat-card,
+.data-table {
+  border-radius: 2px !important;
 }
 
 .app-layout {

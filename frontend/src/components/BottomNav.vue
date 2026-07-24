@@ -50,14 +50,14 @@ const isMobileView = computed(() => true)
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: 60px;
   background: #0f172a;
-  border-top: 1px solid #1e293b;
+  border-top: 2px solid #d97706;
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 250;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -66,7 +66,7 @@ const isMobileView = computed(() => true)
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: #cbd5e1;
   text-decoration: none;
   font-size: 0.7rem;
   font-weight: 600;
@@ -77,39 +77,39 @@ const isMobileView = computed(() => true)
 }
 
 .bnav-icon {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
 .bnav-item.router-link-active {
-  color: #38bdf8;
+  color: #f59e0b;
 }
 
 .fab-wrapper {
   position: relative;
-  top: -14px;
+  top: -10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .fab-btn {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0284c7, #2563eb);
+  width: 48px;
+  height: 48px;
+  border-radius: 2px !important;
+  background: #d97706;
   color: white;
-  border: 3px solid #0f172a;
-  font-size: 1.5rem;
+  border: 2px solid #0f172a;
+  font-size: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
   transition: transform 0.15s ease;
 }
 
 .fab-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.95);
 }
 
 @media (min-width: 850px) {

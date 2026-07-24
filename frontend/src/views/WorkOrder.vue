@@ -32,9 +32,12 @@
           <table>
             <thead>
               <tr>
-                <th>ID WO</th>
-                <th>Lokasi / Kamar</th>
-                <th>Aset ID</th>
+                <th>ID Work Order</th>
+                <th>Kategori Aset</th>
+                <th>Lokasi / Area</th>
+                <th>Kode / ID Aset</th>
+                <th>Pelapor (Username)</th>
+                <th>Departemen Asal</th>
                 <th>Prioritas</th>
                 <th>Deskripsi Kerusakan</th>
                 <th>Teknisi (Engineer)</th>
@@ -45,8 +48,11 @@
             <tbody>
               <tr v-for="wo in filteredWorkOrders" :key="wo.id">
                 <td class="nowrap-cell"><span class="wo-id">#WO-{{ wo.id }}</span></td>
+                <td class="nowrap-cell"><span class="category-chip">🏷️ {{ wo.category || 'HVAC / AC' }}</span></td>
                 <td class="nowrap-cell">📍 {{ wo.location || 'Kamar / Area Hotel' }}</td>
                 <td class="nowrap-cell">Aset #{{ wo.asset_id }}</td>
+                <td class="nowrap-cell"><span class="requester-chip">👤 @{{ wo.requested_by || 'user_hotel' }}</span></td>
+                <td class="nowrap-cell"><span class="dept-chip">🏢 {{ formatDepartmentLabel(wo.department) }}</span></td>
                 <td class="nowrap-cell"><StatusBadge :status="wo.priority || 'Medium'" /></td>
                 <td class="desc-cell" :title="wo.description"><span class="desc-text">{{ wo.description }}</span></td>
                 <td class="nowrap-cell">
@@ -77,7 +83,7 @@
               </td>
             </tr>
             <tr v-if="filteredWorkOrders.length === 0">
-              <td colspan="8" class="empty-state">Tidak ada Work Order pada kategori ini.</td>
+              <td colspan="11" class="empty-state">Tidak ada Work Order pada kategori ini.</td>
             </tr>
           </tbody>
         </table>
@@ -98,8 +104,17 @@
     <ModalDialog :show="showCreateModal" title="🚨 Ajukan Laporan Kerusakan Aset" @close="showCreateModal = false">
       <form @submit.prevent="submitWorkOrder" class="modal-form">
         <label>
-          <span>ID Aset</span>
-          <input v-model.number="formWo.asset_id" type="number" placeholder="Masukkan ID Aset" required />
+          <span>Pilih Kode Aset Terdaftar</span>
+          <select v-model.number="formWo.asset_id" @change="onAssetSelected" required>
+            <option value="" disabled>-- Pilih Kode Aset Terdaftar --</option>
+            <option v-for="asset in registeredAssets" :key="asset.id" :value="asset.id">
+              {{ asset.asset_code }} — {{ asset.asset_name }} (📍 {{ asset.location }})
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Kategori Kerusakan / Aset</span>
+          <input v-model="formWo.category" placeholder="Contoh: HVAC / AC, Elektronik, Plumbing, Dapur" required />
         </label>
         <label>
           <span>Lokasi / Kamar Tempat Kerusakan</span>
@@ -276,7 +291,7 @@ const workOrders = ref([])
 const isLoading = ref(false)
 
 const showCreateModal = ref(false)
-const formWo = ref({ asset_id: 1, location: '', priority: 'Medium', description: '' })
+const formWo = ref({ asset_id: '', category: '', location: '', priority: 'Medium', description: '' })
 
 const showAssignModal = ref(false)
 const selectedWo = ref(null)
@@ -320,6 +335,29 @@ function formatNumber(num) {
   return (num || 0).toLocaleString('id-ID')
 }
 
+const currentUsername = ref(sessionStorage.getItem('username') || localStorage.getItem('username') || sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'admin')
+const currentUserRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'admin')
+
+function formatDepartmentLabel(roleOrDept) {
+  if (!roleOrDept) return 'Staff Hotel'
+  const map = {
+    dept_akunting: 'Departement Akunting',
+    dept_spa: 'Departement Spa',
+    dept_sales: 'Department Sales',
+    dept_hr: 'Department Human Resources',
+    dept_fb_kitchen: 'Department Food Beverage Kitchen',
+    dept_fb_service: 'Department Food Beverage Service',
+    dept_housekeeping: 'Department House Keeping',
+    dept_frontoffice: 'Department Front Office',
+    admin: 'Administrator',
+    hod: 'HOD Engineer',
+    management: 'Supervisor Engineer',
+    engineer: 'Staff Engineer',
+    external: 'Staff Hotel'
+  }
+  return map[roleOrDept] || roleOrDept
+}
+
 async function fetchWorkOrders() {
   isLoading.value = true
   try {
@@ -340,12 +378,16 @@ async function fetchWorkOrders() {
 async function submitWorkOrder() {
   try {
     await api.post('/workorders', {
-      asset_id: formWo.value.asset_id,
+      asset_id: Number(formWo.value.asset_id) || 1,
+      category: formWo.value.category || 'HVAC / AC',
       location: formWo.value.location || 'Area Hotel',
       priority: formWo.value.priority,
-      description: formWo.value.description
+      description: formWo.value.description,
+      requested_by: currentUsername.value,
+      department: currentUserRole.value
     })
     showCreateModal.value = false
+    formWo.value = { asset_id: '', category: '', location: '', priority: 'Medium', description: '' }
     notify('Tiket Work Order / Laporan Kerusakan berhasil diajukan ke database!', 'success')
     await fetchWorkOrders()
   } catch (e) {
@@ -513,6 +555,27 @@ function exportToExcel() {
   document.body.removeChild(link)
 }
 
+const registeredAssets = ref([])
+
+async function fetchRegisteredAssets() {
+  try {
+    const res = await api.get('/assets')
+    if (res.data?.data && Array.isArray(res.data.data)) {
+      registeredAssets.value = res.data.data
+    }
+  } catch (e) {
+    console.error('Failed to fetch registered assets:', e)
+  }
+}
+
+function onAssetSelected() {
+  const selected = registeredAssets.value.find(a => a.id === formWo.value.asset_id)
+  if (selected) {
+    if (!formWo.value.category) formWo.value.category = selected.category || ''
+    if (!formWo.value.location) formWo.value.location = selected.location || ''
+  }
+}
+
 onMounted(() => {
   if (route.query.assetId) {
     formWo.value.asset_id = parseInt(route.query.assetId)
@@ -520,6 +583,7 @@ onMounted(() => {
     showCreateModal.value = true
   }
   fetchWorkOrders()
+  fetchRegisteredAssets()
 })
 </script>
 
@@ -678,14 +742,18 @@ td {
 }
 
 .desc-cell {
+  max-width: 220px;
   white-space: nowrap;
-  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .desc-text {
   font-weight: 500;
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -870,5 +938,25 @@ td {
 
 .print-btn {
   background: #0284c7;
+}
+
+.requester-chip {
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 3px 8px;
+  border-radius: 2px !important;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: 1px solid #cbd5e1;
+}
+
+.dept-chip {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 3px 8px;
+  border-radius: 2px !important;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: 1px solid #bfdbfe;
 }
 </style>
