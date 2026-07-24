@@ -57,6 +57,9 @@ func (c *MaintenanceController) DeletePMSchedule(pmID int, callerRole string) er
 }
 
 func (c *MaintenanceController) SubmitPMChecklist(pmID int, checklist string, callerRole string) error {
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menyelesaikan checklist maintenance")
+	}
 	var schedule models.PreventiveMaintenance
 	if err := c.db.First(&schedule, pmID).Error; err != nil {
 		return err

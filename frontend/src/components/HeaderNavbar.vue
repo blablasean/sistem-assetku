@@ -19,16 +19,16 @@
       <router-link to="/dashboard" class="nav-item">
         <span class="nav-icon">📊</span> Dashboard
       </router-link>
-      <router-link to="/assets" class="nav-item" v-if="userRole !== 'external'">
+      <router-link to="/assets" class="nav-item" v-if="canAccessAdvanced">
         <span class="nav-icon">📦</span> Manajemen Aset
       </router-link>
       <router-link to="/workorders" class="nav-item">
         <span class="nav-icon">🔧</span> Work Order
       </router-link>
-      <router-link to="/maintenance" class="nav-item" v-if="userRole !== 'external'">
+      <router-link to="/maintenance" class="nav-item" v-if="canAccessAdvanced">
         <span class="nav-icon">📅</span> Maintenance
       </router-link>
-      <router-link to="/activitylogs" class="nav-item">
+      <router-link to="/activitylogs" class="nav-item" v-if="canAccessAdvanced">
         <span class="nav-icon">📋</span> Activity Log
       </router-link>
       <router-link to="/users" class="nav-item" v-if="userRole === 'admin'">
@@ -52,16 +52,16 @@
           <router-link to="/dashboard" class="drawer-item">
             <span>📊</span> Dashboard
           </router-link>
-          <router-link to="/assets" class="drawer-item" v-if="userRole !== 'external'">
+          <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced">
             <span>📦</span> Manajemen Aset
           </router-link>
           <router-link to="/workorders" class="drawer-item">
             <span>🔧</span> Work Order
           </router-link>
-          <router-link to="/maintenance" class="drawer-item" v-if="userRole !== 'external'">
+          <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced">
             <span>📅</span> Maintenance
           </router-link>
-          <router-link to="/activitylogs" class="drawer-item">
+          <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced">
             <span>📋</span> Activity Log
           </router-link>
           <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'">
@@ -183,6 +183,12 @@ const profileMsg = ref('')
 const profileMsgType = ref('success')
 
 const isLoggedIn = computed(() => !!(sessionStorage.getItem('token') || localStorage.getItem('token')))
+
+// Staff-only roles: dept_* dan external — hanya bisa akses Dashboard & Work Order
+const STAFF_ROLES = ['external', 'dept_akunting', 'dept_spa', 'dept_sales', 'dept_hr', 'dept_fb_kitchen', 'dept_fb_service', 'dept_housekeeping', 'dept_frontoffice']
+const isStaffOnly = computed(() => STAFF_ROLES.includes(userRole.value))
+// Roles yang dapat akses halaman advanced (Aset, Maintenance, Activity Log)
+const canAccessAdvanced = computed(() => !isStaffOnly.value)
 
 const userInitial = computed(() => {
   return userName.value ? userName.value.charAt(0).toUpperCase() : 'U'

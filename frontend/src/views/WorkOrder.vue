@@ -61,20 +61,23 @@
                 </td>
                 <td class="nowrap-cell"><StatusBadge :status="wo.status" /></td>
                 <td class="actions-cell">
+                  <button class="icon-btn log-btn" @click.stop="openLogsModal(wo)" title="Lihat Laporan Timeline Progres">
+                    📜 Timeline
+                  </button>
                   <button v-if="canAssign && wo.status === 'Open'" class="icon-btn assign-btn" @click="openAssignModal(wo)" title="Assign Worker">
                     👷 Assign
                   </button>
-                  <button v-if="canUpdateProgress && (wo.status === 'In Progress' || wo.status === 'Open')" class="icon-btn progress-btn" @click="openUpdateModal(wo)" title="Update Progres">
+                  <button v-if="canUpdateProgress && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn progress-btn" @click="openUpdateModal(wo)" title="Update Progres">
                     📝 Progres
                   </button>
                   <button v-if="canManageOrder && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn close-btn" @click="closeOrder(wo)" title="Selesaikan Work Order">
                     ✅ Selesai
                   </button>
 
-                  <!-- External Staff, HOD, and Management can cancel open work orders -->
-                <button v-if="wo.status === 'Open'" class="icon-btn cancel-btn" @click="cancelOrder(wo)" title="Batal (Cancel Work Order)">
-                  🚫 Batal
-                </button>
+                  <!-- HOD, Admin, and Management can cancel open work orders -->
+                  <button v-if="canCancel && wo.status === 'Open'" class="icon-btn cancel-btn" @click="cancelOrder(wo)" title="Batal (Cancel Work Order)">
+                    🚫 Batal
+                  </button>
 
                 <!-- HOD, Admin, and Management can delete work orders -->
                 <button v-if="canDelete" class="icon-btn delete-btn" @click="deleteOrder(wo)" title="Hapus Work Order Permanen">
@@ -161,8 +164,8 @@
           <span>Status Baru</span>
           <select v-model="updateStatus">
             <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
-            <option value="Under Review">Under Review (Selesai Dikerjakan & Menunggu Review HOD)</option>
-            <option value="Completed">Completed (Selesai Perbaikan)</option>
+            <option value="Under Review">Under Review (Selesai Dikerjakan & Menunggu Review)</option>
+            <option value="Finish">Finish / Completed (Selesai & Disetujui)</option>
           </select>
         </label>
 
@@ -246,11 +249,88 @@
         </button>
       </div>
     </ModalDialog>
+
+    <!-- Modal Laporan Progres & Timeline Work Order -->
+    <ModalDialog :show="showLogsModal" title="📜 Laporan Timeline Progres Work Order" @close="showLogsModal = false">
+      <div v-if="selectedWoForLogs" class="logs-modal-body">
+        <div class="wo-info-banner">
+          <div>
+            <span class="wo-badge">#WO-{{ selectedWoForLogs.id }}</span>
+            <h3 class="wo-banner-title">📍 {{ selectedWoForLogs.location }}</h3>
+            <p class="wo-banner-sub">Pelapor: <strong>@{{ selectedWoForLogs.requested_by || 'user' }}</strong> (🏢 {{ formatDepartmentLabel(selectedWoForLogs.department) }})</p>
+          </div>
+          <StatusBadge :status="selectedWoForLogs.status" />
+        </div>
+
+        <div class="timeline-container">
+          <h4 class="timeline-title">⏱️ Riwayat Perubahan & Progres Pengerjaan</h4>
+          
+          <div v-if="isLogsLoading" class="logs-loading">Memuat timeline progres...</div>
+          
+          <div v-else class="timeline-list">
+            <div v-for="(log, idx) in woProgressLogs" :key="log.id || idx" class="timeline-item">
+              <div class="timeline-node">
+                <span class="node-icon">{{ getStatusIcon(log.status) }}</span>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <StatusBadge :status="log.status" />
+                  <span class="timeline-time">🕒 {{ formatDate(log.created_at) }}</span>
+                </div>
+                <p class="timeline-actor">
+                  👤 Oleh: <strong>@{{ log.updated_by || 'Sistem' }}</strong> 
+                  <span class="user-role-chip" v-if="log.user_role">({{ formatDepartmentLabel(log.user_role) }})</span>
+                </p>
+                <div class="timeline-notes" v-if="log.action_taken">
+                  <p><strong>📝 Catatan / Tindakan:</strong> {{ log.action_taken }}</p>
+                </div>
+                <p v-if="log.cost > 0" class="timeline-cost">💰 Biaya Terkait: <strong>Rp {{ formatNumber(log.cost) }}</strong></p>
+              </div>
+            </div>
+
+            <div v-if="woProgressLogs.length === 0" class="empty-logs">
+              Belum ada riwayat progres tercatat untuk Work Order ini.
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Tambah Catatan Timeline Baru -->
+        <div v-if="canUpdateProgress && selectedWoForLogs.status !== 'Finish' && selectedWoForLogs.status !== 'Cancelled'" class="add-timeline-box">
+          <h4 class="add-tl-title">➕ Tambah Catatan / Update Progres Timeline</h4>
+          <form @submit.prevent="submitAddTimelineNote" class="add-tl-form">
+            <div class="add-tl-row">
+              <label class="tl-field">
+                <span>Status Progres:</span>
+                <select v-model="newTlStatus" class="modal-input">
+                  <option value="In Progress">👷 In Progress (Sedang Dikerjakan)</option>
+                  <option value="Under Review">🔍 Under Review (Menunggu Review HOD)</option>
+                  <option value="Finish">✅ Finish / Completed (Selesai & Disetujui)</option>
+                </select>
+              </label>
+
+              <label class="tl-field">
+                <span>Biaya Perbaikan (Rp):</span>
+                <input v-model.number="newTlCost" type="number" min="0" placeholder="Contoh: 150000" class="modal-input" />
+              </label>
+            </div>
+
+            <label class="tl-field">
+              <span>Catatan Progres / Tindakan Pengerjaan:</span>
+              <textarea v-model="newTlActionTaken" rows="2" placeholder="Tuliskan catatan progres terbaru..." class="modal-input modal-textarea" required></textarea>
+            </label>
+
+            <button type="submit" class="submit-modal-btn add-tl-btn" :disabled="isSubmittingTl">
+              {{ isSubmittingTl ? 'Menyimpan...' : '➕ Simpan Catatan Timeline' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </ModalDialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
@@ -264,6 +344,7 @@ const canAssign = computed(() => userRole.value === 'hod' || userRole.value === 
 const canManageOrder = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 const canUpdateProgress = computed(() => userRole.value === 'engineer' || userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 const canDelete = computed(() => userRole.value === 'hod' || userRole.value === 'admin' || userRole.value === 'management')
+const canCancel = computed(() => userRole.value === 'hod' || userRole.value === 'admin' || userRole.value === 'management')
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -305,6 +386,135 @@ const updateCost = ref(0)
 const showReportModal = ref(false)
 const reportMonthYear = ref(new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }))
 
+const showLogsModal = ref(false)
+const selectedWoForLogs = ref(null)
+const woProgressLogs = ref([])
+const isLogsLoading = ref(false)
+const newTlStatus = ref('In Progress')
+const newTlActionTaken = ref('')
+const newTlCost = ref(0)
+const isSubmittingTl = ref(false)
+
+function getStatusIcon(status) {
+  const map = {
+    Open: '🚨',
+    'In Progress': '👷',
+    'Under Review': '🔍',
+    Finish: '✅',
+    Completed: '✅',
+    Cancelled: '🚫'
+  }
+  return map[status] || '📌'
+}
+
+function openLogsModal(wo) {
+  if (!wo) return
+  selectedWoForLogs.value = wo
+  showLogsModal.value = true
+
+  newTlStatus.value = wo.status === 'Open' ? 'In Progress' : wo.status
+  newTlActionTaken.value = ''
+  newTlCost.value = 0
+
+  // Build instant milestone timeline from wo object
+  const initialLogs = [
+    {
+      id: 1,
+      work_order_id: wo.id,
+      status: 'Open',
+      action_taken: `Laporan diajukan: ${wo.description || ''}`,
+      updated_by: wo.requested_by || 'Staff Hotel',
+      user_role: wo.department || 'User',
+      created_at: wo.created_at || new Date().toISOString()
+    }
+  ]
+
+  if (wo.status && wo.status !== 'Open') {
+    initialLogs.push({
+      id: 2,
+      work_order_id: wo.id,
+      status: 'In Progress',
+      action_taken: `Penugasan Teknisi untuk perbaikan di lokasi ${wo.location || ''}`,
+      updated_by: 'HOD Engineer',
+      user_role: 'HOD Engineer',
+      created_at: wo.created_at || new Date().toISOString()
+    })
+  }
+
+  if (wo.status === 'Under Review' || wo.status === 'Finish' || wo.status === 'Completed' || wo.status === 'Closed') {
+    initialLogs.push({
+      id: 3,
+      work_order_id: wo.id,
+      status: 'Under Review',
+      action_taken: wo.action_taken || 'Perbaikan unit selesai dikerjakan. Menunggu review.',
+      cost: wo.cost || 0,
+      updated_by: 'Budi Santoso (Teknisi)',
+      user_role: 'Staff Engineer',
+      created_at: wo.created_at || new Date().toISOString()
+    })
+  }
+
+  if (wo.status === 'Finish' || wo.status === 'Completed' || wo.status === 'Closed' || wo.status === 'Cancelled') {
+    initialLogs.push({
+      id: 4,
+      work_order_id: wo.id,
+      status: wo.status,
+      action_taken: wo.status === 'Cancelled' ? 'Work Order dibatalkan' : 'Work Order diverifikasi selesai',
+      cost: wo.cost || 0,
+      updated_by: 'Administrator',
+      user_role: 'Admin',
+      created_at: wo.closed_at || new Date().toISOString()
+    })
+  }
+
+  woProgressLogs.value = initialLogs
+  isLogsLoading.value = false
+
+  // Background fetch live timeline records from MySQL DB
+  api.get(`/workorders/timeline?wo_id=${wo.id}`).then(res => {
+    const logsData = res.data?.data || res.data
+    if (Array.isArray(logsData) && logsData.length > 0) {
+      woProgressLogs.value = logsData
+    }
+  }).catch(e => {
+    console.error('Background fetch WO timeline error:', e)
+  })
+}
+
+async function submitAddTimelineNote() {
+  if (!selectedWoForLogs.value || !newTlActionTaken.value) return
+  isSubmittingTl.value = true
+  try {
+    const payload = {
+      work_order_id: selectedWoForLogs.value.id,
+      status: newTlStatus.value,
+      action_taken: newTlActionTaken.value,
+      cost: newTlCost.value || 0
+    }
+    await api.post('/workorders/timeline/add', payload)
+    notify('Catatan timeline berhasil ditambahkan!', 'success')
+    newTlActionTaken.value = ''
+    newTlCost.value = 0
+    selectedWoForLogs.value.status = newTlStatus.value
+    if (payload.cost > 0) {
+      selectedWoForLogs.value.cost = payload.cost
+    }
+    
+    // Refresh live timeline
+    const res = await api.get(`/workorders/timeline?wo_id=${selectedWoForLogs.value.id}`)
+    const logsData = res.data?.data || res.data
+    if (Array.isArray(logsData) && logsData.length > 0) {
+      woProgressLogs.value = logsData
+    }
+    fetchWorkOrders(true)
+  } catch (e) {
+    console.error('Failed to add timeline note:', e)
+    notify(e.response?.data?.error || 'Gagal menambahkan catatan timeline.', 'error')
+  } finally {
+    isSubmittingTl.value = false
+  }
+}
+
 const filteredWorkOrders = computed(() => {
   if (activeTab.value === 'all') return workOrders.value
   if (activeTab.value === 'open') return workOrders.value.filter(w => w.status === 'Open')
@@ -335,6 +545,17 @@ function formatNumber(num) {
   return (num || 0).toLocaleString('id-ID')
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  try {
+    return new Date(dateStr).toLocaleString('id-ID', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
 const currentUsername = ref(sessionStorage.getItem('username') || localStorage.getItem('username') || sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'admin')
 const currentUserRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'admin')
 
@@ -358,8 +579,8 @@ function formatDepartmentLabel(roleOrDept) {
   return map[roleOrDept] || roleOrDept
 }
 
-async function fetchWorkOrders() {
-  isLoading.value = true
+async function fetchWorkOrders(isSilent = false) {
+  if (!isSilent) isLoading.value = true
   try {
     const res = await api.get('/workorders')
     if (res.data?.data && Array.isArray(res.data.data)) {
@@ -368,10 +589,9 @@ async function fetchWorkOrders() {
       workOrders.value = []
     }
   } catch (e) {
-    console.error('Failed to fetch work orders from DB:', e)
-    workOrders.value = []
+    if (!isSilent) console.error('Failed to fetch work orders from DB:', e)
   } finally {
-    isLoading.value = false
+    if (!isSilent) isLoading.value = false
   }
 }
 
@@ -576,6 +796,8 @@ function onAssetSelected() {
   }
 }
 
+let pollTimer = null
+
 onMounted(() => {
   if (route.query.assetId) {
     formWo.value.asset_id = parseInt(route.query.assetId)
@@ -584,6 +806,17 @@ onMounted(() => {
   }
   fetchWorkOrders()
   fetchRegisteredAssets()
+
+  // Real-time status sync across all roles & screens
+  pollTimer = setInterval(() => {
+    fetchWorkOrders(true)
+  }, 3000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+  }
 })
 </script>
 
@@ -958,5 +1191,204 @@ td {
   font-weight: 700;
   font-size: 0.8rem;
   border: 1px solid #bfdbfe;
+}
+
+.log-btn {
+  background: #f8fafc;
+  color: #0284c7;
+  border-color: #7dd3fc;
+}
+
+.logs-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wo-info-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px !important;
+  padding: 14px 16px;
+}
+
+.wo-badge {
+  font-size: 0.78rem;
+  background: #0f172a;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 2px !important;
+  font-weight: 800;
+}
+
+.wo-banner-title {
+  margin: 6px 0 2px;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.wo-banner-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.timeline-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 2px !important;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.timeline-title {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline-list::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 14px;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-node {
+  position: absolute;
+  left: -20px;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  z-index: 1;
+}
+
+.timeline-content {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px !important;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.timeline-time {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.timeline-actor {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.user-role-chip {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.timeline-notes {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  border-radius: 2px !important;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.timeline-notes p {
+  margin: 0;
+}
+
+.timeline-cost {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #16a34a;
+}
+
+.logs-loading, .empty-logs {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.add-timeline-box {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px !important;
+  padding: 16px;
+}
+
+.add-tl-title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.add-tl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-tl-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.add-tl-btn {
+  align-self: flex-end;
+  padding: 8px 16px;
+  font-weight: 700;
 }
 </style>

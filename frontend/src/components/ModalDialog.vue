@@ -1,15 +1,17 @@
 <template>
-  <div v-if="show" class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal-card" :style="{ maxWidth: maxWidth }">
-      <div class="modal-header">
-        <h3>{{ title }}</h3>
-        <button class="close-btn" @click="$emit('close')">✕</button>
-      </div>
-      <div class="modal-body">
-        <slot></slot>
+  <Teleport to="body">
+    <div v-if="show" class="modal-backdrop" @click.self="$emit('close')">
+      <div class="modal-card" :style="{ maxWidth: maxWidth }">
+        <div class="modal-header">
+          <h3>{{ title }}</h3>
+          <button class="close-btn" @click="$emit('close')">✕</button>
+        </div>
+        <div class="modal-body">
+          <slot></slot>
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -30,7 +32,7 @@ defineEmits(['close'])
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  z-index: 99999 !important;
   padding: 16px;
 }
 

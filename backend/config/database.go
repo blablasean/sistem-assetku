@@ -62,15 +62,17 @@ func InitDatabase() error {
 	// Ensure avatar column is LONGTEXT to hold Base64 images
 	db.Exec("ALTER TABLE users MODIFY COLUMN avatar LONGTEXT NULL;")
 
-	// Fix mutations table: drop old integer pic_id FK, use string pic column instead
+	// Fix mutations table: use string pic column instead of old integer pic_id
 	db.Exec("ALTER TABLE mutations ADD COLUMN IF NOT EXISTS pic VARCHAR(255) DEFAULT '';")
 	db.Exec("ALTER TABLE mutations MODIFY COLUMN previous_location VARCHAR(255) DEFAULT '';")
 	db.Exec("ALTER TABLE mutations MODIFY COLUMN mutation_date DATETIME NULL DEFAULT NULL;")
-	// Drop the old pic_id column if it still exists (was NOT NULL, now replaced by pic string)
-	db.Exec("ALTER TABLE mutations MODIFY COLUMN pic_id INT DEFAULT 0;")
-	db.Exec("ALTER TABLE mutations DROP FOREIGN KEY IF EXISTS fk_mutations_pic;")
-	db.Exec("ALTER TABLE mutations DROP INDEX IF EXISTS fk_mutations_pic;")
-	db.Exec("ALTER TABLE mutations DROP COLUMN IF EXISTS pic_id;")
+
+	var picIdCount int64
+	db.Raw("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mutations' AND COLUMN_NAME = 'pic_id'", dbname).Scan(&picIdCount)
+	if picIdCount > 0 {
+		db.Exec("ALTER TABLE mutations DROP FOREIGN KEY IF EXISTS fk_mutations_pic;")
+		db.Exec("ALTER TABLE mutations DROP COLUMN pic_id;")
+	}
 
 	log.Println("✓ Database models auto-migrated successfully")
 
@@ -168,6 +170,44 @@ func SeedInitialData(db *gorm.DB) error {
 		}
 	}
 
+	// Seed sample WorkOrderLogs
+	var wolCount int64
+	db.Model(&models.WorkOrderLog{}).Count(&wolCount)
+	if wolCount == 0 {
+		now := time.Now()
+		woLogs := []models.WorkOrderLog{
+			{WorkOrderID: 1, Status: "Open", ActionTaken: "Laporan diajukan: AC Kamar 301 bocor air dan tidak dingin", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-3 * time.Hour)},
+			{WorkOrderID: 1, Status: "In Progress", ActionTaken: "Penugasan Teknisi Budi Santoso untuk pembersihan evaporator", UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-2 * time.Hour)},
+			{WorkOrderID: 1, Status: "Under Review", ActionTaken: "Pembersihan filter evaporator dan pengisian freon R32 selesai. Menunggu review HOD.", Cost: 150000, UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-30 * time.Minute)},
+			{WorkOrderID: 2, Status: "Open", ActionTaken: "Laporan diajukan: Chiller Dapur Utama suhu naik ke -5°C", UpdatedBy: "chef_dapur", UserRole: "dept_fb_kitchen", CreatedAt: now.Add(-1 * time.Hour)},
+			{WorkOrderID: 3, Status: "Open", ActionTaken: "Laporan diajukan: Smart TV HDMI port tidak terdeteksi", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-24 * time.Hour)},
+			{WorkOrderID: 3, Status: "In Progress", ActionTaken: "Pemeriksaan port mainboard TV", UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-18 * time.Hour)},
+			{WorkOrderID: 3, Status: "Finish", ActionTaken: "Penggantian kabel HDMI internal TV selesai", Cost: 75000, UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-10 * time.Hour)},
+		}
+		for _, log := range woLogs {
+			db.Create(&log)
+		}
+	}
+
+	// Seed sample Timelines
+	var timelineCount int64
+	db.Model(&models.Timeline{}).Count(&timelineCount)
+	if timelineCount == 0 {
+		now := time.Now()
+		timelines := []models.Timeline{
+			{WorkOrderID: 1, Status: "Open", ActionTaken: "Laporan diajukan: AC Kamar 301 bocor air dan tidak dingin", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-3 * time.Hour)},
+			{WorkOrderID: 1, Status: "In Progress", ActionTaken: "Penugasan Teknisi Budi Santoso untuk pembersihan evaporator", UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-2 * time.Hour)},
+			{WorkOrderID: 1, Status: "Under Review", ActionTaken: "Pembersihan filter evaporator dan pengisian freon R32 selesai. Menunggu review HOD.", Cost: 150000, UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-30 * time.Minute)},
+			{WorkOrderID: 2, Status: "Open", ActionTaken: "Laporan diajukan: Chiller Dapur Utama suhu naik ke -5°C", UpdatedBy: "chef_dapur", UserRole: "dept_fb_kitchen", CreatedAt: now.Add(-1 * time.Hour)},
+			{WorkOrderID: 3, Status: "Open", ActionTaken: "Laporan diajukan: Smart TV HDMI port tidak terdeteksi", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-24 * time.Hour)},
+			{WorkOrderID: 3, Status: "In Progress", ActionTaken: "Pemeriksaan port mainboard TV", UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-18 * time.Hour)},
+			{WorkOrderID: 3, Status: "Finish", ActionTaken: "Penggantian kabel HDMI internal TV selesai", Cost: 75000, UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-10 * time.Hour)},
+		}
+		for _, tl := range timelines {
+			db.Create(&tl)
+		}
+	}
+
 	log.Println("✓ Initial default users and hotel sample data seeded & verified successfully")
 	return nil
 }
@@ -179,7 +219,10 @@ func AutoMigrateModels() error {
 		&models.Asset{},
 		&models.SparePart{},
 		&models.Mutation{},
+		&models.AssetMutationTimeline{},
 		&models.WorkOrder{},
+		&models.WorkOrderLog{},
+		&models.Timeline{},
 		&models.PreventiveMaintenance{},
 		&models.MaintenanceHistory{},
 		&models.ActivityLog{},

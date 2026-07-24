@@ -52,43 +52,37 @@
         <input v-model="searchFilter" placeholder="🔍 Cari..." class="search-input" />
       </div>
 
-      <!-- Section 1: Finished Work Orders -->
+      <!-- Section 1: Work Order Timelines (Audit Trail) -->
       <div class="card-panel">
-        <h2 class="section-title">✅ Work Order Selesai</h2>
+        <h2 class="section-title">⚡ Riwayat Seluruh Timeline Work Order (Audit Trail)</h2>
         <div class="table-responsive">
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Lokasi</th>
-                <th>Aset ID</th>
-                <th>Prioritas</th>
-                <th>Deskripsi</th>
-                <th>Tindakan Perbaikan</th>
-                <th>Biaya (Rp)</th>
+                <th>Timeline ID</th>
+                <th>WO ID</th>
                 <th>Status</th>
-                <th>Tanggal Selesai</th>
-                <th v-if="canManage">Aksi</th>
+                <th>Di-update Oleh</th>
+                <th>Tindakan / Catatan Progres</th>
+                <th>Biaya (Rp)</th>
+                <th>Tanggal & Waktu Update</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="wo in filteredWOs" :key="wo.id">
-                <td><span class="wo-id">#WO-{{ wo.id }}</span></td>
-                <td>📍 {{ wo.location || '—' }}</td>
-                <td>Aset #{{ wo.asset_id }}</td>
-                <td><StatusBadge :status="wo.priority || 'Medium'" /></td>
-                <td class="desc-cell" :title="wo.description">{{ wo.description }}</td>
-                <td class="desc-cell" :title="wo.action_taken">{{ wo.action_taken || '—' }}</td>
-                <td>Rp {{ formatNumber(wo.cost || 0) }}</td>
-                <td><StatusBadge :status="wo.status" /></td>
-                <td class="time-col">{{ formatDate(wo.closed_at) }}</td>
-                <td v-if="canManage" class="actions-cell">
-                  <button class="icon-btn edit-btn" @click="openEditWoModal(wo)" title="Edit">✏️ Edit</button>
-                  <button class="icon-btn delete-btn" @click="deleteWo(wo)" title="Hapus">🗑️ Hapus</button>
+              <tr v-for="tl in filteredTimelines" :key="tl.id">
+                <td><span class="wo-id">#TL-{{ tl.id }}</span></td>
+                <td><span class="wo-id">#WO-{{ tl.work_order_id }}</span></td>
+                <td><StatusBadge :status="tl.status" /></td>
+                <td>
+                  <span class="requester-chip">👤 @{{ tl.updated_by || 'Sistem' }}</span>
+                  <span class="user-role-sub-inline" v-if="tl.user_role"> ({{ tl.user_role }})</span>
                 </td>
+                <td class="desc-cell" :title="tl.action_taken">{{ tl.action_taken || '—' }}</td>
+                <td>Rp {{ formatNumber(tl.cost || 0) }}</td>
+                <td class="time-col">{{ formatDate(tl.created_at) }}</td>
               </tr>
-              <tr v-if="filteredWOs.length === 0">
-                <td :colspan="canManage ? 10 : 9" class="empty-state">Tidak ada data.</td>
+              <tr v-if="filteredTimelines.length === 0">
+                <td colspan="7" class="empty-state">Tidak ada data riwayat timeline Work Order.</td>
               </tr>
             </tbody>
           </table>
@@ -130,33 +124,33 @@
         </div>
       </div>
 
-      <!-- Section 3: Mutation History -->
+      <!-- Section 3: Asset Mutation Timelines -->
       <div class="card-panel" style="margin-top: 24px;">
-        <h2 class="section-title">🔀 Riwayat Mutasi Aset</h2>
+        <h2 class="section-title">🔀 Riwayat Seluruh Mutasi Aset (Audit Trail)</h2>
         <div class="table-responsive">
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Aset ID</th>
-                <th>Lokasi Sebelumnya</th>
-                <th>Lokasi Baru</th>
-                <th>PIC / Departemen</th>
+                <th>Timeline ID</th>
+                <th>Kode Aset</th>
+                <th>Lokasi Asal</th>
+                <th>Lokasi Tujuan (Baru)</th>
+                <th>PIC / Penanggung Jawab</th>
                 <th>Alasan Mutasi</th>
-                <th>Tanggal Mutasi</th>
+                <th>Tanggal & Waktu Mutasi</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="mut in filteredMutations" :key="mut.id">
-                <td><span class="wo-id">#MUT-{{ mut.id }}</span></td>
-                <td>Aset #{{ mut.asset_id }}</td>
+              <tr v-for="mut in filteredAssetMutationTimelines" :key="mut.id">
+                <td><span class="wo-id">#AMUT-{{ mut.id }}</span></td>
+                <td><span class="wo-id">{{ mut.asset_code }}</span></td>
                 <td>📍 {{ mut.previous_location || '—' }}</td>
                 <td><span class="location-new">📍 {{ mut.new_location || '—' }}</span></td>
-                <td>🏢 {{ mut.new_pic || '—' }}</td>
+                <td>👤 {{ mut.pic || 'Engineering' }}</td>
                 <td class="desc-cell" :title="mut.reason">{{ mut.reason || '—' }}</td>
-                <td class="time-col">{{ formatDate(mut.mutation_date) }}</td>
+                <td class="time-col">{{ formatDate(mut.moved_at) }}</td>
               </tr>
-              <tr v-if="filteredMutations.length === 0">
+              <tr v-if="filteredAssetMutationTimelines.length === 0">
                 <td colspan="7" class="empty-state">Belum ada riwayat mutasi aset.</td>
               </tr>
             </tbody>
@@ -329,6 +323,8 @@ function notify(msg, type = 'success') {
 
 const searchFilter = ref('')
 const finishedWOs = ref([])
+const timelines = ref([])
+const assetMutationTimelines = ref([])
 const maintenanceHistory = ref([])
 const mutations = ref([])
 const isLoading = ref(false)
@@ -354,6 +350,29 @@ const totalMaintenanceCost = computed(() =>
 const totalWoCost = computed(() =>
   finishedWOs.value.reduce((sum, wo) => sum + (wo.cost || 0), 0)
 )
+
+const filteredTimelines = computed(() => {
+  const q = searchFilter.value.toLowerCase()
+  if (!q) return timelines.value
+  return timelines.value.filter(tl =>
+    (tl.action_taken && tl.action_taken.toLowerCase().includes(q)) ||
+    (tl.updated_by && tl.updated_by.toLowerCase().includes(q)) ||
+    (tl.status && tl.status.toLowerCase().includes(q)) ||
+    String(tl.work_order_id).includes(q)
+  )
+})
+
+const filteredAssetMutationTimelines = computed(() => {
+  const q = searchFilter.value.toLowerCase()
+  if (!q) return assetMutationTimelines.value
+  return assetMutationTimelines.value.filter(tl =>
+    (tl.asset_code && tl.asset_code.toLowerCase().includes(q)) ||
+    (tl.previous_location && tl.previous_location.toLowerCase().includes(q)) ||
+    (tl.new_location && tl.new_location.toLowerCase().includes(q)) ||
+    (tl.pic && tl.pic.toLowerCase().includes(q)) ||
+    (tl.reason && tl.reason.toLowerCase().includes(q))
+  )
+})
 
 const filteredWOs = computed(() => {
   const q = searchFilter.value.toLowerCase()
@@ -408,6 +427,8 @@ async function fetchLogs() {
     const res = await api.get('/activitylogs')
     if (res.data?.data) {
       finishedWOs.value = res.data.data.work_orders || []
+      timelines.value = res.data.data.timelines || []
+      assetMutationTimelines.value = res.data.data.asset_mutation_timelines || []
       maintenanceHistory.value = res.data.data.maintenance_history || []
       mutations.value = res.data.data.mutations || []
     }

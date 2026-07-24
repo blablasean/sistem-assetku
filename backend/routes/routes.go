@@ -74,6 +74,9 @@ func RegisterRoutes(
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})))
 
+	mux.Handle("/assets/mutation-timeline", middlewares.AuthMiddleware(handleGetAssetMutationTimeline(mutationCtrl)))
+	mux.Handle("/assets/mutate", middlewares.AuthMiddleware(handleMutateAssetByCode(mutationCtrl)))
+
 	// Mutations
 	mux.Handle("/mutations", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -93,6 +96,9 @@ func RegisterRoutes(
 	mux.Handle("/workorders/close", middlewares.AuthMiddleware(handleCloseWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/cancel", middlewares.AuthMiddleware(handleCancelWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/delete", middlewares.AuthMiddleware(handleDeleteWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/logs", middlewares.AuthMiddleware(handleGetWorkOrderTimeline(workOrderCtrl)))
+	mux.Handle("/workorders/timeline/add", middlewares.AuthMiddleware(handleAddTimelineEntry(workOrderCtrl)))
+	mux.Handle("/workorders/timeline", middlewares.AuthMiddleware(handleGetWorkOrderTimeline(workOrderCtrl)))
 	mux.Handle("/workorders", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -133,7 +139,7 @@ func RegisterRoutes(
 	})))
 
 	// Activity logs
-	mux.Handle("/activitylogs", middlewares.AuthMiddleware(handleGetActivityLogs(db)))
+	mux.Handle("/activitylogs", middlewares.AuthMiddleware(handleGetActivityLogs(db, workOrderCtrl, mutationCtrl)))
 
 	// User Management endpoints (Admin)
 	mux.Handle("/users/create", middlewares.AuthMiddleware(handleCreateUser(db)))
@@ -428,6 +434,52 @@ func handleGetMutationHistory(mutationCtrl *controllers.MutationController) http
 	}
 }
 
+func handleGetAssetMutationTimeline(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		assetCode := r.URL.Query().Get("asset_code")
+		if assetCode == "" {
+			utils.SendError(w, http.StatusBadRequest, "Asset code required", "asset_code query parameter missing")
+			return
+		}
+
+		timelines, err := mutationCtrl.GetAssetMutationTimeline(assetCode)
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch mutation timeline", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Asset mutation timeline retrieved successfully", timelines)
+	}
+}
+
+func handleMutateAssetByCode(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "hod"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+
+		var payload struct {
+			AssetCode   string `json:"asset_code"`
+			NewLocation string `json:"new_location"`
+			PIC         string `json:"pic"`
+			Reason      string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := mutationCtrl.CreateMutationByCode(payload.AssetCode, payload.NewLocation, payload.PIC, payload.Reason, role); err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to record mutation", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusCreated, "Mutasi aset berhasil dicatat", payload)
+	}
+}
+
 func handleCreateWorkOrder(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
@@ -501,8 +553,12 @@ func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.Han
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "hod"
+		username := "User"
 		if claims != nil && claims.Role != "" {
 			role = claims.Role
+		}
+		if claims != nil && claims.Username != "" {
+			username = claims.Username
 		}
 
 		var payload struct {
@@ -514,7 +570,7 @@ func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.Han
 			return
 		}
 
-		if err := workOrderCtrl.AssignWorker(payload.WOID, payload.EngineerID, role); err != nil {
+		if err := workOrderCtrl.AssignWorker(payload.WOID, payload.EngineerID, role, username); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to assign worker", err.Error())
 			return
 		}
@@ -527,8 +583,12 @@ func handleUpdateWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController)
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "engineer"
+		username := "User"
 		if claims != nil && claims.Role != "" {
 			role = claims.Role
+		}
+		if claims != nil && claims.Username != "" {
+			username = claims.Username
 		}
 
 		var payload struct {
@@ -542,7 +602,7 @@ func handleUpdateWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController)
 			return
 		}
 
-		if err := workOrderCtrl.UpdateWOStatus(payload.WOID, payload.Status, payload.ActionTaken, payload.Cost, role); err != nil {
+		if err := workOrderCtrl.UpdateWOStatus(payload.WOID, payload.Status, payload.ActionTaken, payload.Cost, role, username); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to update status", err.Error())
 			return
 		}
@@ -555,8 +615,12 @@ func handleCancelWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "hod"
+		username := "User"
 		if claims != nil && claims.Role != "" {
 			role = claims.Role
+		}
+		if claims != nil && claims.Username != "" {
+			username = claims.Username
 		}
 
 		var payload struct {
@@ -567,7 +631,7 @@ func handleCancelWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 			return
 		}
 
-		if err := workOrderCtrl.CancelWorkOrder(payload.WOID, role); err != nil {
+		if err := workOrderCtrl.CancelWorkOrder(payload.WOID, role, username); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to cancel work order", err.Error())
 			return
 		}
@@ -580,8 +644,12 @@ func handleCloseWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "hod"
+		username := "User"
 		if claims != nil && claims.Role != "" {
 			role = claims.Role
+		}
+		if claims != nil && claims.Username != "" {
+			username = claims.Username
 		}
 
 		var payload struct {
@@ -592,7 +660,7 @@ func handleCloseWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.H
 			return
 		}
 
-		if err := workOrderCtrl.CloseWorkOrder(payload.WOID, role); err != nil {
+		if err := workOrderCtrl.CloseWorkOrder(payload.WOID, role, username); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to close work order", err.Error())
 			return
 		}
@@ -626,11 +694,72 @@ func handleDeleteWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 	}
 }
 
-func handleGetActivityLogs(db *gorm.DB) http.HandlerFunc {
+func handleGetWorkOrderTimeline(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.URL.Query().Get("wo_id")
+		woID, err := strconv.Atoi(idStr)
+		if err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid work order ID", err.Error())
+			return
+		}
+
+		timelines, err := workOrderCtrl.GetWorkOrderTimeline(woID)
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch work order timeline", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusOK, "Work order timeline retrieved successfully", timelines)
+	}
+}
+
+func handleAddTimelineEntry(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", "POST required")
+			return
+		}
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "engineer"
+		username := "User"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
+		}
+		if claims != nil && claims.Username != "" {
+			username = claims.Username
+		}
+
+		var payload struct {
+			WOID        int    `json:"work_order_id"`
+			Status      string `json:"status"`
+			ActionTaken string `json:"action_taken"`
+			Cost        int    `json:"cost"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		if err := workOrderCtrl.AddTimelineEntry(payload.WOID, payload.Status, payload.ActionTaken, payload.Cost, role, username); err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to add timeline entry", err.Error())
+			return
+		}
+
+		utils.SendSuccess(w, http.StatusCreated, "Catatan timeline berhasil ditambahkan", payload)
+	}
+}
+
+func handleGetActivityLogs(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController, mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Fetch finished / completed Work Orders
 		var finishedWOs []models.WorkOrder
 		db.Where("status IN ('Finish','Completed','Closed')").Order("id desc").Limit(50).Find(&finishedWOs)
+
+		// Fetch all Work Order Timelines
+		timelines, _ := workOrderCtrl.GetAllTimelines()
+
+		// Fetch all Asset Mutation Timelines
+		assetMutationTimelines, _ := mutationCtrl.GetAllAssetMutationTimelines()
 
 		// Fetch all maintenance history entries
 		var maintenanceHistory []models.MaintenanceHistory
@@ -641,9 +770,11 @@ func handleGetActivityLogs(db *gorm.DB) http.HandlerFunc {
 		db.Order("mutation_date desc").Limit(100).Find(&mutations)
 
 		result := map[string]interface{}{
-			"work_orders":         finishedWOs,
-			"maintenance_history": maintenanceHistory,
-			"mutations":           mutations,
+			"work_orders":              finishedWOs,
+			"timelines":                timelines,
+			"asset_mutation_timelines": assetMutationTimelines,
+			"maintenance_history":      maintenanceHistory,
+			"mutations":                mutations,
 		}
 		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", result)
 	}
@@ -668,19 +799,51 @@ func handleGetWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController) ht
 func handleCreatePMSchedule(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "hod" {
-			utils.SendError(w, http.StatusForbidden, "Access denied", "Only HOD can create PM schedules")
-			return
+		role := "admin"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
 
-		var payload models.PreventiveMaintenance
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		var input struct {
+			AssetID       interface{} `json:"asset_id"`
+			ScheduleType  string      `json:"schedule_type"`
+			NextRun       string      `json:"next_run"`
+			ChecklistData string      `json:"checklist_data"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
 
-		if err := maintenanceCtrl.CreatePMSchedule(payload, claims.Role); err != nil {
-			utils.SendError(w, http.StatusForbidden, "Failed to create PM schedule", err.Error())
+		assetID := 0
+		switch v := input.AssetID.(type) {
+		case float64:
+			assetID = int(v)
+		case int:
+			assetID = v
+		case string:
+			assetID, _ = strconv.Atoi(v)
+		}
+
+		nextRunTime := time.Now()
+		if input.NextRun != "" {
+			if t, err := time.Parse("2006-01-02", input.NextRun); err == nil {
+				nextRunTime = t
+			} else if t, err := time.Parse(time.RFC3339, input.NextRun); err == nil {
+				nextRunTime = t
+			}
+		}
+
+		payload := models.PreventiveMaintenance{
+			AssetID:       assetID,
+			ScheduleType:  input.ScheduleType,
+			NextRun:       nextRunTime,
+			ChecklistData: input.ChecklistData,
+			Status:        "Active",
+		}
+
+		if err := maintenanceCtrl.CreatePMSchedule(payload, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to create PM schedule", err.Error())
 			return
 		}
 

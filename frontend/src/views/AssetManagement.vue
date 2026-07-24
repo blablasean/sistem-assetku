@@ -43,7 +43,9 @@
               <th>Kode Aset</th>
               <th>Nama Aset</th>
               <th>Kategori</th>
-              <th>Lokasi / Kamar</th>
+              <th>Lokasi Registrasi</th>
+              <th>Lokasi Mutasi Terbaru</th>
+              <th>Terakhir Dipindahkan</th>
               <th>PIC</th>
               <th>Status</th>
               <th>Dokumen</th>
@@ -58,7 +60,12 @@
                 <span v-if="asset.is_reserved" class="reserved-tag">Reserved</span>
               </td>
               <td>{{ asset.category || 'General' }}</td>
-              <td>📍 {{ asset.location || 'Main Store' }}</td>
+              <td>📍 {{ asset.registration_location || asset.location }}</td>
+              <td>📍 {{ asset.location }}</td>
+              <td>
+                <span v-if="asset.location === (asset.registration_location || asset.location)" class="dash-text">-</span>
+                <span v-else class="time-text">{{ formatDate(asset.last_moved_at) }}</span>
+              </td>
               <td>👤 {{ asset.pic || 'Engineering' }}</td>
               <td><StatusBadge :status="asset.status" /></td>
               <td>
@@ -66,10 +73,13 @@
                 <span v-else class="no-doc">-</span>
               </td>
               <td class="actions-cell">
+                <button class="icon-btn log-btn" @click.stop="openMutationTimelineModal(asset)" title="Lihat Timeline Mutasi Aset">
+                  📜 Timeline
+                </button>
                 <button class="icon-btn qr-btn" @click="openQrPrint(asset)" title="Generate & Cetak QR Code">
                   🖨️ QR
                 </button>
-                <button class="icon-btn mut-btn" @click="openMutationModal(asset)" title="Mutasi Lokasi Barang">
+                <button class="icon-btn mut-btn" v-if="canMutate" @click="openMutationModal(asset)" title="Mutasi Lokasi Barang">
                   🔄 Mutasi
                 </button>
                 <button class="icon-btn edit-btn" v-if="canCreateAsset" @click="openEditModal(asset)" title="Edit Aset">
@@ -81,7 +91,7 @@
               </td>
             </tr>
             <tr v-if="displayedAssets.length === 0">
-              <td colspan="8" class="empty-state">Tidak ada data aset yang ditemukan.</td>
+              <td colspan="10" class="empty-state">Tidak ada data aset yang ditemukan.</td>
             </tr>
           </tbody>
         </table>
@@ -207,13 +217,84 @@
             <h3>AsetKu Hotel</h3>
             <p class="q-code">{{ selectedAssetForQr.asset_code }}</p>
             <p class="q-name">{{ selectedAssetForQr.asset_name }}</p>
-            <p class="q-loc">📍 {{ selectedAssetForQr.location }}</p>
+            <p class="q-loc">📍 Lokasi Registrasi: {{ selectedAssetForQr.registration_location || selectedAssetForQr.location }}</p>
           </div>
         </div>
 
         <p class="qr-instruction">Tempelkan stiker QR Code ini pada unit fisik aset untuk akses cepat scan.</p>
         <div class="qr-btn-group">
           <button class="submit-modal-btn" @click="downloadQrStickerPng">📸 Unduh Stiker PNG</button>
+        </div>
+      </div>
+    </ModalDialog>
+
+    <!-- Modal Timeline Mutasi Aset -->
+    <ModalDialog :show="showMutationTimelineModal" title="📜 Timeline & Histori Mutasi Aset" @close="showMutationTimelineModal = false">
+      <div v-if="selectedAssetForTimeline" class="logs-modal-body">
+        <div class="wo-info-banner">
+          <div>
+            <span class="wo-badge">{{ selectedAssetForTimeline.asset_code }}</span>
+            <h3 class="wo-banner-title">📦 {{ selectedAssetForTimeline.asset_name }}</h3>
+            <p class="wo-banner-sub">Lokasi Registrasi Awal: <strong>📍 {{ selectedAssetForTimeline.registration_location || selectedAssetForTimeline.location }}</strong></p>
+          </div>
+          <StatusBadge :status="selectedAssetForTimeline.status" />
+        </div>
+
+        <div class="timeline-container">
+          <h4 class="timeline-title">⏱️ Histori Pemindahan Lokasi Aset</h4>
+          
+          <div v-if="isTimelineLoading" class="logs-loading">Memuat timeline mutasi...</div>
+          
+          <div v-else class="timeline-list">
+            <div v-for="(log, idx) in assetTimelineLogs" :key="log.id || idx" class="timeline-item">
+              <div class="timeline-node">
+                <span class="node-icon">🔄</span>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span class="location-flow">📍 {{ log.previous_location || '-' }} ➔ <strong>{{ log.new_location }}</strong></span>
+                  <span class="timeline-time">🕒 {{ formatDate(log.moved_at) }}</span>
+                </div>
+                <p class="timeline-actor">
+                  👤 PIC / Penanggung Jawab: <strong>{{ log.pic || 'Engineering' }}</strong>
+                </p>
+                <div class="timeline-notes" v-if="log.reason">
+                  <p><strong>📝 Alasan Mutasi:</strong> {{ log.reason }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="assetTimelineLogs.length === 0" class="empty-logs">
+              Belum ada riwayat mutasi tercatat untuk aset ini.
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Mutasi Langsung Dari Modal Timeline -->
+        <div v-if="canMutate" class="add-timeline-box">
+          <h4 class="add-tl-title">➕ Catat Mutasi Lokasi Baru</h4>
+          <form @submit.prevent="submitAddMutationNote" class="add-tl-form">
+            <div class="add-tl-row">
+              <label class="tl-field">
+                <span>Lokasi Baru:</span>
+                <input v-model="newMutLocation" type="text" placeholder="Contoh: Kamar 305 / Restoran" class="modal-input" required />
+              </label>
+
+              <label class="tl-field">
+                <span>PIC / Penanggung Jawab:</span>
+                <input v-model="newMutPic" type="text" placeholder="Contoh: Budi Santoso" class="modal-input" required />
+              </label>
+            </div>
+
+            <label class="tl-field">
+              <span>Alasan Mutasi / Catatan Pemindahan:</span>
+              <textarea v-model="newMutReason" rows="2" placeholder="Tuliskan alasan pemindahan aset..." class="modal-input modal-textarea" required></textarea>
+            </label>
+
+            <button type="submit" class="submit-modal-btn add-tl-btn" :disabled="isSubmittingMut">
+              {{ isSubmittingMut ? 'Menyimpan...' : '🔄 Simpan Mutasi Aset' }}
+            </button>
+          </form>
         </div>
       </div>
     </ModalDialog>
@@ -230,6 +311,7 @@ import api from '../api'
 const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
 const canCreateAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 const canDeleteAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
+const canMutate = computed(() => userRole.value === 'hod' || userRole.value === 'admin')
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -263,6 +345,101 @@ const mutReason = ref('')
 
 const showQrModal = ref(false)
 const selectedAssetForQr = ref(null)
+
+const showMutationTimelineModal = ref(false)
+const selectedAssetForTimeline = ref(null)
+const assetTimelineLogs = ref([])
+const isTimelineLoading = ref(false)
+const newMutLocation = ref('')
+const newMutPic = ref('')
+const newMutReason = ref('')
+const isSubmittingMut = ref(false)
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  try {
+    return new Date(dateStr).toLocaleString('id-ID', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+function openMutationTimelineModal(asset) {
+  if (!asset) return
+  selectedAssetForTimeline.value = asset
+  showMutationTimelineModal.value = true
+
+  newMutLocation.value = ''
+  newMutPic.value = asset.pic || 'Engineering'
+  newMutReason.value = ''
+
+  const initialLogs = [
+    {
+      id: 1,
+      asset_code: asset.asset_code,
+      previous_location: '-',
+      new_location: asset.registration_location || asset.location,
+      pic: asset.pic || 'Engineering',
+      reason: 'Registrasi awal aset terdaftar di sistem',
+      moved_at: asset.created_at || new Date().toISOString()
+    }
+  ]
+
+  if (asset.location !== (asset.registration_location || asset.location)) {
+    initialLogs.push({
+      id: 2,
+      asset_code: asset.asset_code,
+      previous_location: asset.registration_location || asset.location,
+      new_location: asset.location,
+      pic: asset.pic || 'Engineering',
+      reason: `Mutasi posisi aset ke ${asset.location}`,
+      moved_at: asset.last_moved_at || new Date().toISOString()
+    })
+  }
+
+  assetTimelineLogs.value = initialLogs
+  isTimelineLoading.value = false
+
+  api.get(`/assets/mutation-timeline?asset_code=${asset.asset_code}`).then(res => {
+    const logsData = res.data?.data || res.data
+    if (Array.isArray(logsData) && logsData.length > 0) {
+      assetTimelineLogs.value = logsData
+    }
+  }).catch(e => {
+    console.error('Background fetch asset mutation timeline error:', e)
+  })
+}
+
+async function submitAddMutationNote() {
+  if (!selectedAssetForTimeline.value || !newMutLocation.value) return
+  isSubmittingMut.value = true
+  try {
+    const payload = {
+      asset_code: selectedAssetForTimeline.value.asset_code,
+      new_location: newMutLocation.value,
+      pic: newMutPic.value || selectedAssetForTimeline.value.pic,
+      reason: newMutReason.value
+    }
+    await api.post('/assets/mutate', payload)
+    notify(`Mutasi lokasi aset ${selectedAssetForTimeline.value.asset_code} ke ${newMutLocation.value} berhasil dicatat!`, 'success')
+    newMutLocation.value = ''
+    newMutReason.value = ''
+
+    const res = await api.get(`/assets/mutation-timeline?asset_code=${selectedAssetForTimeline.value.asset_code}`)
+    const logsData = res.data?.data || res.data
+    if (Array.isArray(logsData) && logsData.length > 0) {
+      assetTimelineLogs.value = logsData
+    }
+    await fetchAssets()
+  } catch (e) {
+    console.error('Failed to record mutation:', e)
+    notify(e.response?.data?.error || 'Gagal mencatat mutasi aset.', 'error')
+  } finally {
+    isSubmittingMut.value = false
+  }
+}
 
 const displayedAssets = computed(() => {
   let list = [...assets.value]
