@@ -763,4 +763,12 @@ h1, .page-header h1 {
   object-fit: cover;
   border-radius: 8px !important;
 }
+
+/* === Mobile Responsive CSS (Android & iOS) === */
+@media (max-width: 640px) {
+  .page-container { padding: 16px 14px !important; }
+  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .page-header .primary-btn { width: 100%; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
+  .card-panel { padding: 16px !important; border-radius: 14px !important; }
+}
 </style>

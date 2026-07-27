@@ -1016,9 +1016,9 @@ td {
 }
 
 .primary-btn {
-  background: #007aff !important;
-  color: #ffffff !important;
-  border: 1px solid #007aff !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
   padding: 10px 18px !important;
   border-radius: 10px !important;
   font-size: 0.88rem !important;
@@ -1028,7 +1028,7 @@ td {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.15s ease;
   line-height: 1;
   white-space: nowrap;
@@ -1229,5 +1229,18 @@ td {
   background: #0062cc !important;
   border-color: #0062cc !important;
   transform: translateY(-1px);
+}
+
+/* === Mobile Responsive CSS (Android & iOS) === */
+@media (max-width: 640px) {
+  .page-container { padding: 16px 14px !important; }
+  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .page-header .primary-btn { width: 100%; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
+  .status-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .tab-btn { padding: 8px 12px; font-size: 0.8rem; flex-shrink: 0; white-space: nowrap; }
+  .card-panel { padding: 16px !important; border-radius: 14px !important; }
+  .report-summary-boxes { grid-template-columns: repeat(1, 1fr); gap: 8px; }
+  .report-actions { flex-direction: column; gap: 8px; }
+  .excel-btn, .print-btn { width: 100%; justify-content: center; }
 }
 </style>

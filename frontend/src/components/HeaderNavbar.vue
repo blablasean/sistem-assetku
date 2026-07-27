@@ -480,22 +480,24 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #0f172a;
+  background: #007aff;
   color: #ffffff;
-  border: 1px solid #0f172a;
+  border: 1px solid #007aff;
   padding: 0 16px;
-  border-radius: 4px !important;
+  border-radius: 10px !important;
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
-  height: 44px;
+  height: 42px;
   line-height: 1;
   transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
 }
 
 .qr-quick-btn:hover {
-  background: #1e293b;
-  border-color: #1e293b;
+  background: #0062cc;
+  border-color: #0062cc;
+  transform: translateY(-1px);
 }
 
 .qr-quick-btn .btn-svg {

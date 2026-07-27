@@ -413,33 +413,24 @@ function countAssetStatus(status) {
   return assets.value.filter(a => a.status === status).length
 }
 
+import { exportToExcel, triggerPrint } from '../utils/exportUtils'
+
 function exportAssetToExcel() {
   const fileName = `Laporan_Inventaris_Aset_Hotel_${reportDate.value.replace(/\s+/g, '_')}.xls`
-  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-  <head><meta charset="utf-8"><style>
-    th { background-color: #2563eb; color: #fff; font-weight: bold; border: 1px solid #000; text-align: center; }
-    td { border: 1px solid #ccc; vertical-align: middle; }
-  </style></head><body>
-  <h2>LAPORAN INVENTARIS ASET HOTEL</h2>
-  <p>Sistem AsetKu Hotel — Dicetak: ${reportDate.value}</p><br/>
-  <table border="1" cellspacing="0" cellpadding="6">
-    <thead><tr>
-      <th>Kode Aset</th><th>Nama Aset</th><th>Kategori</th><th>Lokasi Registrasi</th><th>PIC</th><th>Status</th>
-    </tr></thead><tbody>`
-  assets.value.forEach(a => {
-    html += `<tr>
-      <td>${a.asset_code || ''}</td><td>${a.asset_name || ''}</td><td>${a.category || ''}</td>
-      <td>${a.registration_location || a.location || ''}</td><td>${a.pic || ''}</td><td>${a.status || ''}</td>
-    </tr>`
-  })
-  html += `</tbody></table></body></html>`
-  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  const headers = ['Kode Aset', 'Nama Aset', 'Kategori', 'Lokasi Registrasi', 'PIC', 'Status']
+  const rows = assets.value.map(a => [
+    a.asset_code || '',
+    a.asset_name || '',
+    a.category || '',
+    a.registration_location || a.location || '',
+    a.pic || '',
+    a.status || ''
+  ])
+  exportToExcel(fileName, headers, rows)
+}
+
+function printAssetReport() {
+  triggerPrint()
 }
 
 const searchQuery = ref('')
@@ -1190,4 +1181,17 @@ td {
   .no-print { display: none !important; }
 }
 
+/* === Mobile Responsive CSS (Android & iOS) === */
+@media (max-width: 640px) {
+  .page-container { padding: 16px 14px !important; }
+  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+  .header-actions .primary-btn { flex: 1; min-width: 130px; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
+  .toolbar-grid { flex-direction: column; gap: 10px; }
+  .search-input, .select-input { width: 100%; }
+  .card-panel { padding: 16px !important; border-radius: 14px !important; }
+  .report-summary-boxes { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .report-actions { flex-direction: column; gap: 8px; }
+  .excel-btn, .print-btn { width: 100%; justify-content: center; }
+}
 </style>

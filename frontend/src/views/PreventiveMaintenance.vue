@@ -509,37 +509,20 @@ function countPMType(type) {
   return pmList.value.filter(p => p.schedule_type === type).length
 }
 
+import { exportToExcel, triggerPrint } from '../utils/exportUtils'
+
 function exportPMToExcel() {
   const fileName = `Laporan_PM_Hotel_${reportMonthYear.value.replace(/\s+/g, '_')}.xls`
-  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-  <head><meta charset="utf-8"><style>
-    th { background-color: #2563eb; color: #fff; font-weight: bold; border: 1px solid #000; text-align: center; }
-    td { border: 1px solid #ccc; vertical-align: top; }
-  </style></head><body>
-  <h2>LAPORAN PREVENTIVE MAINTENANCE HOTEL</h2>
-  <p>Sistem AsetKu Hotel — Periode: ${reportMonthYear.value}</p><br/>
-  <table border="1" cellspacing="0" cellpadding="6">
-    <thead><tr>
-      <th>ID</th><th>Aset</th><th>Frekuensi</th><th>Jatuh Tempo</th><th>Checklist</th><th>Status</th>
-    </tr></thead><tbody>`
-  pmList.value.forEach(item => {
-    html += `<tr>
-      <td>#PM-${item.id}</td>
-      <td>${getAssetName(item.asset_id)} (Aset #${item.asset_id})</td>
-      <td>${item.schedule_type || ''}</td>
-      <td>${formatDate(item.next_run)}</td>
-      <td>${(item.checklist_data || '').replace(/\n/g, '; ')}</td>
-      <td>${item.status || 'Active'}</td>
-    </tr>`
-  })
-  html += `</tbody></table></body></html>`
-  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  const headers = ['ID', 'Aset', 'Frekuensi', 'Jatuh Tempo', 'Checklist', 'Status']
+  const rows = pmList.value.map(item => [
+    `#PM-${item.id}`,
+    `${getAssetName(item.asset_id)} (Aset #${item.asset_id})`,
+    item.schedule_type || '',
+    formatDate(item.next_run),
+    (item.checklist_data || '').replace(/\n/g, '; '),
+    item.status || 'Active'
+  ])
+  exportToExcel(fileName, headers, rows)
 }
 
 async function fetchRegisteredAssets() {

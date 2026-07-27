@@ -35,18 +35,14 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor - handle 401 unauthorized status cleanly
+import { clearSessionAndForceLogin } from './utils/auth'
+
+// Response interceptor - handle 401/403 unauthorized status cleanly
 api.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      sessionStorage.clear()
-      localStorage.clear()
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      clearSessionAndForceLogin()
     }
     return Promise.reject(error)
   }

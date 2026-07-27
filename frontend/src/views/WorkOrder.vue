@@ -10,7 +10,7 @@
       <div class="header-action-group">
         <button class="primary-btn btn-secondary-ios" @click="showReportModal = true" title="Prinjau & Export Laporan Bulanan">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          <span>Laporan & Export WO</span>
+          <span>Laporan & Export</span>
         </button>
         <button class="primary-btn" @click="showCreateModal = true">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -717,87 +717,25 @@ async function deleteOrder(wo) {
   }
 }
 
+import { exportToExcel as exportToExcelHelper, triggerPrint } from '../utils/exportUtils'
+
 function printMonthlyReport() {
-  window.print()
+  triggerPrint()
 }
 
 function exportToExcel() {
   const monthName = reportMonthYear.value.replace(/\s+/g, '_')
   const fileName = `Laporan_WorkOrder_Hotel_${monthName}.xls`
-
-  let htmlTable = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-      <meta charset="utf-8">
-      <!--[if gte mso 9]>
-      <xml>
-        <x:ExcelWorkbook>
-          <x:ExcelWorksheets>
-            <x:ExcelWorksheet>
-              <x:Name>Laporan Work Order</x:Name>
-              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-            </x:ExcelWorksheet>
-          </x:ExcelWorksheets>
-        </x:ExcelWorkbook>
-      </xml>
-      <![endif]-->
-      <style>
-        th { background-color: #2563eb; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; }
-        td { border: 1px solid #cccccc; vertical-align: middle; }
-        .summary-header { font-size: 14pt; font-weight: bold; color: #0f172a; }
-        .total-row { font-weight: bold; background-color: #f1f5f9; }
-      </style>
-    </head>
-    <body>
-      <h2 class="summary-header">LAPORAN BULANAN MANAJEMEN ASET & WORK ORDER HOTEL</h2>
-      <p><b>Sistem AsetKu Hotel</b> — Periode: ${reportMonthYear.value}</p>
-      <br/>
-      <table border="1" cellspacing="0" cellpadding="6">
-        <thead>
-          <tr>
-            <th>ID Work Order</th>
-            <th>Lokasi / Kamar</th>
-            <th>Prioritas</th>
-            <th>Deskripsi Kerusakan</th>
-            <th>Status Tiket</th>
-            <th>Biaya Perbaikan (Rp)</th>
-          </tr>
-        </thead>
-        <tbody>
-  `
-
-  workOrders.value.forEach(wo => {
-    htmlTable += `
-      <tr>
-        <td>#WO-${wo.id}</td>
-        <td>${wo.location || ''}</td>
-        <td>${wo.priority || ''}</td>
-        <td>${wo.description || ''}</td>
-        <td>${wo.status || ''}</td>
-        <td align="right">${wo.cost || 0}</td>
-      </tr>
-    `
-  })
-
-  htmlTable += `
-        <tr class="total-row">
-          <td colspan="5" align="right"><b>TOTAL BIAYA PERBAIKAN:</b></td>
-          <td align="right"><b>${totalReportCost.value}</b></td>
-        </tr>
-      </tbody>
-      </table>
-    </body>
-    </html>
-  `
-
-  const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', fileName)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  const headers = ['Kode WO', 'Lokasi / Kamar', 'Prioritas', 'Deskripsi Kerusakan', 'Status Tiket', 'Biaya Perbaikan (Rp)']
+  const rows = workOrders.value.map(wo => [
+    wo.wo_code || `#WO-${wo.id}`,
+    wo.location || '-',
+    wo.priority || '-',
+    wo.description || '-',
+    wo.status || '-',
+    wo.cost || 0
+  ])
+  exportToExcelHelper(fileName, headers, rows)
 }
 
 const registeredAssets = ref([])
@@ -1590,5 +1528,19 @@ td {
   align-self: flex-end;
   padding: 8px 16px;
   font-weight: 700;
+}
+
+/* === Mobile Responsive CSS (Android & iOS) === */
+@media (max-width: 640px) {
+  .page-container { padding: 16px 14px !important; }
+  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .header-action-group { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+  .header-action-group .primary-btn { flex: 1; min-width: 130px; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
+  .status-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .tab-btn { padding: 8px 12px; font-size: 0.8rem; flex-shrink: 0; white-space: nowrap; }
+  .card-panel { padding: 16px !important; border-radius: 14px !important; }
+  .report-summary-boxes { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .report-actions { flex-direction: column; gap: 8px; }
+  .excel-btn, .print-btn { width: 100%; justify-content: center; }
 }
 </style>
