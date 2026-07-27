@@ -196,9 +196,9 @@ const dropdownOpen = ref(false)
 const mobileMenuOpen = ref(false)
 const showProfileModal = ref(false)
 
-const userName = ref(sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'User Hotel')
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
-const userAvatar = ref(sessionStorage.getItem('user_avatar') || localStorage.getItem('user_avatar') || '')
+const userName = ref(sessionStorage.getItem('user_name') || 'User Hotel')
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
+const userAvatar = ref(sessionStorage.getItem('user_avatar') || '')
 
 const editProfileName = ref(userName.value)
 const editProfilePassword = ref('')
@@ -213,7 +213,7 @@ function onAvatarImgError() {
   avatarFailed.value = true
 }
 
-const isLoggedIn = computed(() => !!(sessionStorage.getItem('token') || localStorage.getItem('token')))
+const isLoggedIn = computed(() => !!sessionStorage.getItem('token'))
 
 // Staff-only roles: dept_* dan external — hanya bisa akses Dashboard & Work Order
 const STAFF_ROLES = ['external', 'dept_akunting', 'dept_spa', 'dept_sales', 'dept_hr', 'dept_fb_kitchen', 'dept_fb_service', 'dept_housekeeping', 'dept_frontoffice']
@@ -255,9 +255,9 @@ const roleLabel = computed(() => {
 })
 
 function syncUserFromStorage() {
-  userName.value = sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'User Hotel'
-  userRole.value = sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external'
-  userAvatar.value = sessionStorage.getItem('user_avatar') || localStorage.getItem('user_avatar') || ''
+  userName.value = sessionStorage.getItem('user_name') || 'User Hotel'
+  userRole.value = sessionStorage.getItem('user_role') || 'external'
+  userAvatar.value = sessionStorage.getItem('user_avatar') || ''
 }
 
 function toggleDropdown() {
@@ -304,9 +304,7 @@ async function updateUserProfile() {
     userName.value = editProfileName.value
     userAvatar.value = editProfileAvatar.value
     sessionStorage.setItem('user_name', editProfileName.value)
-    localStorage.setItem('user_name', editProfileName.value)
     sessionStorage.setItem('user_avatar', editProfileAvatar.value)
-    localStorage.setItem('user_avatar', editProfileAvatar.value)
 
     profileMsg.value = 'Profil & Foto Anda berhasil diperbarui!'
     profileMsgType.value = 'success'
@@ -321,10 +319,14 @@ async function updateUserProfile() {
   }
 }
 
-function handleLogout() {
-  sessionStorage.clear()
-  localStorage.clear()
-  router.push('/login')
+async function handleLogout() {
+  try {
+    await api.post('/auth/logout').catch(() => null)
+  } finally {
+    sessionStorage.clear()
+    localStorage.clear()
+    router.push('/login')
+  }
 }
 
 function handleClickOutside(e) {

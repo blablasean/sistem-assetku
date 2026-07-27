@@ -25,14 +25,18 @@ func RegisterRoutes(
 	maintenanceCtrl *controllers.MaintenanceController,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
+	authMW := middlewares.AuthMiddlewareWithDB(db)
+
 	// Public endpoints
 	mux.HandleFunc("/", handleHome)
 	mux.HandleFunc("/auth/login", handleLogin(authCtrl))
 	mux.HandleFunc("/auth/register", handleRegister(db))
-	mux.Handle("/auth/profile", middlewares.AuthMiddleware(handleUpdateProfile(db)))
+	mux.Handle("/auth/me", authMW(handleGetMe(db)))
+	mux.Handle("/auth/profile", authMW(handleUpdateProfile(db)))
+	mux.Handle("/auth/logout", authMW(handleLogout(authCtrl)))
 
 	// Protected endpoints (single handler per path; switch by method)
-	mux.Handle("/assets", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/assets", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handleGetAssets(assetCtrl)(w, r)
@@ -45,12 +49,12 @@ func RegisterRoutes(
 		}
 	})))
 
-	mux.Handle("/assets/code", middlewares.AuthMiddleware(handleGetAssetByCode(assetCtrl)))
-	mux.Handle("/assets/reserve", middlewares.AuthMiddleware(handleReserveAsset(assetCtrl)))
-	mux.Handle("/assets/delete", middlewares.AuthMiddleware(handleDeleteAsset(assetCtrl)))
+	mux.Handle("/assets/code", authMW(handleGetAssetByCode(assetCtrl)))
+	mux.Handle("/assets/reserve", authMW(handleReserveAsset(assetCtrl)))
+	mux.Handle("/assets/delete", authMW(handleDeleteAsset(assetCtrl)))
 
 	// asset detail and history - use prefix "/assets/"
-	mux.Handle("/assets/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/assets/", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tail := strings.TrimPrefix(r.URL.Path, "/assets/")
 		if tail == "" {
 			http.NotFound(w, r)
@@ -74,11 +78,11 @@ func RegisterRoutes(
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})))
 
-	mux.Handle("/assets/mutation-timeline", middlewares.AuthMiddleware(handleGetAssetMutationTimeline(mutationCtrl)))
-	mux.Handle("/assets/mutate", middlewares.AuthMiddleware(handleMutateAssetByCode(mutationCtrl)))
+	mux.Handle("/assets/mutation-timeline", authMW(handleGetAssetMutationTimeline(mutationCtrl)))
+	mux.Handle("/assets/mutate", authMW(handleMutateAssetByCode(mutationCtrl)))
 
 	// Mutations
-	mux.Handle("/mutations", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/mutations", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			handleCreateMutation(mutationCtrl)(w, r)
@@ -90,16 +94,16 @@ func RegisterRoutes(
 	})))
 
 	// Workorders
-	mux.Handle("/workorders/assign", middlewares.AuthMiddleware(handleAssignWorker(workOrderCtrl)))
-	mux.Handle("/workorders/status", middlewares.AuthMiddleware(handleUpdateWorkOrderStatus(workOrderCtrl)))
-	mux.Handle("/workorders/edit", middlewares.AuthMiddleware(handleEditWorkOrderDetail(workOrderCtrl)))
-	mux.Handle("/workorders/close", middlewares.AuthMiddleware(handleCloseWorkOrder(workOrderCtrl)))
-	mux.Handle("/workorders/cancel", middlewares.AuthMiddleware(handleCancelWorkOrder(workOrderCtrl)))
-	mux.Handle("/workorders/delete", middlewares.AuthMiddleware(handleDeleteWorkOrder(workOrderCtrl)))
-	mux.Handle("/workorders/logs", middlewares.AuthMiddleware(handleGetWorkOrderTimeline(workOrderCtrl)))
-	mux.Handle("/workorders/timeline/add", middlewares.AuthMiddleware(handleAddTimelineEntry(workOrderCtrl)))
-	mux.Handle("/workorders/timeline", middlewares.AuthMiddleware(handleGetWorkOrderTimeline(workOrderCtrl)))
-	mux.Handle("/workorders", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/workorders/assign", authMW(handleAssignWorker(workOrderCtrl)))
+	mux.Handle("/workorders/status", authMW(handleUpdateWorkOrderStatus(workOrderCtrl)))
+	mux.Handle("/workorders/edit", authMW(handleEditWorkOrderDetail(workOrderCtrl)))
+	mux.Handle("/workorders/close", authMW(handleCloseWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/cancel", authMW(handleCancelWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/delete", authMW(handleDeleteWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/logs", authMW(handleGetWorkOrderTimeline(workOrderCtrl)))
+	mux.Handle("/workorders/timeline/add", authMW(handleAddTimelineEntry(workOrderCtrl)))
+	mux.Handle("/workorders/timeline", authMW(handleGetWorkOrderTimeline(workOrderCtrl)))
+	mux.Handle("/workorders", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			handleCreateWorkOrder(db, workOrderCtrl)(w, r)
@@ -111,13 +115,13 @@ func RegisterRoutes(
 	})))
 
 	// Maintenance
-	mux.Handle("/maintenance/schedules", middlewares.AuthMiddleware(handleGetAllPMSchedules(maintenanceCtrl)))
-	mux.Handle("/maintenance/schedule", middlewares.AuthMiddleware(handleCreatePMSchedule(maintenanceCtrl)))
-	mux.Handle("/maintenance/edit", middlewares.AuthMiddleware(handleEditPMSchedule(maintenanceCtrl)))
-	mux.Handle("/maintenance/delete", middlewares.AuthMiddleware(handleDeletePMSchedule(maintenanceCtrl)))
-	mux.Handle("/maintenance/history/edit", middlewares.AuthMiddleware(handleEditMaintenanceHistory(maintenanceCtrl)))
-	mux.Handle("/maintenance/history/delete", middlewares.AuthMiddleware(handleDeleteMaintenanceHistory(maintenanceCtrl)))
-	mux.Handle("/maintenance/", middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/maintenance/schedules", authMW(handleGetAllPMSchedules(maintenanceCtrl)))
+	mux.Handle("/maintenance/schedule", authMW(handleCreatePMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/edit", authMW(handleEditPMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/delete", authMW(handleDeletePMSchedule(maintenanceCtrl)))
+	mux.Handle("/maintenance/history/edit", authMW(handleEditMaintenanceHistory(maintenanceCtrl)))
+	mux.Handle("/maintenance/history/delete", authMW(handleDeleteMaintenanceHistory(maintenanceCtrl)))
+	mux.Handle("/maintenance/", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tail := strings.TrimPrefix(r.URL.Path, "/maintenance/")
 		if strings.HasSuffix(tail, "/checklist") && r.Method == http.MethodPost {
 			idStr := strings.TrimSuffix(tail, "/checklist")
@@ -139,13 +143,13 @@ func RegisterRoutes(
 	})))
 
 	// Activity logs
-	mux.Handle("/activitylogs", middlewares.AuthMiddleware(handleGetActivityLogs(db, workOrderCtrl, mutationCtrl)))
+	mux.Handle("/activitylogs", authMW(handleGetActivityLogs(db, workOrderCtrl, mutationCtrl)))
 
 	// User Management endpoints (Admin)
-	mux.Handle("/users/create", middlewares.AuthMiddleware(handleCreateUser(db)))
-	mux.Handle("/users/edit", middlewares.AuthMiddleware(handleEditUser(db)))
-	mux.Handle("/users/delete", middlewares.AuthMiddleware(handleDeleteUser(db)))
-	mux.Handle("/users", middlewares.AuthMiddleware(handleGetAllUsers(db)))
+	mux.Handle("/users/create", authMW(handleCreateUser(db)))
+	mux.Handle("/users/edit", authMW(handleEditUser(db)))
+	mux.Handle("/users/delete", authMW(handleDeleteUser(db)))
+	mux.Handle("/users", authMW(handleGetAllUsers(db)))
 
 	return mux
 }
@@ -172,7 +176,7 @@ func handleLogin(authCtrl *controllers.AuthController) http.HandlerFunc {
 
 		token, user, err := authCtrl.Login(payload.Username, payload.Password)
 		if err != nil {
-			utils.SendError(w, http.StatusUnauthorized, "Login gagal: Username atau password salah", err.Error())
+			utils.SendError(w, http.StatusUnauthorized, err.Error(), err.Error())
 			return
 		}
 
@@ -1234,5 +1238,32 @@ func handleUpdateProfile(db *gorm.DB) http.HandlerFunc {
 
 		user.Password = ""
 		utils.SendSuccess(w, http.StatusOK, "Foto profil Anda berhasil diperbarui!", user)
+	}
+}
+
+func handleLogout(authCtrl *controllers.AuthController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims != nil && claims.UserID > 0 {
+			_ = authCtrl.Logout(claims.UserID)
+		}
+		utils.SendSuccess(w, http.StatusOK, "Logout successful", nil)
+	}
+}
+
+func handleGetMe(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims == nil || claims.UserID == 0 {
+			utils.SendError(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
+			return
+		}
+		var user models.User
+		if err := db.First(&user, claims.UserID).Error; err != nil {
+			utils.SendError(w, http.StatusNotFound, "User not found", err.Error())
+			return
+		}
+		user.Password = ""
+		utils.SendSuccess(w, http.StatusOK, "User active profile", user)
 	}
 }

@@ -6,6 +6,10 @@
       <router-view @open-qr-scanner="showQrScanner = true" />
     </main>
 
+    <footer class="global-footer" v-if="showNavbar">
+      <p>© 2026 <strong>Sistem AsetKu Hotel</strong>. Hak Cipta Dilindungi Undang-Undang.</p>
+    </footer>
+
     <QrScannerModal :show="showQrScanner" @close="showQrScanner = false" />
   </div>
 </template>
@@ -83,6 +87,20 @@ textarea,
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
+}
+
+.global-footer {
+  text-align: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  margin-top: auto;
+}
+
+.global-footer p {
+  margin: 0;
 }
 
 /* Crisp Clean Buttons */

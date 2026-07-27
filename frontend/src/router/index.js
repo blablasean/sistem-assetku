@@ -23,15 +23,16 @@ const router = createRouter({
   routes,
 })
 
-// Navigation Guard checking sessionStorage for session re-login requirement
-router.beforeEach((to, from, next) => {
-  const token = sessionStorage.getItem('token') || localStorage.getItem('token')
-  const userRole = sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external'
+import { isTokenValid, clearSessionAndForceLogin } from '../utils/auth'
 
-  if (!to.meta.public && !token) {
+// Navigation Guard checking token validity and session state
+router.beforeEach((to, from, next) => {
+  const hasValidToken = isTokenValid()
+  const userRole = sessionStorage.getItem('user_role') || 'external'
+
+  if (!to.meta.public && !hasValidToken) {
+    clearSessionAndForceLogin()
     next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/dashboard')
   } else if (to.meta.roles && !to.meta.roles.includes(userRole)) {
     alert(`⛔ Akses Ditolak!\nRole "${userRole.toUpperCase()}" tidak memiliki wewenang untuk mengakses halaman ini. Anda dialihkan ke Work Order.`)
     next('/workorders')

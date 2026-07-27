@@ -7,7 +7,8 @@ type User struct {
 	Username  string    `gorm:"unique;not null" json:"username"`
 	Password  string    `gorm:"not null" json:"password,omitempty"`
 	Name      string    `gorm:"not null" json:"name"`
-	Role      string    `gorm:"not null" json:"role"`
-	Avatar    string    `gorm:"type:longtext" json:"avatar"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	Role        string    `gorm:"not null" json:"role"`
+	Avatar      string    `gorm:"type:longtext" json:"avatar"`
+	ActiveToken string    `gorm:"type:text" json:"-"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
 }

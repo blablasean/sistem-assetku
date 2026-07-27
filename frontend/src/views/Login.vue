@@ -56,6 +56,7 @@
 
         <p v-if="error" class="error-message">{{ error }}</p>
       </form>
+      <p class="login-footer-copy">© 2026 <strong>Sistem AsetKu Hotel</strong>. Hak Cipta Dilindungi Undang-Undang.</p>
     </div>
   </div>
 </template>
@@ -98,7 +99,7 @@ async function login() {
       throw new Error('Token tidak ditemukan dari server.')
     }
 
-    // Save token and user details in sessionStorage (forces re-login on new sessions)
+    // Store session exclusively in tab-isolated sessionStorage (isolates session per tab)
     sessionStorage.setItem('token', token)
     sessionStorage.setItem('user_role', role)
     sessionStorage.setItem('user_name', name)
@@ -109,21 +110,14 @@ async function login() {
       sessionStorage.removeItem('user_avatar')
     }
 
-    // Sync to localStorage for current active session
-    localStorage.setItem('token', token)
-    localStorage.setItem('user_role', role)
-    localStorage.setItem('user_name', name)
-    localStorage.setItem('username', data.username || username.value)
-    if (data.avatar) {
-      localStorage.setItem('user_avatar', data.avatar)
-    } else {
-      localStorage.removeItem('user_avatar')
-    }
+    // Clear legacy localStorage to prevent cross-tab session leakage
+    localStorage.clear()
 
     router.push('/dashboard')
   } catch (err) {
     console.error('Login error:', err)
-    error.value = err.response?.data?.message || err.message || 'Username atau password salah. Silakan periksa kembali kredensial database Anda.'
+    const apiErrorMsg = err.response?.data?.message || err.response?.data?.details || err.message
+    error.value = apiErrorMsg || 'Username atau password salah. Silakan periksa kembali kredensial database Anda.'
   } finally {
     isLoading.value = false
   }
@@ -308,5 +302,12 @@ p {
   font-size: 0.85rem;
   line-height: 1.4;
   font-weight: 600;
+}
+
+.login-footer-copy {
+  margin-top: 24px;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  text-align: center;
 }
 </style>

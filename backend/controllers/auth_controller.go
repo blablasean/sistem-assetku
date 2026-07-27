@@ -30,11 +30,26 @@ func (c *AuthController) Login(username string, password string) (string, *model
 		return "", nil, errors.New("username atau password salah")
 	}
 
+	// Single Active Session Check: Reject login if account currently has an active, unexpired token
+	if user.ActiveToken != "" {
+		if _, err := utils.ValidateToken(user.ActiveToken); err == nil {
+			return "", nil, errors.New("Akun ini sedang aktif di perangkat lain. Silakan lakukan logout terlebih dahulu.")
+		}
+	}
+
 	// Generate JWT token
 	token, err := utils.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return "", nil, err
 	}
 
+	// Save new active session token
+	user.ActiveToken = token
+	_ = c.db.Model(&user).Update("active_token", token)
+
 	return token, &user, nil
+}
+
+func (c *AuthController) Logout(userID int) error {
+	return c.db.Model(&models.User{}).Where("id = ?", userID).Update("active_token", "").Error
 }

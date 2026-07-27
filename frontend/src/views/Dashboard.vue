@@ -130,11 +130,18 @@ const quickStats = ref([
   { label: 'Aset Rusak', value: '0 Unit', note: 'Aset berstatus Damaged' }
 ])
 
+import { isTokenValid, clearSessionAndForceLogin } from '../utils/auth'
+
 async function fetchDashboardData() {
+  if (!isTokenValid()) {
+    clearSessionAndForceLogin()
+    return
+  }
+
   try {
     const [woRes, assetRes] = await Promise.all([
-      api.get('/workorders').catch(() => null),
-      api.get('/assets').catch(() => null)
+      api.get('/workorders'),
+      api.get('/assets')
     ])
 
     if (woRes?.data?.data && Array.isArray(woRes.data.data)) {
@@ -158,6 +165,9 @@ async function fetchDashboardData() {
     }
   } catch (e) {
     console.error('Error fetching dashboard data:', e)
+    if (e.response?.status === 401 || e.response?.status === 403) {
+      clearSessionAndForceLogin()
+    }
   }
 }
 
