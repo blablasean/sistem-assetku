@@ -865,13 +865,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  height: 37.6px;
 }
 
 .primary-btn {
   background: #007aff !important;
   color: #ffffff !important;
   border: 1px solid #007aff !important;
-  height: 42px !important;
+  height: 37.6px !important;
   padding: 0 18px !important;
   border-radius: 10px !important;
   font-size: 0.88rem !important;

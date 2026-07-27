@@ -1,8 +1,24 @@
 import axios from 'axios'
 
+function getBaseURL() {
+  const envBase = import.meta.env.VITE_API_BASE
+  if (!envBase || envBase === '' || envBase === '/') {
+    return ''
+  }
+  
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const currentHost = window.location.hostname
+    if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
+      return envBase.replace('localhost', currentHost).replace('127.0.0.1', currentHost)
+    }
+  }
+  
+  return envBase
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8080',
-  timeout: 5000,
+  baseURL: getBaseURL(),
+  timeout: 10000,
 })
 
 // Request interceptor - add token from sessionStorage or localStorage

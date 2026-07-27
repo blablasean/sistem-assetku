@@ -43,36 +43,45 @@
       <!-- Mobile Drawer Overlay -->
       <div class="mobile-drawer-overlay" v-if="mobileMenuOpen && isLoggedIn" @click="mobileMenuOpen = false">
         <div class="mobile-drawer" @click.stop>
-          <div class="drawer-header">
-            <div class="user-avatar">{{ userInitial }}</div>
-            <div>
-              <p class="drawer-name">{{ userName }}</p>
+          <div class="drawer-header clickable" @click="showProfileFromMobile" title="Klik untuk edit profil & foto">
+            <div class="user-avatar">
+              <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
+              <span v-else>{{ userInitial }}</span>
+            </div>
+            <div class="drawer-user-info">
+              <p class="drawer-name">{{ shortUserName }}</p>
               <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
             </div>
-            <button class="close-drawer" @click="mobileMenuOpen = false">✕</button>
+            <button class="close-drawer" @click.stop="mobileMenuOpen = false">✕</button>
           </div>
 
-          <nav class="drawer-links" @click="mobileMenuOpen = false">
-            <router-link to="/dashboard" class="drawer-item">
+          <nav class="drawer-links">
+            <router-link to="/dashboard" class="drawer-item" @click="mobileMenuOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
             </router-link>
-            <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced">
+            <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Manajemen Aset
             </router-link>
-            <router-link to="/workorders" class="drawer-item">
+            <router-link to="/workorders" class="drawer-item" @click="mobileMenuOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Work Order
             </router-link>
-            <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced">
+            <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> Maintenance
             </router-link>
-            <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced">
+            <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Activity Log
             </router-link>
-            <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Management
+            <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'" @click="mobileMenuOpen = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 1 0 7.75"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Management
             </router-link>
 
             <div class="drawer-divider"></div>
+
+            <button class="drawer-item profile-drawer-btn" @click="showProfileFromMobile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>Profil Saya & Foto</span>
+            </button>
+
             <button class="drawer-item logout" @click="handleLogout">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Keluar (Logout)
             </button>
@@ -95,7 +104,7 @@
               <span v-else>{{ userInitial }}</span>
             </div>
             <div class="user-info">
-              <span class="user-name">{{ userName }}</span>
+              <span class="user-name" :title="userName">{{ shortUserName }}</span>
               <span class="user-role-sub">{{ roleLabel }}</span>
             </div>
             <span class="dropdown-arrow">▼</span>
@@ -103,22 +112,31 @@
 
           <div class="dropdown-menu" v-if="dropdownOpen" @click="dropdownOpen = false">
             <div class="dropdown-header">
-              <p class="dh-title">{{ userName }}</p>
-              <p class="dh-sub">Role: {{ roleLabel }}</p>
+              <div class="dh-avatar">
+                <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
+                <span v-else>{{ userInitial }}</span>
+              </div>
+              <div class="dh-info">
+                <p class="dh-title" :title="userName">{{ shortUserName }}</p>
+                <span class="dh-role-badge" :class="userRole">{{ roleLabel }}</span>
+              </div>
             </div>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item" @click="showProfile">
-              <span>👤</span> Profil Saya & Foto
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dd-icon"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>Profil Saya & Foto</span>
             </button>
             <button class="dropdown-item logout-item" @click="handleLogout">
-              <span>🚪</span> Keluar (Logout)
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dd-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+              <span>Keluar (Logout)</span>
             </button>
           </div>
         </div>
       </div>
     </div>
+
     <!-- Custom User Profile Modal UI -->
-    <ModalDialog :show="showProfileModal" title="👤 Foto & Profil Saya" maxWidth="450px" @close="showProfileModal = false">
+    <ModalDialog :show="showProfileModal" title="Profil Saya & Foto" maxWidth="440px" @close="showProfileModal = false">
       <form @submit.prevent="updateUserProfile" class="profile-card-content">
         <div class="avatar-edit-wrapper">
           <div class="profile-avatar-large">
@@ -126,7 +144,8 @@
             <span v-else>{{ userInitial }}</span>
           </div>
           <label class="upload-avatar-btn">
-            📷 Upload Foto Profil
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            <span>Upload Foto Profil</span>
             <input type="file" accept="image/*" @change="onAvatarFileSelected" style="display:none" />
           </label>
         </div>
@@ -134,15 +153,15 @@
         <!-- Read-only Info Display -->
         <div class="profile-read-only-box">
           <div class="pro-info-row">
-            <span>Nama Lengkap:</span>
+            <span>Nama Lengkap</span>
             <strong>{{ userName }}</strong>
           </div>
           <div class="pro-info-row">
-            <span>Role / Jabatan:</span>
+            <span>Role / Jabatan</span>
             <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
           </div>
           <div class="pro-info-row">
-            <span>Status Akun:</span>
+            <span>Status Akun</span>
             <strong class="status-active-badge">🟢 Aktif</strong>
           </div>
           <p class="admin-only-notice">
@@ -155,8 +174,8 @@
         </div>
 
         <div class="profile-actions-row">
-          <button type="button" class="action-btn-sharp cancel-btn" @click="showProfileModal = false">Batal</button>
-          <button type="submit" class="action-btn-sharp primary-btn" :disabled="isUpdatingProfile">
+          <button type="button" class="ios-btn ios-btn-cancel" @click="showProfileModal = false">Batal</button>
+          <button type="submit" class="ios-btn ios-btn-primary" :disabled="isUpdatingProfile">
             {{ isUpdatingProfile ? 'Menyimpan...' : 'Simpan Foto Profil' }}
           </button>
         </div>
@@ -188,6 +207,11 @@ const isUpdatingProfile = ref(false)
 const profileMsg = ref('')
 const profileMsgType = ref('success')
 const logoFailed = ref(false)
+const avatarFailed = ref(false)
+
+function onAvatarImgError() {
+  avatarFailed.value = true
+}
 
 const isLoggedIn = computed(() => !!(sessionStorage.getItem('token') || localStorage.getItem('token')))
 
@@ -199,6 +223,16 @@ const canAccessAdvanced = computed(() => !isStaffOnly.value)
 
 const userInitial = computed(() => {
   return userName.value ? userName.value.charAt(0).toUpperCase() : 'U'
+})
+
+const shortUserName = computed(() => {
+  if (!userName.value) return 'User'
+  const name = userName.value.trim()
+  const parts = name.split(/\s+/)
+  if (parts.length > 2) {
+    return `${parts[0]} ${parts[1]}`
+  }
+  return name
 })
 
 const roleLabel = computed(() => {
@@ -220,8 +254,20 @@ const roleLabel = computed(() => {
   return map[userRole.value] || 'User Hotel'
 })
 
+function syncUserFromStorage() {
+  userName.value = sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'User Hotel'
+  userRole.value = sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external'
+  userAvatar.value = sessionStorage.getItem('user_avatar') || localStorage.getItem('user_avatar') || ''
+}
+
 function toggleDropdown() {
+  syncUserFromStorage()
   dropdownOpen.value = !dropdownOpen.value
+}
+
+function showProfileFromMobile() {
+  mobileMenuOpen.value = false
+  showProfile()
 }
 
 function showProfile() {
@@ -288,6 +334,7 @@ function handleClickOutside(e) {
 }
 
 onMounted(() => {
+  syncUserFromStorage()
   document.addEventListener('click', handleClickOutside)
 })
 
@@ -467,24 +514,39 @@ onUnmounted(() => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #0f172a;
-  padding: 6px 12px;
-  border-radius: 4px !important;
+  padding: 5px 12px;
+  border-radius: 10px !important;
   cursor: pointer;
-  height: 44px;
+  height: 42px;
+  transition: all 0.15s ease;
+}
+
+.account-trigger:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .user-avatar {
   width: 32px;
   height: 32px;
-  background: #0f172a;
+  background: #007aff;
   color: #ffffff;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 0.9rem;
   flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar-img-nav {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .user-info {
@@ -504,6 +566,9 @@ onUnmounted(() => {
   padding: 0;
   text-align: left;
   white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-role-sub {
@@ -514,65 +579,129 @@ onUnmounted(() => {
   padding: 0;
   text-align: left;
   white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: block;
 }
 
 .dropdown-arrow {
   font-size: 0.6rem;
   color: #64748b;
+  margin-left: 2px;
 }
 
 .dropdown-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
-  width: 200px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 2px !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-  padding: 4px 0;
-  z-index: 200;
+  top: calc(100% + 8px);
+  width: 230px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  padding: 8px;
+  z-index: 300;
+  animation: dropdownFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFade {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .dropdown-header {
-  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+}
+
+.dh-avatar {
+  width: 36px;
+  height: 36px;
+  background: #007aff;
+  color: #ffffff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.dh-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  overflow: hidden;
 }
 
 .dh-title {
   margin: 0;
-  font-weight: 700;
-  color: white;
-  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 140px;
 }
 
-.dh-sub {
-  margin: 2px 0 0;
-  color: #94a3b8;
-  font-size: 0.7rem;
+.dh-role-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
 }
 
 .dropdown-divider {
   height: 1px;
-  background: #334155;
-  margin: 4px 0;
+  background: #f1f5f9;
+  margin: 4px 0 6px;
 }
 
 .dropdown-item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 10px;
+  padding: 10px 12px;
   background: transparent;
   border: none;
-  color: #cbd5e1;
-  font-size: 0.85rem;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
+  border-radius: 10px !important;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
-.logout-item { color: #f87171; }
+.dropdown-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.dropdown-item.logout-item {
+  color: #dc2626;
+}
+
+.dropdown-item.logout-item:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.dd-icon {
+  flex-shrink: 0;
+}
 
 /* Mobile Drawer Overlay */
 .mobile-drawer-overlay {
@@ -604,11 +733,35 @@ onUnmounted(() => {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.drawer-header.clickable {
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 8px;
+  margin: -8px -8px 16px;
+  transition: background 0.15s ease;
+}
+
+.drawer-header.clickable:hover {
+  background: #f8fafc;
+}
+
+.drawer-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  overflow: hidden;
+}
+
 .drawer-name {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-weight: 800;
   color: #0f172a;
   font-size: 0.95rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 170px;
 }
 
 .close-drawer {
@@ -633,16 +786,31 @@ onUnmounted(() => {
   color: #334155;
   text-decoration: none;
   padding: 10px 14px;
-  border-radius: 4px !important;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-radius: 10px !important;
   font-size: 0.9rem;
   font-weight: 600;
   border: 1px solid transparent;
+  width: 100%;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
 }
 
 .drawer-item:hover, .drawer-item.router-link-active {
   background: #f1f5f9;
   color: #0f172a;
   border-color: #e2e8f0;
+}
+
+.profile-drawer-btn {
+  color: #007aff !important;
+  font-weight: 700 !important;
+}
+
+.profile-drawer-btn:hover {
+  background: #eff6ff !important;
 }
 
 .drawer-divider {
@@ -652,7 +820,7 @@ onUnmounted(() => {
 }
 
 .drawer-item.logout {
-  color: #f87171;
+  color: #dc2626;
 }
 
 /* Responsive Queries for Mobile (Android & iOS) */
@@ -674,167 +842,143 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 10px 0;
-}
-
-.profile-avatar-large {
-  width: 64px;
-  height: 64px;
-  border-radius: 2px !important;
-  background: #0f172a;
-  border: 2px solid #d97706;
-  color: #f59e0b;
-  font-size: 1.8rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.profile-card-content h3 {
-  margin: 0 0 4px;
-  font-size: 1.2rem;
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.profile-role-badge {
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 2px !important;
-  margin-bottom: 18px;
-}
-
-.profile-role-badge.admin, .profile-role-badge.hod {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-
-.profile-role-badge.management {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-}
-
-.profile-role-badge.engineer {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
-}
-
-.profile-role-badge.external {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-}
-
-.profile-details-grid {
-  width: 100%;
-  display: grid;
-  gap: 8px;
-  margin-bottom: 18px;
-  text-align: left;
-}
-
-.pdetail-item {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  padding: 10px 14px;
-  border-radius: 2px !important;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.pdetail-item span {
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.pdetail-item strong {
-  font-size: 0.85rem;
-  color: #0f172a;
-}
-
-.status-active-badge {
-  color: #16a34a !important;
-}
-
-.submit-modal-btn {
-  background: #0f172a;
-  color: white;
-  border: 1px solid #1e293b;
-  padding: 10px;
-  border-radius: 2px !important;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.close-profile-btn {
-  width: 100%;
-}
-
-.avatar-img-nav {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 2px !important;
+  padding: 4px 0 0;
 }
 
 .avatar-edit-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px !important;
+  background: #007aff;
+  color: #ffffff;
+  font-size: 2.2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 122, 255, 0.25);
+  border: 3px solid #ffffff;
 }
 
 .avatar-img-large {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 2px !important;
 }
 
 .upload-avatar-btn {
-  margin-top: 8px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
-  padding: 6px 12px;
-  border-radius: 2px !important;
-  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #007aff;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 10px !important;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  display: inline-block;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
 }
 
-.profile-form-sharp {
+.upload-avatar-btn:hover {
+  background: #0062cc;
+  transform: translateY(-1px);
+}
+
+.profile-read-only-box {
   width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px !important;
+  padding: 16px;
+  margin-bottom: 18px;
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  text-align: left;
-  margin-bottom: 16px;
+  box-sizing: border-box;
 }
 
-.profile-form-sharp label span {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 700;
+.pro-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.pro-info-row span {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pro-info-row strong {
   color: #0f172a;
-  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.role-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 8px !important;
+  display: inline-block;
+}
+
+.role-badge.admin, .role-badge.hod {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.role-badge.management {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.role-badge.engineer {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.role-badge.external {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.status-active-badge {
+  color: #16a34a !important;
+}
+
+.admin-only-notice {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 10px;
+  line-height: 1.4;
 }
 
 .profile-msg-banner {
   width: 100%;
-  padding: 8px 12px;
-  border-radius: 2px !important;
-  font-size: 0.82rem;
+  padding: 10px 14px;
+  border-radius: 10px !important;
+  font-size: 0.85rem;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
 }
 
 .profile-msg-banner.success {
@@ -853,46 +997,48 @@ onUnmounted(() => {
   width: 100%;
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-}
-
-.profile-read-only-box {
-  width: 100%;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 2px !important;
-  padding: 14px;
-  margin-bottom: 16px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
   gap: 10px;
 }
 
-.pro-info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-}
-
-.pro-info-row span {
-  color: #64748b;
-  font-weight: 600;
-}
-
-.pro-info-row strong {
-  color: #0f172a;
+.ios-btn {
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 10px !important;
+  font-size: 0.88rem;
   font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
-.admin-only-notice {
-  margin: 6px 0 0;
-  font-size: 0.75rem;
-  color: #64748b;
-  font-style: italic;
-  border-top: 1px dashed #cbd5e1;
-  padding-top: 8px;
-  line-height: 1.3;
+.ios-btn-cancel {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.ios-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.ios-btn-primary {
+  background: #007aff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+}
+
+.ios-btn-primary:hover {
+  background: #0062cc;
+  transform: translateY(-1px);
+}
+
+.ios-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 </style>

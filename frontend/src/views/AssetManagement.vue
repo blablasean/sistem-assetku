@@ -7,9 +7,14 @@
         <p class="subtitle">Manajemen & mutasi aset.</p>
       </div>
 
-      <div class="header-actions" v-if="canCreateAsset">
-        <button class="primary-btn" @click="openAddModal">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Tambah Aset Baru
+      <div class="header-actions">
+        <button class="primary-btn btn-secondary-ios" @click="showReportModal = true" v-if="canCreateAsset">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Laporan & Export</span>
+        </button>
+        <button class="primary-btn" @click="openAddModal" v-if="canCreateAsset">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Tambah Aset Baru</span>
         </button>
       </div>
     </div>
@@ -301,6 +306,75 @@
         </div>
       </div>
     </ModalDialog>
+
+    <!-- Laporan Aset Modal -->
+    <ModalDialog :show="showReportModal" title="Laporan Inventaris Aset Hotel" maxWidth="960px" @close="showReportModal = false">
+      <div class="monthly-report-printable" id="printableAssetReport">
+        <div class="report-header">
+          <h2>LAPORAN INVENTARIS ASET HOTEL</h2>
+          <p class="report-sub">Sistem AsetKu Hotel — Dicetak: {{ reportDate }}</p>
+          <hr class="report-divider" />
+        </div>
+
+        <div class="report-summary-boxes">
+          <div class="rbox">
+            <span>Total Aset</span>
+            <strong>{{ assets.length }} Unit</strong>
+          </div>
+          <div class="rbox success">
+            <span>Status Active</span>
+            <strong>{{ countAssetStatus('Active') }} Unit</strong>
+          </div>
+          <div class="rbox warning">
+            <span>Dalam Maintenance</span>
+            <strong>{{ countAssetStatus('Maintenance') }} Unit</strong>
+          </div>
+          <div class="rbox danger">
+            <span>Rusak / Retired</span>
+            <strong>{{ countAssetStatus('Damaged') + countAssetStatus('Retired') }} Unit</strong>
+          </div>
+        </div>
+
+        <div class="report-table-wrapper">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Kode Aset</th>
+                <th>Nama Aset</th>
+                <th>Kategori</th>
+                <th>Lokasi Registrasi</th>
+                <th>PIC</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="asset in assets" :key="asset.id">
+                <td>{{ asset.asset_code }}</td>
+                <td>{{ asset.asset_name }}</td>
+                <td>{{ asset.category }}</td>
+                <td>{{ asset.registration_location || asset.location }}</td>
+                <td>{{ asset.pic }}</td>
+                <td>{{ asset.status }}</td>
+              </tr>
+              <tr v-if="assets.length === 0">
+                <td colspan="6" class="empty-state">Belum ada data aset terdaftar.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="report-actions no-print">
+        <button class="excel-btn" @click="exportAssetToExcel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          <span>Export ke Excel (.xlsx)</span>
+        </button>
+        <button class="print-btn" @click="() => window.print()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          <span>Cetak Dokumen Laporan (PDF / Print)</span>
+        </button>
+      </div>
+    </ModalDialog>
   </div>
 </template>
 
@@ -331,6 +405,42 @@ function notify(msg, type = 'success') {
 
 const assets = ref([])
 const isLoading = ref(false)
+
+const showReportModal = ref(false)
+const reportDate = ref(new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }))
+
+function countAssetStatus(status) {
+  return assets.value.filter(a => a.status === status).length
+}
+
+function exportAssetToExcel() {
+  const fileName = `Laporan_Inventaris_Aset_Hotel_${reportDate.value.replace(/\s+/g, '_')}.xls`
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="utf-8"><style>
+    th { background-color: #2563eb; color: #fff; font-weight: bold; border: 1px solid #000; text-align: center; }
+    td { border: 1px solid #ccc; vertical-align: middle; }
+  </style></head><body>
+  <h2>LAPORAN INVENTARIS ASET HOTEL</h2>
+  <p>Sistem AsetKu Hotel — Dicetak: ${reportDate.value}</p><br/>
+  <table border="1" cellspacing="0" cellpadding="6">
+    <thead><tr>
+      <th>Kode Aset</th><th>Nama Aset</th><th>Kategori</th><th>Lokasi Registrasi</th><th>PIC</th><th>Status</th>
+    </tr></thead><tbody>`
+  assets.value.forEach(a => {
+    html += `<tr>
+      <td>${a.asset_code || ''}</td><td>${a.asset_name || ''}</td><td>${a.category || ''}</td>
+      <td>${a.registration_location || a.location || ''}</td><td>${a.pic || ''}</td><td>${a.status || ''}</td>
+    </tr>`
+  })
+  html += `</tbody></table></body></html>`
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 
 const searchQuery = ref('')
 const filterStatus = ref('')
@@ -673,6 +783,13 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 37.6px;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   text-transform: uppercase;
@@ -699,19 +816,22 @@ h1, .page-header h1 {
   background: #007aff !important;
   color: #ffffff !important;
   border: 1px solid #007aff !important;
-  padding: 10px 18px !important;
+  height: 37.6px !important;
+  padding: 0 18px !important;
   border-radius: 10px !important;
   font-size: 0.88rem !important;
   font-weight: 700 !important;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
-  transition: all 0.15s ease;
-  line-height: 1;
-  white-space: nowrap;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25) !important;
+  transition: all 0.15s ease !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+  margin: 0 !important;
 }
 
 .primary-btn:hover {
@@ -904,22 +1024,6 @@ td {
   border-color: #fca5a5;
 }
 
-.primary-btn {
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #0f172a;
-  padding: 10px 18px;
-  border-radius: 4px !important;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.15s ease;
-}
-
 .primary-btn:hover {
   background: #1e293b;
   border-color: #1e293b;
@@ -1044,4 +1148,46 @@ td {
   color: #0f172a;
   border: 1px solid #cbd5e1;
 }
+
+/* === Report Modal CSS === */
+.monthly-report-printable { padding: 4px 0 16px; }
+.report-header { text-align: center; margin-bottom: 20px; }
+.report-header h2 { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; letter-spacing: -0.01em; }
+.report-sub { color: #64748b; font-size: 0.85rem; margin: 0; }
+.report-divider { border: none; border-top: 2px solid #e2e8f0; margin: 16px 0 0; }
+.report-summary-boxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.rbox { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
+.rbox span { display: block; font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+.rbox strong { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+.rbox.success strong { color: #16a34a; }
+.rbox.warning strong { color: #d97706; }
+.rbox.danger strong { color: #dc2626; }
+.report-table-wrapper { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.report-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.report-table th { background: #0f172a; color: #fff; padding: 9px 12px; text-align: left; font-weight: 700; white-space: nowrap; }
+.report-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+.report-table tbody tr:last-child td { border-bottom: none; }
+.report-table tbody tr:hover td { background: #f8fafc; }
+.empty-state { text-align: center; color: #94a3b8; font-style: italic; padding: 20px !important; }
+.report-actions { display: flex; gap: 12px; padding-top: 16px; justify-content: flex-end; border-top: 1px solid #e2e8f0; margin-top: 16px; }
+.excel-btn, .print-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 42px; padding: 0 18px; border-radius: 10px; font-size: 0.88rem;
+  font-weight: 700; cursor: pointer; border: none; transition: all 0.15s ease;
+  line-height: 1; white-space: nowrap;
+}
+.excel-btn { background: #16a34a; color: #fff; }
+.excel-btn:hover { background: #15803d; }
+.print-btn { background: #007aff; color: #fff; }
+.print-btn:hover { background: #0062cc; }
+.btn-icon { flex-shrink: 0; }
+.btn-secondary-ios {
+  background: #ffffff !important; color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+}
+.btn-secondary-ios:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
+@media print {
+  .no-print { display: none !important; }
+}
+
 </style>

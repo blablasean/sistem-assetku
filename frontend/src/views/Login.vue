@@ -103,12 +103,22 @@ async function login() {
     sessionStorage.setItem('user_role', role)
     sessionStorage.setItem('user_name', name)
     sessionStorage.setItem('username', data.username || username.value)
+    if (data.avatar) {
+      sessionStorage.setItem('user_avatar', data.avatar)
+    } else {
+      sessionStorage.removeItem('user_avatar')
+    }
 
     // Sync to localStorage for current active session
     localStorage.setItem('token', token)
     localStorage.setItem('user_role', role)
     localStorage.setItem('user_name', name)
     localStorage.setItem('username', data.username || username.value)
+    if (data.avatar) {
+      localStorage.setItem('user_avatar', data.avatar)
+    } else {
+      localStorage.removeItem('user_avatar')
+    }
 
     router.push('/dashboard')
   } catch (err) {
