@@ -1,5 +1,5 @@
 <template>
-  <ModalDialog :show="show" title="📱 Pemindai QR Code Aset" maxWidth="540px" @close="handleClose">
+  <ModalDialog :show="show" title="Pemindai QR Code Aset" maxWidth="540px" @close="handleClose">
     <div class="qr-scanner-content">
       <!-- Camera Live Stream & Viewfinder Container -->
       <div class="camera-simulator">
@@ -10,7 +10,10 @@
           <div class="corner top-right"></div>
           <div class="corner bottom-left"></div>
           <div class="corner bottom-right"></div>
-          <p class="placeholder-text">📷 Tekan "Buka Kamera" atau "Upload Foto QR"</p>
+          <div class="placeholder-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            <p class="placeholder-text">Arahkan Kamera ke Stiker QR Code</p>
+          </div>
         </div>
 
         <p class="scan-instruction">
@@ -18,14 +21,17 @@
         </p>
 
         <div class="camera-controls">
-          <button v-if="!isCameraActive" class="cam-btn" @click="startCamera">
-            🎥 Buka Kamera WebCam
+          <button v-if="!isCameraActive" class="cam-btn start-cam" @click="startCamera">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cam-icon"><path d="m22 8-6 4 6 4V8z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+            <span>Buka Kamera</span>
           </button>
           <button v-else class="cam-btn stop-cam" @click="stopCamera">
-            ⏹️ Matikan Kamera
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cam-icon"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+            <span>Matikan Kamera</span>
           </button>
           <label class="cam-btn file-btn">
-            📁 Upload Foto QR
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cam-icon"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z"/></svg>
+            <span>Upload Foto QR</span>
             <input type="file" accept="image/*" @change="handleFileUpload" style="display: none;" />
           </label>
         </div>
@@ -99,9 +105,9 @@ const errorMsg = ref('')
 const assetDetail = ref(null)
 
 const scanStatusText = computed(() => {
-  if (scanSuccessAnim.value) return '✅ QR Code Terdeteksi & Diproses!'
-  if (isCameraActive.value) return '🎥 Kamera Aktif — Arahkan ke Stiker QR Code Aset'
-  return '📷 Tekan Buka Kamera atau Upload Foto QR'
+  if (scanSuccessAnim.value) return 'QR Code Terdeteksi & Diproses!'
+  if (isCameraActive.value) return 'Kamera Aktif — Arahkan ke Stiker QR Code Aset'
+  return 'Pilih metode pemindaian di bawah'
 })
 
 watch(() => props.show, (newVal) => {
@@ -303,16 +309,22 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.qr-scanner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .camera-simulator {
-  background: #0f172a;
-  border-radius: 2px !important;
-  border: 1px solid #334155;
+  background: #f8fafc;
+  border-radius: 6px !important;
+  border: 1px solid #e2e8f0;
   padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #0f172a;
   position: relative;
   overflow: hidden;
   min-height: 240px;
@@ -321,8 +333,8 @@ onUnmounted(() => {
 .html5-qr-wrapper {
   width: 100%;
   max-width: 380px;
-  border-radius: 2px !important;
-  border: 1px solid #334155;
+  border-radius: 4px !important;
+  border: 1px solid #cbd5e1;
   overflow: hidden;
   margin-bottom: 10px;
 }
@@ -330,33 +342,42 @@ onUnmounted(() => {
 .scanner-frame-placeholder {
   width: 180px;
   height: 180px;
-  border: 2px dashed rgba(245, 158, 11, 0.6);
+  border: 2px dashed #94a3b8;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 12px;
-  border-radius: 2px !important;
+  border-radius: 6px !important;
   padding: 12px;
+  background: #ffffff;
+}
+
+.placeholder-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .placeholder-text {
   font-size: 0.78rem;
-  color: #cbd5e1;
+  color: #64748b;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
+  margin: 0;
 }
 
 .scanner-frame-placeholder.scan-success {
-  border-color: #10b981;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+  border-color: #16a34a;
+  box-shadow: 0 0 20px rgba(22, 163, 74, 0.3);
 }
 
 .corner {
   position: absolute;
   width: 16px;
   height: 16px;
-  border-color: #f59e0b;
+  border-color: #0f172a;
   border-style: solid;
 }
 
@@ -366,40 +387,87 @@ onUnmounted(() => {
 .bottom-right { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
 
 .scan-instruction {
-  margin: 8px 0 10px;
-  font-size: 0.8rem;
-  color: #e2e8f0;
+  margin: 8px 0 12px;
+  font-size: 0.84rem;
+  color: #0f172a;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .camera-controls {
-  margin-top: 4px;
+  margin-top: 12px;
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
 }
 
 .cam-btn {
-  background: #2563eb;
-  color: white;
-  border: 1px solid #1d4ed8;
-  padding: 8px 14px;
-  border-radius: 2px !important;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.stop-cam {
-  background: #dc2626;
-  border-color: #b91c1c;
-}
-
-.file-btn {
-  background: #0284c7;
-  border-color: #0369a1;
+  flex: 1 1 0%;
+  width: 50%;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 4px !important;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-sizing: border-box;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
+  margin: 0;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.cam-btn .cam-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.cam-btn span {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cam-btn.start-cam {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+}
+
+.cam-btn.start-cam:hover {
+  background: #1e293b;
+}
+
+.cam-btn.stop-cam {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+}
+
+.cam-btn.stop-cam:hover {
+  background: #b91c1c;
+}
+
+.cam-btn.file-btn {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+}
+
+.cam-btn.file-btn:hover {
+  background: #1d4ed8;
 }
 
 .manual-input-section label {
@@ -419,16 +487,22 @@ onUnmounted(() => {
   flex: 1;
   padding: 10px 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   font-size: 0.88rem;
+  color: #0f172a;
+  outline: none;
+}
+
+.input-group input:focus {
+  border-color: #2563eb;
 }
 
 .input-group button {
   background: #0f172a;
   color: white;
-  border: 1px solid #1e293b;
+  border: 1px solid #0f172a;
   padding: 0 16px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   font-weight: 700;
   cursor: pointer;
 }
@@ -438,16 +512,17 @@ onUnmounted(() => {
   color: #991b1b;
   border: 1px solid #fca5a5;
   padding: 10px 14px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
 .scanned-result-card {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 2px !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px !important;
   padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .res-header {
@@ -461,16 +536,16 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.05rem;
   color: #0f172a;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .asset-code-badge {
   font-size: 0.75rem;
   background: #f1f5f9;
-  color: #334155;
+  color: #0f172a;
   border: 1px solid #cbd5e1;
   padding: 2px 8px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   font-family: monospace;
   font-weight: 700;
 }
@@ -489,42 +564,10 @@ onUnmounted(() => {
   width: 100%;
   background: #dc2626;
   color: white;
-  border: 1px solid #b91c1c;
+  border: 1px solid #dc2626;
   padding: 10px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   font-weight: 700;
   cursor: pointer;
-}
-
-.asset-code-badge {
-  font-size: 0.75rem;
-  background: #e2e8f0;
-  color: #334155;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-family: monospace;
-  font-weight: 700;
-}
-
-.res-body p {
-  margin: 4px 0;
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-.res-actions {
-  margin-top: 14px;
-}
-
-.report-wo-btn {
-  width: 100%;
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
 }
 </style>

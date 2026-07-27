@@ -1,22 +1,23 @@
 <template>
-  <div class="view-wrapper">
-    <div class="page-container">
-      <div class="page-header">
-        <div>
-          <p class="eyebrow">Work Order</p>
-          <h1>🔧 Work Order Hotel</h1>
-          <p class="subtitle">Pelaporan & perbaikan kerusakan.</p>
-        </div>
-
-        <div class="header-action-group">
-          <button class="print-report-btn" @click="showReportModal = true" title="Prinjau & Export Laporan Bulanan">
-            📄 Laporan & Export
-          </button>
-          <button class="primary-btn" @click="showCreateModal = true">
-            🚨 Buat WO
-          </button>
-        </div>
+  <div class="page-container">
+    <div class="page-header">
+      <div>
+        <p class="eyebrow">Work Order</p>
+        <h1>Work Order Hotel</h1>
+        <p class="subtitle">Pelaporan & perbaikan kerusakan.</p>
       </div>
+
+      <div class="header-action-group">
+        <button class="primary-btn btn-secondary-ios" @click="showReportModal = true" title="Prinjau & Export Laporan Bulanan">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Laporan & Export WO</span>
+        </button>
+        <button class="primary-btn" @click="showCreateModal = true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Buat Work Order Baru</span>
+        </button>
+      </div>
+    </div>
 
       <!-- Status Tabs -->
       <div class="status-tabs">
@@ -48,27 +49,50 @@
             <tbody>
               <tr v-for="wo in filteredWorkOrders" :key="wo.id">
                 <td class="nowrap-cell"><span class="wo-id">#WO-{{ wo.id }}</span></td>
-                <td class="nowrap-cell"><span class="category-chip">🏷️ {{ wo.category || 'HVAC / AC' }}</span></td>
-                <td class="nowrap-cell">📍 {{ wo.location || 'Kamar / Area Hotel' }}</td>
+                <td class="nowrap-cell">
+                  <div class="ios-table-pill pill-indigo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r=".5" fill="currentColor"/></svg>
+                    <span>{{ wo.category || 'HVAC / AC' }}</span>
+                  </div>
+                </td>
+                <td class="nowrap-cell">
+                  <div class="ios-table-pill pill-blue">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>{{ wo.location || 'Kamar / Area Hotel' }}</span>
+                  </div>
+                </td>
                 <td class="nowrap-cell">Aset #{{ wo.asset_id }}</td>
-                <td class="nowrap-cell"><span class="requester-chip">👤 @{{ wo.requested_by || 'user_hotel' }}</span></td>
-                <td class="nowrap-cell"><span class="dept-chip">🏢 {{ formatDepartmentLabel(wo.department) }}</span></td>
+                <td class="nowrap-cell">
+                  <div class="ios-table-pill pill-slate">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>@{{ wo.requested_by || 'user_hotel' }}</span>
+                  </div>
+                </td>
+                <td class="nowrap-cell">
+                  <div class="ios-table-pill pill-orange">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                    <span>{{ formatDepartmentLabel(wo.department) }}</span>
+                  </div>
+                </td>
                 <td class="nowrap-cell"><StatusBadge :status="wo.priority || 'Medium'" /></td>
                 <td class="desc-cell" :title="wo.description"><span class="desc-text">{{ wo.description }}</span></td>
                 <td class="nowrap-cell">
-                  <span v-if="wo.engineer_id > 0" class="engineer-chip">👷 Teknisi #{{ wo.engineer_id }}</span>
+                  <div v-if="wo.engineer_id > 0" class="ios-table-pill pill-emerald">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                    <span>Teknisi #{{ wo.engineer_id }}</span>
+                  </div>
                   <span v-else class="unassigned-chip">Belum Ditugaskan</span>
                 </td>
                 <td class="nowrap-cell"><StatusBadge :status="wo.status" /></td>
                 <td class="actions-cell">
                   <button class="icon-btn log-btn" @click.stop="openLogsModal(wo)" title="Lihat Laporan Timeline Progres">
-                    📜 Timeline
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Timeline
                   </button>
                   <button v-if="canAssign && wo.status === 'Open'" class="icon-btn assign-btn" @click="openAssignModal(wo)" title="Assign Worker">
-                    👷 Assign
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg> Assign
                   </button>
                   <button v-if="canUpdateProgress && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn progress-btn" @click="openUpdateModal(wo)" title="Update Progres">
-                    📝 Progres
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Update
                   </button>
                   <button v-if="canManageOrder && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn close-btn" @click="closeOrder(wo)" title="Selesaikan Work Order">
                     ✅ Selesai
@@ -104,14 +128,14 @@
     </div>
 
     <!-- Modals placed OUTSIDE .page-container so hiding .page-container during print never affects modal report -->
-    <ModalDialog :show="showCreateModal" title="🚨 Ajukan Laporan Kerusakan Aset" @close="showCreateModal = false">
+    <ModalDialog :show="showCreateModal" title="Ajukan Laporan Kerusakan Aset" @close="showCreateModal = false">
       <form @submit.prevent="submitWorkOrder" class="modal-form">
         <label>
           <span>Pilih Kode Aset Terdaftar</span>
           <select v-model.number="formWo.asset_id" @change="onAssetSelected" required>
             <option value="" disabled>-- Pilih Kode Aset Terdaftar --</option>
             <option v-for="asset in registeredAssets" :key="asset.id" :value="asset.id">
-              {{ asset.asset_code }} — {{ asset.asset_name }} (📍 {{ asset.location }})
+              {{ asset.asset_code }} — {{ asset.asset_name }} ({{ asset.location }})
             </option>
           </select>
         </label>
@@ -141,9 +165,9 @@
       </form>
     </ModalDialog>
 
-    <ModalDialog :show="showAssignModal" title="👷 Penugasan Teknisi (Assign Worker)" @close="showAssignModal = false">
+    <ModalDialog :show="showAssignModal" title="Penugasan Teknisi (Assign Worker)" @close="showAssignModal = false">
       <form @submit.prevent="submitAssign" class="modal-form" v-if="selectedWo">
-        <p class="modal-info"><strong>WO #{{ selectedWo.id }}:</strong> {{ selectedWo.description }} (📍 {{ selectedWo.location }})</p>
+        <p class="modal-info"><strong>WO #{{ selectedWo.id }}:</strong> {{ selectedWo.description }} ({{ selectedWo.location }})</p>
         <label>
           <span>Pilih Teknisi (Staff Engineer)</span>
           <select v-model.number="assignEngineerId" required>
@@ -158,7 +182,7 @@
       </form>
     </ModalDialog>
 
-    <ModalDialog :show="showUpdateModal" title="📝 Update Status Pengerjaan Teknisi" @close="showUpdateModal = false">
+    <ModalDialog :show="showUpdateModal" title="Update Status Pengerjaan Teknisi" @close="showUpdateModal = false">
       <form @submit.prevent="submitUpdateStatus" class="modal-form" v-if="selectedWo">
         <label>
           <span>Status Baru</span>
@@ -184,10 +208,10 @@
     </ModalDialog>
 
     <!-- Printable Report Modal (Outside .page-container) -->
-    <ModalDialog :show="showReportModal" title="🖨️ Laporan Bulanan Work Order & Maintenance" maxWidth="920px" @close="showReportModal = false">
+    <ModalDialog :show="showReportModal" title="Laporan Bulanan Work Order & Maintenance" maxWidth="920px" @close="showReportModal = false">
       <div class="monthly-report-printable" id="printableReportDocument">
         <div class="report-header">
-          <h2>🏨 LAPORAN BULANAN MANAJEMEN ASET & WORK ORDER</h2>
+          <h2>LAPORAN BULANAN MANAJEMEN ASET & WORK ORDER</h2>
           <p class="report-sub">Sistem AsetKu Hotel — Periode: {{ reportMonthYear }}</p>
           <hr class="report-divider" />
         </div>
@@ -241,17 +265,19 @@
       </div>
 
       <div class="report-actions no-print">
-        <button class="submit-modal-btn excel-btn" @click="exportToExcel">
-          📊 Export ke Excel (.xlsx)
+        <button class="excel-btn" @click="exportToExcel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          <span>Export ke Excel (.xlsx)</span>
         </button>
-        <button class="submit-modal-btn print-btn" @click="printMonthlyReport">
-          🖨️ Cetak Dokumen Laporan (PDF / Print)
+        <button class="print-btn" @click="printMonthlyReport">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          <span>Cetak Dokumen Laporan (PDF / Print)</span>
         </button>
       </div>
     </ModalDialog>
 
     <!-- Modal Laporan Progres & Timeline Work Order -->
-    <ModalDialog :show="showLogsModal" title="📜 Laporan Timeline Progres Work Order" @close="showLogsModal = false">
+    <ModalDialog :show="showLogsModal" title="Laporan Timeline Progres Work Order" @close="showLogsModal = false">
       <div v-if="selectedWoForLogs" class="logs-modal-body">
         <div class="wo-info-banner">
           <div>
@@ -326,7 +352,6 @@
         </div>
       </div>
     </ModalDialog>
-  </div>
 </template>
 
 <script setup>
@@ -822,15 +847,15 @@ onUnmounted(() => {
 
 <style scoped>
 .page-container {
-  max-width: 1240px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 24px 24px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 16px;
@@ -838,61 +863,81 @@ onUnmounted(() => {
 
 .header-action-group {
   display: flex;
-  gap: 12px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.8rem;
-  color: #2563eb;
-  font-weight: 700;
-}
-
-h1 {
-  margin: 0 0 8px;
-  font-size: 1.8rem;
-  color: #0f172a;
-}
-
-.subtitle {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.95rem;
+  align-items: center;
+  gap: 10px;
 }
 
 .primary-btn {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-weight: 700;
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25) !important;
+  transition: all 0.15s ease !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.primary-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
+}
+
+.primary-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.primary-btn span {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.primary-btn.btn-secondary-ios {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+.primary-btn.btn-secondary-ios:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
 }
 
 .print-report-btn {
-  background: #0284c7;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 10px 18px;
+  border-radius: 4px !important;
   font-weight: 700;
+  font-size: 0.88rem;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
-.export-excel-btn {
-  background: #16a34a;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+.print-report-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
 .status-tabs {
@@ -940,6 +985,24 @@ h1 {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
 }
+
+.ios-table-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pill-indigo { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+.pill-blue { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.pill-slate { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+.pill-orange { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+.pill-emerald { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
 
 .wo-table-wrapper {
   overflow-x: auto;
@@ -1022,19 +1085,89 @@ td {
 }
 
 .icon-btn {
-  border: 1px solid #cbd5e1;
-  background: white;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px !important;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
+  box-sizing: border-box;
+  line-height: 1;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.icon-btn span {
+  display: inline-block;
+  line-height: 1;
   white-space: nowrap;
 }
 
-.assign-btn { color: #2563eb; border-color: #93c5fd; }
-.progress-btn { color: #d97706; border-color: #fcd34d; }
-.close-btn { color: #16a34a; border-color: #86efac; }
-.cancel-btn { color: #dc2626; border-color: #fca5a5; }
+.log-btn {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.log-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.assign-btn {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.assign-btn:hover {
+  background: #dcfce7;
+}
+
+.progress-btn {
+  background: #fffbeb;
+  color: #d97706;
+  border-color: #fef3c7;
+}
+
+.progress-btn:hover {
+  background: #fef3c7;
+}
+
+.close-btn {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.close-btn:hover {
+  background: #d1fae5;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+  padding: 0 8px;
+}
+
+.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
 
 .modal-form {
   display: grid;
@@ -1044,25 +1177,47 @@ td {
 .modal-form label {
   display: grid;
   gap: 6px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .modal-form input, .modal-form select, .modal-form textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.modal-form input:focus, .modal-form select:focus, .modal-form textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .submit-modal-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  padding: 13px 18px;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.submit-modal-btn:hover {
+  background: #1e293b;
 }
 
 .modal-info {
@@ -1159,18 +1314,62 @@ td {
 }
 
 .report-actions {
-  margin-top: 20px;
+  margin-top: 24px;
   display: flex;
-  gap: 12px;
+  align-items: center;
   justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
 }
 
 .excel-btn {
-  background: #16a34a;
+  background: #34c759 !important;
+  color: #ffffff !important;
+  border: 1px solid #34c759 !important;
+  padding: 12px 20px !important;
+  border-radius: 10px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  margin: 0;
+}
+
+.excel-btn:hover {
+  background: #28a745 !important;
+  border-color: #28a745 !important;
+  transform: translateY(-1px);
 }
 
 .print-btn {
-  background: #0284c7;
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  padding: 12px 20px !important;
+  border-radius: 10px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  margin: 0;
+}
+
+.print-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
 }
 
 .requester-chip {

@@ -2,7 +2,10 @@
   <div class="login-screen">
     <div class="login-panel">
       <div class="login-brand">
-        <div class="brand-badge">🏢</div>
+        <div class="brand-badge">
+          <img :src="'/assets/logo.png'" alt="AsetKu Logo" class="login-logo-img" @error="logoFailed = true" v-if="!logoFailed" />
+          <span v-else class="login-text-logo">A</span>
+        </div>
         <div>
           <p class="brand-label">AsetKu Hotel</p>
           <p class="brand-subtitle">Work Order & Asset Management System</p>
@@ -41,7 +44,8 @@
               :title="showPassword ? 'Sembunyikan Password' : 'Tampilkan Password'"
               tabindex="-1"
             >
-              {{ showPassword ? '🙈' : '👁️' }}
+              <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
             </button>
           </div>
         </label>
@@ -66,6 +70,7 @@ const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
 const isLoading = ref(false)
+const logoFailed = ref(false)
 const router = useRouter()
 
 async function login() {
@@ -122,38 +127,24 @@ async function login() {
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background: radial-gradient(circle at 50% 20%, #1e293b 0%, #090d16 100%);
+  background: #f8fafc;
   position: relative;
   overflow: hidden;
 }
 
-.login-screen::before {
-  content: '';
-  position: absolute;
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(0,0,0,0) 70%);
-  top: 10%;
-  left: 30%;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
 .login-panel {
-  width: min(420px, 100%);
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 28px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.15);
-  padding: 36px 32px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  animation: fadeIn 0.4s ease-out;
+  width: min(400px, 100%);
+  background: #ffffff;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 0 0 1px #e2e8f0;
+  padding: 40px 36px;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -165,41 +156,56 @@ async function login() {
 }
 
 .brand-badge {
-  width: 50px;
-  height: 50px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #0284c7, #2563eb);
+  width: 46px;
+  height: 46px;
+  border-radius: 6px !important;
+  background: #0f172a;
   color: #ffffff;
-  display: grid;
-  place-items: center;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.login-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.login-text-logo {
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: #ffffff;
 }
 
 .brand-label {
   margin: 0;
   font-weight: 800;
   font-size: 1.15rem;
-  color: #ffffff;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
   margin: 2px 0 0;
-  color: #94a3b8;
-  font-size: 0.85rem;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 h1 {
   margin: 0 0 6px;
-  font-size: 1.85rem;
-  color: #ffffff;
+  font-size: 1.75rem;
+  color: #0f172a;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 p {
   margin: 0 0 24px;
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: #64748b;
+  font-size: 0.88rem;
 }
 
 .login-form {
@@ -210,26 +216,26 @@ p {
 .login-form label {
   display: grid;
   gap: 8px;
-  font-weight: 600;
-  font-size: 0.88rem;
-  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
 }
 
 .login-form input {
   width: 100%;
-  border: 1px solid #334155;
-  border-radius: 14px;
-  padding: 13px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px !important;
+  padding: 12px 14px;
   font-size: 0.95rem;
-  background: #1e293b;
-  color: #ffffff;
+  background: #ffffff;
+  color: #0f172a;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .login-form input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .password-input-wrapper {
@@ -247,7 +253,7 @@ p {
   right: 12px;
   background: transparent;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -264,34 +270,33 @@ p {
 .submit-login-btn {
   display: inline-block;
   width: 100%;
-  padding: 14px 0;
-  border-radius: 14px;
-  font-size: 1rem;
+  padding: 13px 0;
+  border-radius: 4px !important;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(135deg, #0284c7, #2563eb);
-  border: none;
+  background: #0f172a;
+  border: 1px solid #0f172a;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   margin-top: 8px;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
 }
 
 .submit-login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 22px rgba(37, 99, 235, 0.45);
+  background: #1e293b;
 }
 
 .submit-login-btn:disabled {
-  background: #475569;
+  background: #94a3b8;
+  border-color: #94a3b8;
   cursor: not-allowed;
-  transform: none;
 }
 
 .error-message {
   margin: 0;
-  color: #f87171;
+  color: #dc2626;
   font-size: 0.85rem;
   line-height: 1.4;
+  font-weight: 600;
 }
 </style>

@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"errors"
+	"strings"
+	"time"
 	"sistem-asetku-backend/models"
 
 	"gorm.io/gorm"
@@ -56,7 +58,7 @@ func (c *MaintenanceController) DeletePMSchedule(pmID int, callerRole string) er
 	return nil
 }
 
-func (c *MaintenanceController) SubmitPMChecklist(pmID int, checklist string, callerRole string) error {
+func (c *MaintenanceController) SubmitPMChecklist(pmID int, targetDate string, checklist string, callerRole string) error {
 	if !canManageAssets(callerRole) {
 		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menyelesaikan checklist maintenance")
 	}
@@ -68,14 +70,41 @@ func (c *MaintenanceController) SubmitPMChecklist(pmID int, checklist string, ca
 	if checklist != "" {
 		schedule.ChecklistData = checklist
 	}
+
+	cleanDate := strings.TrimSpace(targetDate)
+	if strings.Contains(cleanDate, "T") {
+		cleanDate = strings.Split(cleanDate, "T")[0]
+	}
+	if cleanDate == "" {
+		cleanDate = time.Now().Format("2006-01-02")
+	}
+
+	if schedule.CompletedDates == "" {
+		schedule.CompletedDates = cleanDate
+	} else {
+		existing := strings.Split(schedule.CompletedDates, ",")
+		alreadyExists := false
+		for _, d := range existing {
+			if strings.TrimSpace(d) == cleanDate {
+				alreadyExists = true
+				break
+			}
+		}
+		if !alreadyExists {
+			schedule.CompletedDates = schedule.CompletedDates + "," + cleanDate
+		}
+	}
+
 	schedule.Status = "Completed"
 	if err := c.db.Save(&schedule).Error; err != nil {
 		return err
 	}
 
+	actMsg := "Perawatan Berkala (" + schedule.ScheduleType + ") Tanggal " + cleanDate + ": " + schedule.ChecklistData
+
 	history := models.MaintenanceHistory{
 		AssetID:     schedule.AssetID,
-		ActionTaken: "Perawatan Berkala (" + schedule.ScheduleType + "): " + schedule.ChecklistData,
+		ActionTaken: actMsg,
 		Cost:        50000,
 	}
 	return c.db.Create(&history).Error
@@ -123,7 +152,7 @@ func (c *MaintenanceController) DeleteMaintenanceHistory(historyID int, callerRo
 		return res.Error
 	}
 	if res.RowsAffected == 0 {
-		return errors.New("riwayat maintenance tidak ditemukan")
+		return errors.New("riwayat maintenance tidak ditemukan di database")
 	}
 	return nil
 }

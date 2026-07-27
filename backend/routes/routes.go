@@ -870,20 +870,22 @@ func handleSubmitPMChecklist(maintenanceCtrl *controllers.MaintenanceController)
 		}
 
 		var payload struct {
-			Checklist string `json:"checklist"`
+			TargetDate string `json:"target_date"`
+			Checklist  string `json:"checklist"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
 
-		if err := maintenanceCtrl.SubmitPMChecklist(pmID, payload.Checklist, claims.Role); err != nil {
+		if err := maintenanceCtrl.SubmitPMChecklist(pmID, payload.TargetDate, payload.Checklist, claims.Role); err != nil {
 			utils.SendError(w, http.StatusForbidden, "Failed to submit checklist", err.Error())
 			return
 		}
 
-		utils.SendSuccess(w, http.StatusOK, "PM checklist submitted successfully", map[string]int{
-			"pm_id": pmID,
+		utils.SendSuccess(w, http.StatusOK, "PM checklist submitted successfully", map[string]interface{}{
+			"pm_id":       pmID,
+			"target_date": payload.TargetDate,
 		})
 	}
 }

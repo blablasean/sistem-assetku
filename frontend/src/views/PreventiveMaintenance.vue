@@ -3,20 +3,22 @@
     <div class="page-header">
       <div>
         <p class="eyebrow">Perawatan Rutin</p>
-        <h1>📅 Maintenance (PM)</h1>
+        <h1>Maintenance (PM)</h1>
         <p class="subtitle">Jadwal perawatan berkala.</p>
       </div>
       <button class="primary-btn" v-if="canManageSchedule" @click="openAddModal">
-        ➕ Tambah Jadwal
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Tambah Jadwal
       </button>
     </div>
 
     <!-- Dedicated Reminder Banner for Staff Engineer -->
     <div v-if="userRole === 'engineer'" class="engineer-reminder-banner">
-      <div class="erb-icon">🔔</div>
+      <div class="erb-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </div>
       <div class="erb-content">
         <h3>Pengingat Perawatan Rutin (Staff Engineer)</h3>
-        <p>Halaman ini berisi daftar pengingat <strong>Preventive Maintenance</strong> yang telah dijadwalkan oleh HOD Engineer, Supervisor, dan Administrator. Silakan laksanakan inspeksi fisik aset dan klik tombol <strong>"✅ Selesaikan Checklist"</strong> setelah pengerjaan selesai.</p>
+        <p>Halaman ini berisi daftar pengingat <strong>Preventive Maintenance</strong> yang telah dijadwalkan oleh HOD Engineer, Supervisor, dan Administrator. Silakan laksanakan inspeksi fisik aset dan klik tombol <strong>"Selesaikan Checklist"</strong> setelah pengerjaan selesai.</p>
       </div>
     </div>
 
@@ -24,10 +26,10 @@
     <div class="pm-toolbar">
       <div class="view-switcher-btns">
         <button :class="['tab-btn', { active: viewMode === 'calendar' }]" @click="viewMode = 'calendar'">
-          📅 Kalender Reminder
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Kalender Reminder
         </button>
         <button :class="['tab-btn', { active: viewMode === 'grid' }]" @click="viewMode = 'grid'">
-          📇 Kartu Detail
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Kartu Detail
         </button>
       </div>
 
@@ -65,12 +67,11 @@
           <div class="cal-events-list" v-if="cell.isCurrentMonth">
             <div 
               v-for="item in cell.items" 
-              :key="item.id" 
-              :class="['cal-event-chip', item.status === 'Completed' ? 'status-completed' : 'status-pending']"
-              @click="openDetailModal(item)"
-              :title="`Aset #${item.asset_id} (${item.schedule_type}) - ${item.checklist_data}`"
+              :key="item.id + '_' + cell.dateStr" 
+              :class="['cal-event-chip', isItemCompletedOnDate(item, cell.dateStr) ? 'status-completed' : 'status-pending']"
+              @click="openDetailModalForDate(item, cell.dateStr)"
+              :title="`Aset #${item.asset_id} (${item.schedule_type}) - ${isItemCompletedOnDate(item, cell.dateStr) ? 'Sudah Di-checklist' : 'Belum Di-checklist'}`"
             >
-              <span class="event-icon">{{ item.status === 'Completed' ? '✅' : '📌' }}</span>
               <span class="event-title">#{{ item.asset_id }} — {{ getAssetName(item.asset_id) }}</span>
             </div>
           </div>
@@ -91,7 +92,7 @@
           </div>
 
           <div class="pm-details">
-            <p><strong>Jatuh Tempo Berikutnya:</strong> ⏰ {{ formatDate(item.next_run) }}</p>
+            <p><strong>Jatuh Tempo Berikutnya:</strong> {{ formatDate(item.next_run) }}</p>
             <div class="checklist-box">
               <p><strong>Checklist Inspeksi:</strong></p>
               <pre>{{ item.checklist_data }}</pre>
@@ -99,13 +100,29 @@
           </div>
 
           <div class="pm-actions">
-            <button v-if="canCompleteChecklist" class="checklist-btn" @click="submitChecklist(item)">
-              ✅ Selesaikan Checklist
-            </button>
-            <p v-else class="checklist-notice-readonly">ℹ️ Penyelesaian checklist hanya oleh HOD, Supervisor & Admin</p>
+            <template v-if="canCompleteChecklist">
+              <button 
+                v-if="isPmItemDueOnDate(item, getTodayDateStr())"
+                :class="['checklist-btn full-width-btn', isItemCompletedOnDate(item, getTodayDateStr()) ? 'btn-completed-style' : 'btn-pending-style']" 
+                @click="submitChecklist(item, getTodayDateStr())"
+              >
+                {{ isItemCompletedOnDate(item, getTodayDateStr()) ? 'Checklist Hari Ini Selesai' : 'Selesaikan Checklist Hari Ini (' + getTodayDateStr() + ')' }}
+              </button>
+              <p v-else class="checklist-notice-readonly notice-future">
+                Hari ini bukan tanggal inspeksi untuk aset ini.
+              </p>
+            </template>
+            <p v-else class="checklist-notice-readonly">Penyelesaian checklist hanya oleh HOD, Supervisor & Admin</p>
+
             <div v-if="canManageSchedule" class="pm-admin-btns">
-              <button class="icon-btn edit-btn" @click="openEditModal(item)" title="Edit Jadwal PM">✏️ Edit</button>
-              <button class="icon-btn delete-btn" @click="deletePMSchedule(item)" title="Hapus Jadwal PM">🗑️ Hapus</button>
+              <button class="icon-btn edit-btn" @click="openEditModal(item)" title="Edit Jadwal PM">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Edit</span>
+              </button>
+              <button class="icon-btn delete-btn" @click="deletePMSchedule(item)" title="Hapus Jadwal PM">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                <span>Hapus</span>
+              </button>
             </div>
           </div>
         </div>
@@ -117,36 +134,32 @@
     </div>
 
     <!-- Modal Tambah / Edit Schedule PM -->
-    <ModalDialog :show="showAddModal" :title="isEditMode ? '✏️ Edit Jadwal Preventive Maintenance' : '➕ Tambah Jadwal Preventive Maintenance'" @close="showAddModal = false">
+    <ModalDialog :show="showAddModal" :title="isEditMode ? 'Edit Jadwal Preventive Maintenance' : 'Tambah Jadwal Preventive Maintenance'" @close="showAddModal = false">
       <form @submit.prevent="savePMSchedule" class="pm-form">
         <label>
           <span>Pilih Kode Aset Terdaftar</span>
           <select v-model.number="newAssetId" :disabled="isEditMode" required>
             <option value="" disabled>-- Pilih Kode Aset Terdaftar --</option>
             <option v-for="asset in registeredAssets" :key="asset.id" :value="asset.id">
-              {{ asset.asset_code }} — {{ asset.asset_name }} (📍 {{ asset.location }})
+              {{ asset.asset_code }} — {{ asset.asset_name }} ({{ asset.location }})
             </option>
           </select>
         </label>
-
         <label>
-          <span>Tipe Jadwal</span>
+          <span>Frekuensi Rutin (Schedule Type)</span>
           <select v-model="newScheduleType">
             <option value="Daily">Daily (Harian)</option>
             <option value="Weekly">Weekly (Mingguan)</option>
             <option value="Monthly">Monthly (Bulanan)</option>
-            <option value="Quarterly">Quarterly (Per 3 Bulan)</option>
             <option value="Yearly">Yearly (Tahunan)</option>
           </select>
         </label>
-
         <label>
-          <span>Jatuh Tempo Berikutnya</span>
-          <input v-model="newNextRun" type="date" required />
+          <span>Tanggal Mulai / Jatuh Tempo Pertama</span>
+          <input type="date" v-model="newNextRun" required />
         </label>
-
         <label>
-          <span>Checklist Item (Inspeksi Per Baris)</span>
+          <span>Rincian Poin Checklist Inspeksi Fisik</span>
           <textarea v-model="newChecklistData" rows="4" placeholder="Contoh: 1. Cek tekanan freon AC&#10;2. Bersihkan filter evaporator&#10;3. Cek drainase air kondensasi" required></textarea>
         </label>
 
@@ -155,30 +168,51 @@
     </ModalDialog>
 
     <!-- Modal Detail & Eksekusi Checklist PM -->
-    <ModalDialog :show="showDetailModal" title="📌 Rincian Reminder Maintenance" @close="showDetailModal = false">
+    <ModalDialog :show="showDetailModal" title="Rincian Reminder Maintenance" @close="showDetailModal = false">
       <div v-if="selectedPmItem" class="pm-detail-modal-body">
         <div class="pm-detail-header-box">
-          <span class="schedule-type-badge">{{ selectedPmItem.schedule_type }}</span>
+          <div class="pm-header-row">
+            <span class="schedule-type-badge">{{ selectedPmItem.schedule_type }}</span>
+            <span :class="['status-chip-badge', isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'badge-completed' : 'badge-pending']">
+              {{ isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'Sudah Di-checklist' : 'Belum Di-checklist' }}
+            </span>
+          </div>
           <h3>Aset #{{ selectedPmItem.asset_id }} — {{ getAssetName(selectedPmItem.asset_id) }}</h3>
-          <StatusBadge :status="selectedPmItem.status || 'Active'" />
         </div>
 
         <div class="pm-detail-info">
-          <p><strong>⏰ Jatuh Tempo Perawatan:</strong> {{ formatDate(selectedPmItem.next_run) }}</p>
+          <p><strong>Tanggal Inspeksi Target:</strong> {{ selectedDetailDate }}</p>
+          <p><strong>Target Jatuh Tempo Akhir:</strong> {{ formatDate(selectedPmItem.next_run) }}</p>
           <div class="checklist-box">
-            <p><strong>📝 Catatan & Checklist Inspeksi:</strong></p>
+            <p><strong>Catatan & Checklist Inspeksi:</strong></p>
             <pre>{{ selectedPmItem.checklist_data }}</pre>
           </div>
         </div>
 
         <div class="pm-detail-actions">
-          <button v-if="canCompleteChecklist" class="checklist-btn full-width-btn" @click="submitChecklistFromModal(selectedPmItem)">
-            ✅ Selesaikan Checklist Perawatan
-          </button>
-          <p v-else class="checklist-notice-readonly">ℹ️ Penyelesaian checklist maintenance hanya dapat dikonfirmasi oleh HOD, Supervisor, atau Admin.</p>
+          <template v-if="canCompleteChecklist">
+            <button 
+              v-if="isDateReached(selectedDetailDate)"
+              :class="['checklist-btn full-width-btn', isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'btn-completed-style' : 'btn-pending-style']" 
+              @click="submitChecklistFromModal(selectedPmItem, selectedDetailDate)"
+            >
+              {{ isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'Checklist Sudah Selesai (Klik untuk update)' : 'Selesaikan Checklist Perawatan' }}
+            </button>
+            <p v-else class="checklist-notice-readonly notice-future">
+              Checklist perawatan hanya dapat diisi ketika tanggal jadwal ({{ selectedDetailDate }}) telah tiba.
+            </p>
+          </template>
+          <p v-else class="checklist-notice-readonly">Penyelesaian checklist maintenance hanya dapat dikonfirmasi oleh HOD, Supervisor, atau Admin.</p>
+
           <div v-if="canManageSchedule" class="pm-admin-modal-btns">
-            <button class="icon-btn edit-btn" @click="openEditModalFromDetail(selectedPmItem)">✏️ Edit Jadwal</button>
-            <button class="icon-btn delete-btn" @click="deleteFromDetail(selectedPmItem)">🗑️ Hapus Jadwal</button>
+            <button class="icon-btn edit-btn" @click="openEditModalFromDetail(selectedPmItem)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>Edit Jadwal</span>
+            </button>
+            <button class="icon-btn delete-btn" @click="deleteFromDetail(selectedPmItem)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              <span>Hapus Jadwal</span>
+            </button>
           </div>
         </div>
       </div>
@@ -200,25 +234,35 @@ import { ref, computed, onMounted } from 'vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
+import { useAuth } from '../composables/useAuth'
+import { useNotification } from '../composables/useNotification'
+import { formatDate, getTodayDateStr } from '../utils/formatters'
 
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
-const canManageSchedule = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canCompleteChecklist = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
+const { canManageAssets: canManageSchedule, canManageAssets: canCompleteChecklist } = useAuth()
+const { showToast, toastMsg, toastType, notify } = useNotification()
 
-const showToast = ref(false)
-const toastMsg = ref('')
-const toastType = ref('success')
+const todayDateStr = getTodayDateStr()
 
-function notify(msg, type = 'success') {
-  toastMsg.value = msg
-  toastType.value = type
-  showToast.value = true
-  setTimeout(() => {
-    showToast.value = false
-  }, 4000)
+function isItemCompletedOnDate(item, dateStr) {
+  if (!item || !dateStr) return false
+  const cleanDateStr = String(dateStr).includes('T') ? String(dateStr).split('T')[0] : String(dateStr).trim()
+  if (!cleanDateStr) return false
+
+  if (item.completed_dates && typeof item.completed_dates === 'string') {
+    const datesArr = item.completed_dates.split(',').map(d => d.trim().split('T')[0])
+    if (datesArr.includes(cleanDateStr)) return true
+  }
+
+  const nextRunClean = typeof item.next_run === 'string' ? item.next_run.split('T')[0] : ''
+  if (item.status === 'Completed' && (nextRunClean === cleanDateStr)) return true
+  return false
 }
 
-const todayDateStr = new Date().toISOString().split('T')[0]
+function isDateReached(dateStr) {
+  if (!dateStr) return true
+  const cleanDate = String(dateStr).includes('T') ? String(dateStr).split('T')[0] : String(dateStr).trim()
+  return cleanDate <= getTodayDateStr()
+}
 
 const viewMode = ref('calendar')
 const calendarDate = ref(new Date())
@@ -344,14 +388,21 @@ const calendarDays = computed(() => {
   return days
 })
 
-function openDetailModal(item) {
+const selectedDetailDate = ref('')
+
+function openDetailModalForDate(item, dateStr) {
   selectedPmItem.value = item
+  selectedDetailDate.value = dateStr || formatDate(item.next_run)
   showDetailModal.value = true
 }
 
-async function submitChecklistFromModal(item) {
+function openDetailModal(item) {
+  openDetailModalForDate(item, formatDate(item.next_run))
+}
+
+async function submitChecklistFromModal(item, targetDateStr) {
   showDetailModal.value = false
-  await submitChecklist(item)
+  await submitChecklist(item, targetDateStr)
 }
 
 function openEditModalFromDetail(item) {
@@ -387,13 +438,7 @@ async function fetchRegisteredAssets() {
   }
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '—'
-  if (typeof dateStr === 'string' && dateStr.includes('T')) {
-    return dateStr.split('T')[0]
-  }
-  return dateStr
-}
+
 
 async function fetchPMSchedules() {
   isLoading.value = true
@@ -468,13 +513,21 @@ async function deletePMSchedule(item) {
   }
 }
 
-async function submitChecklist(item) {
+async function submitChecklist(item, targetDateStr) {
   try {
+    const dateToSubmit = targetDateStr || selectedDetailDate.value || formatDate(item.next_run)
     await api.post(`/maintenance/${item.id}/checklist`, {
+      target_date: dateToSubmit,
       checklist: item.checklist_data
     })
-    item.status = 'Completed'
-    notify(`Checklist perawatan Aset #${item.asset_id} berhasil diselesaikan!`, 'success')
+
+    if (!item.completed_dates) {
+      item.completed_dates = dateToSubmit
+    } else if (!item.completed_dates.includes(dateToSubmit)) {
+      item.completed_dates += ',' + dateToSubmit
+    }
+
+    notify(`Checklist perawatan Aset #${item.asset_id} tanggal ${dateToSubmit} berhasil diselesaikan (Kuning ➔ Hijau)!`, 'success')
     await fetchPMSchedules()
   } catch (e) {
     notify('Gagal menyelesaikan checklist: ' + (e.response?.data?.message || e.message), 'error')
@@ -491,14 +544,16 @@ onMounted(() => {
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 24px 24px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .eyebrow {
@@ -523,13 +578,27 @@ h1 {
 }
 
 .primary-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-weight: 700;
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.primary-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
 }
 
 .pm-grid {
@@ -540,13 +609,19 @@ h1 {
 
 .pm-card {
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: 14px !important;
   border: 1px solid #e2e8f0;
   padding: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.pm-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
 }
 
 .pm-card-header {
@@ -557,19 +632,25 @@ h1 {
 }
 
 .schedule-type-badge {
-  font-size: 0.75rem;
-  background: #e0f2fe;
-  color: #0369a1;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 700;
+  font-size: 0.72rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  padding: 3px 8px;
+  border-radius: 6px !important;
+  font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: inline-block;
+  margin-bottom: 4px;
 }
 
 .pm-asset-title {
   margin: 4px 0 0;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .pm-details {
@@ -579,9 +660,9 @@ h1 {
 
 .checklist-box {
   background: #f8fafc;
-  padding: 10px 12px;
-  border-radius: 10px;
-  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 8px !important;
+  margin-top: 12px;
   border: 1px solid #e2e8f0;
 }
 
@@ -600,14 +681,33 @@ h1 {
 }
 
 .checklist-btn {
-  background: #16a34a;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 10px;
+  background: #007aff;
+  color: #ffffff;
+  border: 1px solid #007aff;
+  padding: 11px 16px;
+  border-radius: 8px !important;
+  font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.checklist-btn.btn-completed-style {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.checklist-btn.btn-pending-style {
+  background: #007aff;
+  color: #ffffff;
+  border-color: #007aff;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
 }
 
 .pm-admin-btns {
@@ -616,18 +716,60 @@ h1 {
 }
 
 .icon-btn {
-  border: 1px solid #cbd5e1;
-  background: white;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px !important;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  flex: 1;
+  box-sizing: border-box;
+  line-height: 1;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  user-select: none;
 }
 
-.edit-btn { color: #2563eb; border-color: #93c5fd; }
-.delete-btn { color: #dc2626; border-color: #fca5a5; }
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.icon-btn span {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.edit-btn {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  padding: 0 10px;
+}
+
+.edit-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+  padding: 0 10px;
+}
+
+.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
 
 .pm-form {
   display: grid;
@@ -637,26 +779,48 @@ h1 {
 .pm-form label {
   display: grid;
   gap: 6px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .pm-form input, .pm-form select, .pm-form textarea {
-  padding: 10px 12px;
+  width: 100%;
+  padding: 12px 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.pm-form input:focus, .pm-form select:focus, .pm-form textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .submit-modal-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 10px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  padding: 13px 18px;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;
-  margin-top: 6px;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.submit-modal-btn:hover {
+  background: #1e293b;
 }
 
 .empty-state {
@@ -668,10 +832,9 @@ h1 {
 }
 
 .engineer-reminder-banner {
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-left: 5px solid #d97706;
-  border-radius: 2px !important;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px !important;
   padding: 16px 20px;
   margin-bottom: 24px;
   display: flex;
@@ -680,20 +843,28 @@ h1 {
 }
 
 .erb-icon {
-  font-size: 2rem;
+  width: 36px;
+  height: 36px;
+  background: #dbeafe;
+  color: #2563eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .erb-content h3 {
   margin: 0 0 4px 0;
-  font-size: 1.05rem;
-  color: #92400e;
+  font-size: 0.98rem;
+  color: #1e40af;
   font-weight: 800;
 }
 
 .erb-content p {
   margin: 0;
-  font-size: 0.9rem;
-  color: #78350f;
+  font-size: 0.88rem;
+  color: #1e3a8a;
   line-height: 1.4;
 }
 
@@ -716,15 +887,19 @@ h1 {
   border: 1px solid #cbd5e1;
   color: #475569;
   padding: 8px 16px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
 .tab-btn.active {
   background: #0f172a;
-  color: white;
+  color: #ffffff;
   border-color: #0f172a;
 }
 
@@ -944,6 +1119,45 @@ h1 {
 .pm-admin-modal-btns {
   display: flex;
   gap: 10px;
+}
+
+.pm-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.status-chip-badge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.badge-completed {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.btn-pending-style {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  border: 1px solid #b45309 !important;
+}
+
+.btn-completed-style {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border: 1px solid #15803d !important;
 }
 
 .checklist-notice-readonly {

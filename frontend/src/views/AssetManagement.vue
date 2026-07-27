@@ -3,13 +3,13 @@
     <div class="page-header">
       <div>
         <p class="eyebrow">Aset Hotel</p>
-        <h1>📦 Manajemen Aset</h1>
+        <h1>Manajemen Aset</h1>
         <p class="subtitle">Manajemen & mutasi aset.</p>
       </div>
 
       <div class="header-actions" v-if="canCreateAsset">
         <button class="primary-btn" @click="openAddModal">
-          ➕ Tambah Aset
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Tambah Aset Baru
         </button>
       </div>
     </div>
@@ -17,7 +17,7 @@
     <div class="card-panel">
       <!-- Toolbar: Search, Filter, Sort -->
       <div class="toolbar-grid">
-        <input v-model="searchQuery" placeholder="🔍 Cari nama, kode, lokasi, atau PIC aset..." class="search-input" @input="filterAssets" />
+        <input v-model="searchQuery" placeholder="Cari nama, kode, lokasi, atau PIC aset..." class="search-input" @input="filterAssets" />
         
         <select v-model="filterStatus" @change="filterAssets" class="filter-select">
           <option value="">Semua Status</option>
@@ -60,33 +60,36 @@
                 <span v-if="asset.is_reserved" class="reserved-tag">Reserved</span>
               </td>
               <td>{{ asset.category || 'General' }}</td>
-              <td>📍 {{ asset.registration_location || asset.location }}</td>
-              <td>📍 {{ asset.location }}</td>
+              <td>{{ asset.registration_location || asset.location }}</td>
+              <td>{{ asset.location }}</td>
               <td>
                 <span v-if="asset.location === (asset.registration_location || asset.location)" class="dash-text">-</span>
                 <span v-else class="time-text">{{ formatDate(asset.last_moved_at) }}</span>
               </td>
-              <td>👤 {{ asset.pic || 'Engineering' }}</td>
+              <td>{{ asset.pic || 'Engineering' }}</td>
               <td><StatusBadge :status="asset.status" /></td>
               <td>
-                <a v-if="asset.document_url" :href="asset.document_url" target="_blank" class="doc-link">📄 Manual</a>
+                <a v-if="asset.document_url" :href="asset.document_url" target="_blank" class="doc-link">Manual</a>
                 <span v-else class="no-doc">-</span>
               </td>
               <td class="actions-cell">
                 <button class="icon-btn log-btn" @click.stop="openMutationTimelineModal(asset)" title="Lihat Timeline Mutasi Aset">
-                  📜 Timeline
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Timeline</span>
                 </button>
                 <button class="icon-btn qr-btn" @click="openQrPrint(asset)" title="Generate & Cetak QR Code">
-                  🖨️ QR
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+                  <span>QR</span>
                 </button>
                 <button class="icon-btn mut-btn" v-if="canMutate" @click="openMutationModal(asset)" title="Mutasi Lokasi Barang">
-                  🔄 Mutasi
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+                  <span>Mutasi</span>
                 </button>
                 <button class="icon-btn edit-btn" v-if="canCreateAsset" @click="openEditModal(asset)" title="Edit Aset">
-                  ✏️
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 </button>
                 <button class="icon-btn delete-btn" v-if="canDeleteAsset" @click="deleteAsset(asset)" title="Hapus Aset Permanen">
-                  🗑️
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                 </button>
               </td>
             </tr>
@@ -108,7 +111,7 @@
     </transition>
 
     <!-- Modal Registrasi / Edit Aset -->
-    <ModalDialog :show="showAssetModal" :title="isEditMode ? '✏️ Edit Data Aset' : '➕ Registrasi Aset Baru'" @close="showAssetModal = false">
+    <ModalDialog :show="showAssetModal" :title="isEditMode ? 'Edit Data Aset' : 'Registrasi Aset Baru'" @close="showAssetModal = false">
       <form @submit.prevent="saveAsset" class="modal-form">
         <label>
           <span>Kode Aset Unik</span>
@@ -158,13 +161,13 @@
         </label>
 
         <button type="submit" class="submit-modal-btn">
-          {{ isEditMode ? 'Simpan Perubahan' : 'Daftarkan Aset' }}
+          {{ isEditMode ? 'Simpan Perubahan' : 'Daftarkan Aset Baru' }}
         </button>
       </form>
     </ModalDialog>
 
     <!-- Modal Mutasi Lokasi Barang -->
-    <ModalDialog :show="showMutModal" title="🔄 Mutasi Lokasi Aset" @close="showMutModal = false">
+    <ModalDialog :show="showMutModal" title="Mutasi Lokasi Aset" @close="showMutModal = false">
       <div v-if="selectedAssetForMut" class="mut-modal-body">
         <div class="current-info">
           <p><strong>Aset:</strong> {{ selectedAssetForMut.asset_name }} ({{ selectedAssetForMut.asset_code }})</p>
@@ -658,14 +661,16 @@ onMounted(() => {
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 24px 24px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .eyebrow {
@@ -677,10 +682,11 @@ onMounted(() => {
   font-weight: 700;
 }
 
-h1 {
+h1, .page-header h1 {
   margin: 0 0 8px;
   font-size: 1.8rem;
   color: #0f172a;
+  font-weight: 800;
 }
 
 .subtitle {
@@ -690,13 +696,28 @@ h1 {
 }
 
 .primary-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-weight: 700;
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.primary-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
 }
 
 .card-panel {
@@ -789,20 +810,120 @@ td {
 
 .actions-cell {
   display: flex;
+  align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .icon-btn {
-  border: 1px solid #cbd5e1;
-  background: white;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px !important;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s;
+  box-sizing: border-box;
+  line-height: 1;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  user-select: none;
 }
 
-.icon-btn:hover { background: #f1f5f9; }
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.icon-btn span {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.log-btn {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.log-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.qr-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.qr-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.mut-btn {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #ffedd5;
+}
+
+.mut-btn:hover {
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+
+.edit-btn {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  padding: 0 8px;
+}
+
+.edit-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+  padding: 0 8px;
+}
+
+.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.primary-btn {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  padding: 10px 18px;
+  border-radius: 4px !important;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.primary-btn:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+}
 
 .modal-form {
   display: grid;
@@ -812,26 +933,45 @@ td {
 .modal-form label {
   display: grid;
   gap: 6px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .modal-form input, .modal-form select {
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.modal-form input:focus, .modal-form select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .submit-modal-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  padding: 13px;
+  border-radius: 4px !important;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   margin-top: 8px;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.submit-modal-btn:hover {
+  background: #1e293b;
 }
 
 .warning-btn { background: #d97706; }

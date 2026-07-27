@@ -1,18 +1,20 @@
 <template>
-  <div class="dashboard-screen page-container">
-    <div class="dashboard-topbar">
+  <div class="page-container">
+    <div class="page-header">
       <div>
         <p class="eyebrow">AsetKu Portal</p>
         <h1>Halo, {{ userName }}</h1>
         <p class="subtitle">Ringkasan operasional hotel.</p>
       </div>
 
-      <div class="quick-action-bar">
-        <button class="action-btn primary" @click="$emit('open-qr-scanner')">
-          📱 Scan QR Code Aset
+      <div class="header-action-group">
+        <button class="primary-btn" @click="$emit('open-qr-scanner')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+          <span>Scan QR Code</span>
         </button>
-        <button class="action-btn danger" @click="goToReportWO">
-          🚨 Laporkan Kerusakan
+        <button class="primary-btn btn-danger-ios" @click="goToReportWO">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>Laporkan Kerusakan</span>
         </button>
       </div>
     </div>
@@ -165,41 +167,61 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dashboard-topbar {
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px;
+}
+
+.page-header {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 24px;
-  align-items: center;
-  margin-bottom: 28px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.quick-action-bar {
+.header-action-group {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
 }
 
-.action-btn {
-  border: none;
-  border-radius: 12px;
-  padding: 12px 18px;
-  font-weight: 700;
+.primary-btn {
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.action-btn.primary {
-  background: #2563eb;
-  color: white;
+.primary-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
 }
 
-.action-btn.danger {
-  background: #dc2626;
-  color: white;
+.primary-btn.btn-danger-ios {
+  background: #ff3b30 !important;
+  border-color: #ff3b30 !important;
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.25);
 }
 
-.action-btn:hover {
-  transform: translateY(-2px);
+.primary-btn.btn-danger-ios:hover {
+  background: #d70015 !important;
+  border-color: #d70015 !important;
 }
 
 .summary-cards {
@@ -210,41 +232,49 @@ onMounted(() => {
 }
 
 .summary-card {
-  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px !important;
   padding: 22px;
-  color: #ffffff;
+  color: #0f172a;
   min-height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
 }
 
 .summary-card:hover {
-  transform: translateY(-4px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.card-primary { background: linear-gradient(135deg, #2563eb, #3b82f6); }
-.card-secondary { background: linear-gradient(135deg, #d97706, #f59e0b); }
-.card-accent { background: linear-gradient(135deg, #059669, #10b981); }
+.card-primary { border-top: 4px solid #2563eb; }
+.card-secondary { border-top: 4px solid #d97706; }
+.card-accent { border-top: 4px solid #059669; }
 
 .card-title {
   margin: 0;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: #64748b;
+  font-weight: 700;
 }
 
 .card-value {
   margin: 4px 0 0;
   font-size: 2.2rem;
   font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .card-note {
   margin: 0;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: #64748b;
+  font-weight: 600;
 }
 
 .dashboard-grid {

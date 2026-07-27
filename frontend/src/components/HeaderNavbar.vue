@@ -1,113 +1,119 @@
 <template>
   <header class="header-navbar">
-    <div class="navbar-left">
-      <button class="mobile-hamburger" v-if="isLoggedIn" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle navigation">
-        {{ mobileMenuOpen ? '✕' : '☰' }}
-      </button>
-
-      <div class="navbar-brand">
-        <div class="brand-logo">🏢</div>
-        <div>
-          <span class="brand-title">AsetKu</span>
-          <span class="brand-sub">Hotel Asset & WO</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Desktop Navigation Links -->
-    <nav class="navbar-links desktop-only" v-if="isLoggedIn">
-      <router-link to="/dashboard" class="nav-item">
-        <span class="nav-icon">📊</span> Dashboard
-      </router-link>
-      <router-link to="/assets" class="nav-item" v-if="canAccessAdvanced">
-        <span class="nav-icon">📦</span> Manajemen Aset
-      </router-link>
-      <router-link to="/workorders" class="nav-item">
-        <span class="nav-icon">🔧</span> Work Order
-      </router-link>
-      <router-link to="/maintenance" class="nav-item" v-if="canAccessAdvanced">
-        <span class="nav-icon">📅</span> Maintenance
-      </router-link>
-      <router-link to="/activitylogs" class="nav-item" v-if="canAccessAdvanced">
-        <span class="nav-icon">📋</span> Activity Log
-      </router-link>
-      <router-link to="/users" class="nav-item" v-if="userRole === 'admin'">
-        <span class="nav-icon">👥</span> User Management
-      </router-link>
-    </nav>
-
-    <!-- Mobile Drawer Overlay -->
-    <div class="mobile-drawer-overlay" v-if="mobileMenuOpen && isLoggedIn" @click="mobileMenuOpen = false">
-      <div class="mobile-drawer" @click.stop>
-        <div class="drawer-header">
-          <div class="user-avatar">{{ userInitial }}</div>
-          <div>
-            <p class="drawer-name">{{ userName }}</p>
-            <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
-          </div>
-          <button class="close-drawer" @click="mobileMenuOpen = false">✕</button>
-        </div>
-
-        <nav class="drawer-links" @click="mobileMenuOpen = false">
-          <router-link to="/dashboard" class="drawer-item">
-            <span>📊</span> Dashboard
-          </router-link>
-          <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced">
-            <span>📦</span> Manajemen Aset
-          </router-link>
-          <router-link to="/workorders" class="drawer-item">
-            <span>🔧</span> Work Order
-          </router-link>
-          <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced">
-            <span>📅</span> Maintenance
-          </router-link>
-          <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced">
-            <span>📋</span> Activity Log
-          </router-link>
-          <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'">
-            <span>👥</span> User Management
-          </router-link>
-
-          <div class="drawer-divider"></div>
-          <button class="drawer-item logout" @click="handleLogout">
-            <span>🚪</span> Keluar (Logout)
-          </button>
-        </nav>
-      </div>
-    </div>
-
-    <!-- User Menu & Scan Button -->
-    <div class="navbar-user" v-if="isLoggedIn">
-      <button class="qr-quick-btn" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
-        📱 <span class="btn-text-desktop">Scan QR</span>
-      </button>
-
-      <!-- Account Dropdown (Desktop) -->
-      <div class="account-dropdown-wrapper desktop-only">
-        <button class="account-trigger" @click="toggleDropdown">
-          <div class="user-avatar">
-            <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
-            <span v-else>{{ userInitial }}</span>
-          </div>
-          <div class="user-info">
-            <span class="user-name">{{ userName }}</span>
-            <span class="user-role-sub">{{ roleLabel }}</span>
-          </div>
-          <span class="dropdown-arrow">▼</span>
+    <div class="navbar-container">
+      <div class="navbar-left">
+        <button class="mobile-hamburger" v-if="isLoggedIn" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle navigation">
+          {{ mobileMenuOpen ? '✕' : '☰' }}
         </button>
 
-        <div class="dropdown-menu" v-if="dropdownOpen" @click="dropdownOpen = false">
-          <div class="dropdown-header">
-            <p class="dh-title">{{ userName }}</p>
-            <p class="dh-sub">Role: {{ roleLabel }}</p>
+        <div class="navbar-brand">
+          <div class="brand-logo">
+            <img :src="'/assets/logo.png'" alt="AsetKu Logo" class="brand-logo-img" @error="logoFailed = true" v-if="!logoFailed" />
+            <span v-else class="brand-text-logo">A</span>
           </div>
-          <div class="dropdown-divider"></div>
-          <button class="dropdown-item" @click="showProfile">
-            <span>👤</span> Profil Saya & Foto
+          <div>
+            <span class="brand-title">AsetKu</span>
+            <span class="brand-sub">Hotel Asset & WO</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="navbar-links desktop-only" v-if="isLoggedIn">
+        <router-link to="/dashboard" class="nav-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
+        </router-link>
+        <router-link to="/assets" class="nav-item" v-if="canAccessAdvanced">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Manajemen Aset
+        </router-link>
+        <router-link to="/workorders" class="nav-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Work Order
+        </router-link>
+        <router-link to="/maintenance" class="nav-item" v-if="canAccessAdvanced">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> Maintenance
+        </router-link>
+        <router-link to="/activitylogs" class="nav-item" v-if="canAccessAdvanced">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Activity Log
+        </router-link>
+        <router-link to="/users" class="nav-item" v-if="userRole === 'admin'">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Management
+        </router-link>
+      </nav>
+
+      <!-- Mobile Drawer Overlay -->
+      <div class="mobile-drawer-overlay" v-if="mobileMenuOpen && isLoggedIn" @click="mobileMenuOpen = false">
+        <div class="mobile-drawer" @click.stop>
+          <div class="drawer-header">
+            <div class="user-avatar">{{ userInitial }}</div>
+            <div>
+              <p class="drawer-name">{{ userName }}</p>
+              <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
+            </div>
+            <button class="close-drawer" @click="mobileMenuOpen = false">✕</button>
+          </div>
+
+          <nav class="drawer-links" @click="mobileMenuOpen = false">
+            <router-link to="/dashboard" class="drawer-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
+            </router-link>
+            <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Manajemen Aset
+            </router-link>
+            <router-link to="/workorders" class="drawer-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Work Order
+            </router-link>
+            <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> Maintenance
+            </router-link>
+            <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Activity Log
+            </router-link>
+            <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Management
+            </router-link>
+
+            <div class="drawer-divider"></div>
+            <button class="drawer-item logout" @click="handleLogout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Keluar (Logout)
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- User Menu & Scan Button -->
+      <div class="navbar-user" v-if="isLoggedIn">
+        <button class="qr-quick-btn" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+          <span class="btn-text-desktop">Scan QR</span>
+        </button>
+
+        <!-- Account Dropdown (Desktop) -->
+        <div class="account-dropdown-wrapper desktop-only">
+          <button class="account-trigger" @click="toggleDropdown">
+            <div class="user-avatar">
+              <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
+              <span v-else>{{ userInitial }}</span>
+            </div>
+            <div class="user-info">
+              <span class="user-name">{{ userName }}</span>
+              <span class="user-role-sub">{{ roleLabel }}</span>
+            </div>
+            <span class="dropdown-arrow">▼</span>
           </button>
-          <button class="dropdown-item logout-item" @click="handleLogout">
-            <span>🚪</span> Keluar (Logout)
-          </button>
+
+          <div class="dropdown-menu" v-if="dropdownOpen" @click="dropdownOpen = false">
+            <div class="dropdown-header">
+              <p class="dh-title">{{ userName }}</p>
+              <p class="dh-sub">Role: {{ roleLabel }}</p>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" @click="showProfile">
+              <span>👤</span> Profil Saya & Foto
+            </button>
+            <button class="dropdown-item logout-item" @click="handleLogout">
+              <span>🚪</span> Keluar (Logout)
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -181,6 +187,7 @@ const editProfileAvatar = ref(userAvatar.value)
 const isUpdatingProfile = ref(false)
 const profileMsg = ref('')
 const profileMsgType = ref('success')
+const logoFailed = ref(false)
 
 const isLoggedIn = computed(() => !!(sessionStorage.getItem('token') || localStorage.getItem('token')))
 
@@ -291,34 +298,45 @@ onUnmounted(() => {
 
 <style scoped>
 .header-navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #0f172a;
-  color: #ffffff;
-  padding: 10px 20px;
-  border-bottom: 2px solid #d97706;
+  background: #ffffff;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+.navbar-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 60px;
+  min-height: 60px;
+  max-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .navbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .mobile-hamburger {
   display: none;
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: white;
-  font-size: 1.3rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  font-size: 1.2rem;
   width: 38px;
   height: 38px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   cursor: pointer;
 }
 
@@ -329,53 +347,79 @@ onUnmounted(() => {
 }
 
 .brand-logo {
-  font-size: 1.3rem;
-  background: #1e293b;
-  padding: 4px 8px;
-  border-radius: 2px !important;
-  border: 1px solid #334155;
+  font-size: 1.2rem;
+  background: #f8fafc;
+  padding: 4px;
+  border-radius: 4px !important;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.brand-logo-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.brand-text-logo {
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #0f172a;
 }
 
 .brand-title {
   display: block;
   font-size: 1.15rem;
   font-weight: 800;
-  color: #f59e0b;
+  color: #0f172a;
   line-height: 1.1;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.02em;
 }
 
 .brand-sub {
-  font-size: 0.7rem;
-  color: #cbd5e1;
+  font-size: 0.72rem;
+  color: #64748b;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .navbar-links {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .nav-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #cbd5e1;
+  gap: 5px;
+  color: #475569;
   text-decoration: none;
-  padding: 8px 12px;
-  border-radius: 2px !important;
-  font-size: 0.85rem;
+  padding: 7px 10px;
+  border-radius: 4px !important;
+  font-size: 0.82rem;
   font-weight: 600;
   border: 1px solid transparent;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.nav-item:hover, .nav-item.router-link-active {
-  background: #1e293b;
-  color: #f59e0b;
-  border-color: #334155;
+.nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.nav-item.router-link-active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
 }
 
 .navbar-user {
@@ -385,15 +429,31 @@ onUnmounted(() => {
 }
 
 .qr-quick-btn {
-  background: #2563eb;
-  color: white;
-  border: 1px solid #1d4ed8;
-  padding: 8px 14px;
-  border-radius: 2px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  padding: 0 16px;
+  border-radius: 4px !important;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   cursor: pointer;
-  min-height: 38px;
+  height: 44px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.qr-quick-btn:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+}
+
+.qr-quick-btn .btn-svg {
+  flex-shrink: 0;
+  display: block;
 }
 
 .account-dropdown-wrapper {
@@ -404,11 +464,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: white;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
   padding: 6px 12px;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   cursor: pointer;
   height: 44px;
 }
@@ -416,9 +476,9 @@ onUnmounted(() => {
 .user-avatar {
   width: 32px;
   height: 32px;
-  background: #d97706;
+  background: #0f172a;
   color: #ffffff;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -437,9 +497,9 @@ onUnmounted(() => {
 }
 
 .user-name {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0f172a !important;
   margin: 0;
   padding: 0;
   text-align: left;
@@ -449,7 +509,7 @@ onUnmounted(() => {
 .user-role-sub {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #f59e0b;
+  color: #2563eb !important;
   margin: 2px 0 0 0;
   padding: 0;
   text-align: left;
@@ -457,14 +517,9 @@ onUnmounted(() => {
   display: block;
 }
 
-.role-badge.management { background: #ea580c; color: white; }
-.role-badge.hod { background: #2563eb; color: white; }
-.role-badge.engineer { background: #059669; color: white; }
-.role-badge.external { background: #64748b; color: white; }
-
 .dropdown-arrow {
   font-size: 0.6rem;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .dropdown-menu {
@@ -531,12 +586,13 @@ onUnmounted(() => {
 
 .mobile-drawer {
   width: 280px;
-  background: #0f172a;
+  background: #ffffff;
   height: 100%;
   display: flex;
   flex-direction: column;
   padding: 20px;
-  border-right: 2px solid #d97706;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .drawer-header {
@@ -545,13 +601,13 @@ onUnmounted(() => {
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .drawer-name {
   margin: 0 0 4px;
-  font-weight: 700;
-  color: white;
+  font-weight: 800;
+  color: #0f172a;
   font-size: 0.95rem;
 }
 
@@ -559,8 +615,9 @@ onUnmounted(() => {
   margin-left: auto;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 1.2rem;
+  cursor: pointer;
 }
 
 .drawer-links {
@@ -573,28 +630,25 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #cbd5e1;
+  color: #334155;
   text-decoration: none;
-  padding: 10px 12px;
-  border-radius: 2px !important;
-  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 4px !important;
   font-size: 0.9rem;
-  background: transparent;
+  font-weight: 600;
   border: 1px solid transparent;
-  width: 100%;
-  text-align: left;
 }
 
-.drawer-item.router-link-active {
-  background: #1e293b;
-  color: #f59e0b;
-  border-color: #334155;
+.drawer-item:hover, .drawer-item.router-link-active {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
 }
 
 .drawer-divider {
   height: 1px;
-  background: #1e293b;
-  margin: 12px 0;
+  background: #e2e8f0;
+  margin: 8px 0;
 }
 
 .drawer-item.logout {

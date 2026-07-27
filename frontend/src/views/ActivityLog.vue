@@ -4,13 +4,14 @@
       <div class="page-header">
         <div>
           <p class="eyebrow">Audit Trail</p>
-          <h1>📋 Activity Log</h1>
+          <h1>Activity Log</h1>
           <p class="subtitle">Riwayat perbaikan & maintenance.</p>
         </div>
 
         <div class="header-action-group">
-          <button class="print-report-btn" @click="showReportModal = true" title="Prinjau & Export Laporan Audit Trail">
-            📄 Laporan & Export
+          <button class="primary-btn" @click="showReportModal = true" title="Prinjau & Export Laporan Audit Trail">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span>Laporan & Export</span>
           </button>
         </div>
       </div>
@@ -18,28 +19,36 @@
       <!-- Summary boxes -->
       <div class="summary-row">
         <div class="sbox green">
-          <span class="sbox-icon">✅</span>
+          <span class="sbox-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </span>
           <div>
             <p class="sbox-label">WO Finish</p>
             <p class="sbox-value">{{ finishedWOs.length }} Tiket</p>
           </div>
         </div>
         <div class="sbox blue">
-          <span class="sbox-icon">🔧</span>
+          <span class="sbox-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </span>
           <div>
             <p class="sbox-label">Maintenance Selesai</p>
             <p class="sbox-value">{{ maintenanceHistory.length }} Riwayat</p>
           </div>
         </div>
         <div class="sbox purple">
-          <span class="sbox-icon">💰</span>
+          <span class="sbox-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
           <div>
             <p class="sbox-label">Total Biaya Maintenance</p>
             <p class="sbox-value">Rp {{ formatNumber(totalMaintenanceCost) }}</p>
           </div>
         </div>
         <div class="sbox orange">
-          <span class="sbox-icon">🔀</span>
+          <span class="sbox-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+          </span>
           <div>
             <p class="sbox-label">Total Mutasi Aset</p>
             <p class="sbox-value">{{ mutations.length }} Mutasi</p>
@@ -49,12 +58,12 @@
 
       <!-- Search -->
       <div class="search-row">
-        <input v-model="searchFilter" placeholder="🔍 Cari..." class="search-input" />
+        <input v-model="searchFilter" placeholder="Cari riwayat activity log..." class="search-input" />
       </div>
 
       <!-- Section 1: Work Order Timelines (Audit Trail) -->
       <div class="card-panel">
-        <h2 class="section-title">⚡ Riwayat Seluruh Timeline Work Order (Audit Trail)</h2>
+        <h2 class="section-title">Riwayat Seluruh Timeline Work Order (Audit Trail)</h2>
         <div class="table-responsive">
           <table>
             <thead>
@@ -74,7 +83,7 @@
                 <td><span class="wo-id">#WO-{{ tl.work_order_id }}</span></td>
                 <td><StatusBadge :status="tl.status" /></td>
                 <td>
-                  <span class="requester-chip">👤 @{{ tl.updated_by || 'Sistem' }}</span>
+                  <span class="requester-chip">@{{ tl.updated_by || 'Sistem' }}</span>
                   <span class="user-role-sub-inline" v-if="tl.user_role"> ({{ tl.user_role }})</span>
                 </td>
                 <td class="desc-cell" :title="tl.action_taken">{{ tl.action_taken || '—' }}</td>
@@ -91,7 +100,7 @@
 
       <!-- Section 2: Maintenance History -->
       <div class="card-panel" style="margin-top: 24px;">
-        <h2 class="section-title">🔧 Maintenance Selesai</h2>
+        <h2 class="section-title">Maintenance Selesai</h2>
         <div class="table-responsive">
           <table>
             <thead>
@@ -112,8 +121,14 @@
                 <td>Rp {{ formatNumber(mh.cost || 0) }}</td>
                 <td class="time-col">{{ formatDate(mh.created_at) }}</td>
                 <td v-if="canManage" class="actions-cell">
-                  <button class="icon-btn edit-btn" @click="openEditMhModal(mh)" title="Edit">✏️ Edit</button>
-                  <button class="icon-btn delete-btn" @click="deleteMh(mh)" title="Hapus">🗑️ Hapus</button>
+                  <button class="icon-btn edit-btn" @click="openEditMhModal(mh)" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Edit</span>
+                  </button>
+                  <button class="icon-btn delete-btn" @click="deleteMh(mh)" title="Hapus">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    <span>Hapus</span>
+                  </button>
                 </td>
               </tr>
               <tr v-if="filteredMH.length === 0">
@@ -126,7 +141,7 @@
 
       <!-- Section 3: Asset Mutation Timelines -->
       <div class="card-panel" style="margin-top: 24px;">
-        <h2 class="section-title">🔀 Riwayat Seluruh Mutasi Aset (Audit Trail)</h2>
+        <h2 class="section-title">Riwayat Seluruh Mutasi Aset (Audit Trail)</h2>
         <div class="table-responsive">
           <table>
             <thead>
@@ -144,9 +159,9 @@
               <tr v-for="mut in filteredAssetMutationTimelines" :key="mut.id">
                 <td><span class="wo-id">#AMUT-{{ mut.id }}</span></td>
                 <td><span class="wo-id">{{ mut.asset_code }}</span></td>
-                <td>📍 {{ mut.previous_location || '—' }}</td>
-                <td><span class="location-new">📍 {{ mut.new_location || '—' }}</span></td>
-                <td>👤 {{ mut.pic || 'Engineering' }}</td>
+                <td>{{ mut.previous_location || '—' }}</td>
+                <td><span class="location-new">{{ mut.new_location || '—' }}</span></td>
+                <td>{{ mut.pic || 'Engineering' }}</td>
                 <td class="desc-cell" :title="mut.reason">{{ mut.reason || '—' }}</td>
                 <td class="time-col">{{ formatDate(mut.moved_at) }}</td>
               </tr>
@@ -169,9 +184,9 @@
     </div>
 
     <!-- Modals placed OUTSIDE .page-container so print media query hiding .page-container leaves report modal visible -->
-    <ModalDialog :show="showWoModal" title="✏️ Edit WO" @close="showWoModal = false">
+    <ModalDialog :show="showWoModal" title="Edit Work Order" @close="showWoModal = false">
       <form @submit.prevent="submitEditWo" class="modal-form" v-if="selectedWo">
-        <p class="modal-info"><strong>WO #{{ selectedWo.id }}:</strong> 📍 {{ selectedWo.location }}</p>
+        <p class="modal-info"><strong>WO #{{ selectedWo.id }}:</strong> {{ selectedWo.location }}</p>
         <label>
           <span>Deskripsi</span>
           <textarea v-model="editWoDesc" rows="3" required></textarea>
@@ -185,11 +200,11 @@
           <input v-model.number="editWoCost" type="number" min="0" required />
         </label>
 
-        <button type="submit" class="submit-modal-btn">Simpan</button>
+        <button type="submit" class="submit-modal-btn">Simpan Perubahan</button>
       </form>
     </ModalDialog>
 
-    <ModalDialog :show="showMhModal" title="✏️ Edit Maintenance" @close="showMhModal = false">
+    <ModalDialog :show="showMhModal" title="Edit Maintenance" @close="showMhModal = false">
       <form @submit.prevent="submitEditMh" class="modal-form" v-if="selectedMh">
         <p class="modal-info"><strong>Maintenance #MH-{{ selectedMh.id }} (Aset #{{ selectedMh.asset_id }})</strong></p>
         <label>
@@ -201,14 +216,14 @@
           <input v-model.number="editMhCost" type="number" min="0" required />
         </label>
 
-        <button type="submit" class="submit-modal-btn">Simpan</button>
+        <button type="submit" class="submit-modal-btn">Simpan Perubahan</button>
       </form>
     </ModalDialog>
 
-    <ModalDialog :show="showReportModal" title="🖨️ Laporan Activity Log" maxWidth="960px" @close="showReportModal = false">
+    <ModalDialog :show="showReportModal" title="Laporan Activity Log & Audit Trail" maxWidth="960px" @close="showReportModal = false">
       <div class="monthly-report-printable" id="printableReportDocument">
         <div class="report-header">
-          <h2>🏨 LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS</h2>
+          <h2>LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS</h2>
           <p class="report-sub">Sistem AsetKu Hotel — Periode: {{ reportMonthYear }}</p>
           <hr class="report-divider" />
         </div>
@@ -288,11 +303,13 @@
       </div>
 
       <div class="report-actions no-print">
-        <button class="submit-modal-btn excel-btn" @click="exportToExcel">
-          📊 Export ke Excel (.xlsx)
+        <button class="excel-btn" @click="exportToExcel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          <span>Export ke Excel (.xlsx)</span>
         </button>
-        <button class="submit-modal-btn print-btn" @click="printReport">
-          🖨️ Cetak Dokumen Laporan (PDF / Print)
+        <button class="print-btn" @click="printReport">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          <span>Cetak Dokumen Laporan (PDF / Print)</span>
         </button>
       </div>
     </ModalDialog>
@@ -638,18 +655,40 @@ onMounted(() => {
 
 <style scoped>
 .page-container {
-  max-width: 1240px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 24px 24px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
-  flex-wrap: wrap;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+h1, .page-header h1 {
+  margin: 0 0 8px;
+  font-size: 1.8rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .header-action-group {
@@ -976,15 +1015,219 @@ td {
   vertical-align: middle;
 }
 
-.report-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+.primary-btn {
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.excel-btn { background: #16a34a; }
-.print-btn { background: #0284c7; }
+.primary-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
+}
+
+.primary-btn .btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.print-report-btn span {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-sizing: border-box;
+  line-height: 1;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.icon-btn span {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.edit-btn {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  padding: 0 10px;
+}
+
+.edit-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+  padding: 0 10px;
+}
+
+.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.modal-form {
+  display: grid;
+  gap: 16px;
+}
+
+.modal-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.modal-form input, .modal-form select, .modal-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.modal-form input:focus, .modal-form select:focus, .modal-form textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.submit-modal-btn {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  padding: 13px 18px;
+  border-radius: 4px !important;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.submit-modal-btn:hover {
+  background: #1e293b;
+}
+
+.report-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  width: 100%;
+}
+
+.excel-btn {
+  background: #34c759 !important;
+  color: #ffffff !important;
+  border: 1px solid #34c759 !important;
+  padding: 12px 20px !important;
+  border-radius: 10px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.excel-btn:hover {
+  background: #28a745 !important;
+  border-color: #28a745 !important;
+  transform: translateY(-1px);
+}
+
+.print-btn {
+  background: #007aff !important;
+  color: #ffffff !important;
+  border: 1px solid #007aff !important;
+  padding: 12px 20px !important;
+  border-radius: 10px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+  transition: all 0.15s ease;
+  line-height: 1;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.print-btn:hover {
+  background: #0062cc !important;
+  border-color: #0062cc !important;
+  transform: translateY(-1px);
+}
 </style>
