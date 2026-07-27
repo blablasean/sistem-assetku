@@ -115,10 +115,3 @@ sistem-assetku/
 └── README.md                 # Dokumentasi Resmi Proyek
 ```
 
----
-
-## 📄 Hak Cipta & Lisensi
-
-© 2026 **Sistem AsetKu Hotel**. Hak Cipta Dilindungi Undang-Undang.  
-Sistem Informasi Manajemen Aset & Operasional Perhotelan.
-

@@ -1,5 +1,5 @@
 /**
- * Centralized formatting and date utilities for AsetKu Hotel Frontend
+ * Centralized formatting and date utilities for AsetKu Frontend
  */
 
 /**
@@ -44,7 +44,7 @@ export function formatNumber(num) {
  * Maps role or department code to human-readable Indonesian label
  */
 export function formatDepartmentLabel(roleOrDept) {
-  if (!roleOrDept) return 'Staff Hotel'
+  if (!roleOrDept) return 'Staff Operasional'
   const map = {
     dept_akunting: 'Departement Akunting',
     dept_spa: 'Departement Spa',
@@ -58,7 +58,7 @@ export function formatDepartmentLabel(roleOrDept) {
     hod: 'HOD Engineer',
     management: 'Supervisor Engineer',
     engineer: 'Staff Engineer',
-    external: 'Staff Hotel'
+    external: 'Staff Operasional'
   }
   return map[roleOrDept] || roleOrDept
 }

@@ -3,8 +3,8 @@
     <div class="page-header">
       <div>
         <p class="eyebrow">Utility Monitoring & Cost Tracking</p>
-        <h1>⚡ Pemantauan Utilitas Hotel (Listrik & Air PDAM)</h1>
-        <p class="subtitle">Monitoring konsumsi energi dan pemakaian air harian/bulanan untuk efisiensi biaya operasional hotel.</p>
+        <h1>⚡ Pemantauan Utilitas & Energi (Listrik & Air PDAM)</h1>
+        <p class="subtitle">Monitoring konsumsi energi dan pemakaian air harian/bulanan untuk efisiensi biaya operasional.</p>
       </div>
 
       <button class="primary-btn" @click="showLogModal = true">
@@ -94,10 +94,10 @@ const showLogModal = ref(false)
 const logDate = ref('2026-07-22')
 const logPower = ref(14250)
 const logWater = ref(1820)
-const logNotes = ref('Operasional normal, occupancy hotel 85%')
+const logNotes = ref('Operasional normal, beban fasilitas 85%')
 
 const utilityLogs = ref([
-  { id: 1, date: '2026-07-22', electricity_kwh: 14250, water_m3: 1820, recorder: 'Teknisi Eko', notes: 'Occupancy 85%, chiller & AC beroperasi penuh' },
+  { id: 1, date: '2026-07-22', electricity_kwh: 14250, water_m3: 1820, recorder: 'Teknisi Eko', notes: 'Beban fasilitas 85%, sistem AC beroperasi penuh' },
   { id: 2, date: '2026-07-21', electricity_kwh: 13800, water_m3: 1750, recorder: 'Teknisi Deni', notes: 'Pemakaian normal harian' },
   { id: 3, date: '2026-07-20', electricity_kwh: 14100, water_m3: 1790, recorder: 'Teknisi Budi', notes: 'Ada event banquet di ballroom' }
 ])

@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Aset Hotel</p>
+        <p class="eyebrow">Inventaris Aset</p>
         <h1>Manajemen Aset</h1>
         <p class="subtitle">Manajemen & mutasi aset.</p>
       </div>
@@ -181,8 +181,8 @@
 
         <form @submit.prevent="submitMutation" class="modal-form">
           <label>
-            <span>Lokasi Baru (Kamar / Area Hotel)</span>
-            <input v-model="mutNewLocation" placeholder="Contoh: Kamar 205, Lobby Lounge" required />
+            <span>Lokasi Baru (Ruangan / Area Operasional)</span>
+            <input v-model="mutNewLocation" placeholder="Contoh: Ruang 205, Hall Utama" required />
           </label>
           <label>
             <span>PIC Penanggung Jawab Baru (Departemen)</span>
@@ -202,7 +202,7 @@
           </label>
           <label>
             <span>Alasan Perpindahan / Mutasi</span>
-            <input v-model="mutReason" placeholder="Contoh: Penyesuaian kebutuhan event / pemindahan room hotel" />
+            <input v-model="mutReason" placeholder="Contoh: Penyesuaian kebutuhan operasional / pemindahan unit" />
           </label>
 
           <button type="submit" class="submit-modal-btn warning-btn">Proses Mutasi Lokasi</button>
@@ -308,11 +308,11 @@
     </ModalDialog>
 
     <!-- Laporan Aset Modal -->
-    <ModalDialog :show="showReportModal" title="Laporan Inventaris Aset Hotel" maxWidth="960px" @close="showReportModal = false">
+    <ModalDialog :show="showReportModal" title="Laporan Inventaris Aset" maxWidth="960px" @close="showReportModal = false">
       <div class="monthly-report-printable" id="printableAssetReport">
         <div class="report-header">
-          <h2>LAPORAN INVENTARIS ASET HOTEL</h2>
-          <p class="report-sub">Sistem AsetKu Hotel — Dicetak: {{ reportDate }}</p>
+          <h2>LAPORAN INVENTARIS ASET</h2>
+          <p class="report-sub">Sistem AsetKu — Dicetak: {{ reportDate }}</p>
           <hr class="report-divider" />
         </div>
 
@@ -385,10 +385,10 @@ import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
 
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 const canCreateAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 const canDeleteAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canMutate = computed(() => userRole.value === 'hod' || userRole.value === 'admin')
+const canMutate = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -416,7 +416,7 @@ function countAssetStatus(status) {
 import { exportToExcel, triggerPrint } from '../utils/exportUtils'
 
 function exportAssetToExcel() {
-  const fileName = `Laporan_Inventaris_Aset_Hotel_${reportDate.value.replace(/\s+/g, '_')}.xls`
+  const fileName = `Laporan_Inventaris_Aset_${reportDate.value.replace(/\s+/g, '_')}.xls`
   const headers = ['Kode Aset', 'Nama Aset', 'Kategori', 'Lokasi Registrasi', 'PIC', 'Status']
   const rows = assets.value.map(a => [
     a.asset_code || '',
@@ -699,7 +699,7 @@ async function downloadQrStickerPng() {
   ctx.fillStyle = '#f59e0b'
   ctx.font = 'bold 22px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('ASETKU HOTEL STICKER', canvas.width / 2, 56)
+  ctx.fillText('ASETKU ASSET STICKER', canvas.width / 2, 56)
 
   // Load and Draw QR Code Image
   const qrImg = new Image()
@@ -730,13 +730,13 @@ async function downloadQrStickerPng() {
   // Location & PIC
   ctx.fillStyle = '#475569'
   ctx.font = '16px sans-serif'
-  ctx.fillText(`📍 ${asset.location || 'Area Hotel'}`, canvas.width / 2, 440)
+  ctx.fillText(`📍 ${asset.location || 'Ruangan / Area'}`, canvas.width / 2, 440)
   ctx.fillText(`👤 PIC: ${asset.pic || 'Engineering'}`, canvas.width / 2, 475)
 
   // Footer Subtext
   ctx.fillStyle = '#94a3b8'
   ctx.font = '12px sans-serif'
-  ctx.fillText('PROPERTY OF HOTEL ASSET MANAGEMENT', canvas.width / 2, 520)
+  ctx.fillText('PROPERTY OF ASSET MANAGEMENT SYSTEM', canvas.width / 2, 520)
 
   // Trigger PNG download
   const imageURI = canvas.toDataURL('image/png')

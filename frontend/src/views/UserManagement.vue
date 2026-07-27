@@ -6,7 +6,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
       </div>
       <h2>Akses Terbatas (Admin Only)</h2>
-      <p>Halaman Manajemen Pengguna ini hanya dapat diakses oleh Administrator Hotel.</p>
+      <p>Halaman Manajemen Pengguna ini hanya dapat diakses oleh Administrator Sistem.</p>
       <router-link to="/dashboard" class="action-btn-sharp">Kembali ke Dashboard</router-link>
     </div>
 
@@ -17,7 +17,7 @@
         <div>
           <p class="eyebrow">Kontrol Pengguna & Peranan</p>
           <h1>Manajemen User & Hak Akses</h1>
-          <p class="subtitle">Kelola pendaftaran akun, nama, password, dan peranan (role) staf hotel secara aman.</p>
+          <p class="subtitle">Kelola pendaftaran akun, nama, password, dan peranan (role) pengguna secara aman.</p>
         </div>
 
         <button class="primary-btn" @click="openAddModal">
@@ -364,7 +364,7 @@ function getRoleLabel(role) {
     dept_fb_service: 'Department Food Beverage Service',
     dept_housekeeping: 'Department House Keeping',
     dept_frontoffice: 'Department Front Office',
-    external: 'Staff Hotel'
+    external: 'Staff Operasional'
   }
   return map[role] || role
 }

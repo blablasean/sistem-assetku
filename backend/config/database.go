@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -115,100 +114,7 @@ func SeedInitialData(db *gorm.DB) error {
 		}
 	}
 
-	// Check if assets exist
-	var assetCount int64
-	db.Model(&models.Asset{}).Count(&assetCount)
-	if assetCount == 0 {
-		assets := []models.Asset{
-			{AssetCode: "AST-RM301-AC", AssetName: "AC Split Daikin 1.5 PK", Category: "HVAC / AC", Location: "Kamar 301", PIC: "Deni (Tech)", Status: "Active"},
-			{AssetCode: "AST-RM102-TV", AssetName: "Smart TV LG 43 Inch", Category: "Elektronik & TV", Location: "Kamar 102", PIC: "Front Desk Team", Status: "Active"},
-			{AssetCode: "AST-KCH-CHILLER", AssetName: "Chiller Dapur Utama", Category: "Kitchen Equipment", Location: "Kitchen Dapur", PIC: "Kitchen Chef", Status: "Maintenance"},
-			{AssetCode: "AST-GEN-01", AssetName: "Generator Unit Cummins 500kVA", Category: "Mesin & Generator", Location: "Power House", PIC: "Engineering Supervisor", Status: "Active", IsReserved: true},
-			{AssetCode: "AST-LBY-SOFA", AssetName: "Set Sofa Premium Leather", Category: "Mebel & Furniture", Location: "Lobby Lounge", PIC: "Housekeeping", Status: "Active"},
-		}
-		for _, a := range assets {
-			db.Create(&a)
-		}
-	}
-
-	// Check if work orders exist
-	var woCount int64
-	db.Model(&models.WorkOrder{}).Count(&woCount)
-	if woCount == 0 {
-		workOrders := []models.WorkOrder{
-			{AssetID: 1, Category: "HVAC / AC", Location: "Kamar 301", Priority: "Emergency", Description: "AC Kamar 301 bocor air dan tidak dingin", Status: "In Progress", RequesterID: 4, EngineerID: 3},
-			{AssetID: 3, Category: "Kitchen Equipment", Location: "Kitchen Dapur", Priority: "High", Description: "Chiller Dapur Utama suhu naik ke -5°C", Status: "Open", RequesterID: 4, EngineerID: 0},
-			{AssetID: 2, Category: "Elektronik & TV", Location: "Kamar 102", Priority: "Medium", Description: "Smart TV HDMI port tidak terdeteksi", Status: "Closed", RequesterID: 4, EngineerID: 3},
-		}
-		for _, wo := range workOrders {
-			db.Create(&wo)
-		}
-	}
-
-	// Check if PM schedules exist
-	var pmCount int64
-	db.Model(&models.PreventiveMaintenance{}).Count(&pmCount)
-	if pmCount == 0 {
-		pmList := []models.PreventiveMaintenance{
-			{
-				AssetID:       1,
-				ScheduleType:  "Monthly",
-				NextRun:       time.Now().AddDate(0, 1, 0),
-				ChecklistData: "1. Cek tekanan freon AC\n2. Bersihkan filter evaporator\n3. Cek drainase air kondensasi",
-				Status:        "Active",
-			},
-			{
-				AssetID:       4,
-				ScheduleType:  "Weekly",
-				NextRun:       time.Now().AddDate(0, 0, 7),
-				ChecklistData: "1. Tes running generator 15 menit\n2. Cek level solar tangki harian\n3. Ukur tegangan aki starter",
-				Status:        "Active",
-			},
-		}
-		for _, pm := range pmList {
-			db.Create(&pm)
-		}
-	}
-
-	// Seed sample WorkOrderLogs
-	var wolCount int64
-	db.Model(&models.WorkOrderLog{}).Count(&wolCount)
-	if wolCount == 0 {
-		now := time.Now()
-		woLogs := []models.WorkOrderLog{
-			{WorkOrderID: 1, Status: "Open", ActionTaken: "Laporan diajukan: AC Kamar 301 bocor air dan tidak dingin", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-3 * time.Hour)},
-			{WorkOrderID: 1, Status: "In Progress", ActionTaken: "Penugasan Teknisi Budi Santoso untuk pembersihan evaporator", UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-2 * time.Hour)},
-			{WorkOrderID: 1, Status: "Under Review", ActionTaken: "Pembersihan filter evaporator dan pengisian freon R32 selesai. Menunggu review HOD.", Cost: 150000, UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-30 * time.Minute)},
-			{WorkOrderID: 2, Status: "Open", ActionTaken: "Laporan diajukan: Chiller Dapur Utama suhu naik ke -5°C", UpdatedBy: "chef_dapur", UserRole: "dept_fb_kitchen", CreatedAt: now.Add(-1 * time.Hour)},
-			{WorkOrderID: 3, Status: "Open", ActionTaken: "Laporan diajukan: Smart TV HDMI port tidak terdeteksi", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-24 * time.Hour)},
-			{WorkOrderID: 3, Status: "In Progress", ActionTaken: "Pemeriksaan port mainboard TV", UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-18 * time.Hour)},
-			{WorkOrderID: 3, Status: "Finish", ActionTaken: "Penggantian kabel HDMI internal TV selesai", Cost: 75000, UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-10 * time.Hour)},
-		}
-		for _, log := range woLogs {
-			db.Create(&log)
-		}
-	}
-
-	// Seed sample Timelines
-	var timelineCount int64
-	db.Model(&models.Timeline{}).Count(&timelineCount)
-	if timelineCount == 0 {
-		now := time.Now()
-		timelines := []models.Timeline{
-			{WorkOrderID: 1, Status: "Open", ActionTaken: "Laporan diajukan: AC Kamar 301 bocor air dan tidak dingin", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-3 * time.Hour)},
-			{WorkOrderID: 1, Status: "In Progress", ActionTaken: "Penugasan Teknisi Budi Santoso untuk pembersihan evaporator", UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-2 * time.Hour)},
-			{WorkOrderID: 1, Status: "Under Review", ActionTaken: "Pembersihan filter evaporator dan pengisian freon R32 selesai. Menunggu review HOD.", Cost: 150000, UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-30 * time.Minute)},
-			{WorkOrderID: 2, Status: "Open", ActionTaken: "Laporan diajukan: Chiller Dapur Utama suhu naik ke -5°C", UpdatedBy: "chef_dapur", UserRole: "dept_fb_kitchen", CreatedAt: now.Add(-1 * time.Hour)},
-			{WorkOrderID: 3, Status: "Open", ActionTaken: "Laporan diajukan: Smart TV HDMI port tidak terdeteksi", UpdatedBy: "staff_frontdesk", UserRole: "dept_frontoffice", CreatedAt: now.Add(-24 * time.Hour)},
-			{WorkOrderID: 3, Status: "In Progress", ActionTaken: "Pemeriksaan port mainboard TV", UpdatedBy: "teknisi_budi", UserRole: "engineer", CreatedAt: now.Add(-18 * time.Hour)},
-			{WorkOrderID: 3, Status: "Finish", ActionTaken: "Penggantian kabel HDMI internal TV selesai", Cost: 75000, UpdatedBy: "hod_eng", UserRole: "hod", CreatedAt: now.Add(-10 * time.Hour)},
-		}
-		for _, tl := range timelines {
-			db.Create(&tl)
-		}
-	}
-
-	log.Println("✓ Initial default users and hotel sample data seeded & verified successfully")
+	log.Println("✓ Initial default users seeded & verified successfully")
 	return nil
 }
 

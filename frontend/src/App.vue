@@ -6,10 +6,6 @@
       <router-view @open-qr-scanner="showQrScanner = true" />
     </main>
 
-    <footer class="global-footer" v-if="showNavbar">
-      <p>© 2026 <strong>Sistem AsetKu Hotel</strong>. Hak Cipta Dilindungi Undang-Undang.</p>
-    </footer>
-
     <QrScannerModal :show="showQrScanner" @close="showQrScanner = false" />
   </div>
 </template>
@@ -89,20 +85,6 @@ textarea,
   overflow-x: hidden;
 }
 
-.global-footer {
-  text-align: center;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
-  background: #ffffff;
-  color: #64748b;
-  font-size: 0.8rem;
-  margin-top: auto;
-}
-
-.global-footer p {
-  margin: 0;
-}
-
 /* Crisp Clean Buttons */
 button, .btn {
   font-family: inherit;
@@ -115,9 +97,45 @@ button:active, .btn:active {
   transform: scale(0.98);
 }
 
-@media (max-width: 850px) {
+@media (max-width: 640px) {
   .page-container, .dashboard-screen {
+    padding: 12px 10px !important;
+  }
+
+  /* Full width mobile modal adjustments */
+  .modal-container, .modal-content {
+    width: 96% !important;
+    max-width: 96% !important;
+    margin: 10px auto !important;
     padding: 16px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Touch scrolling utilities */
+  .touch-scroll-x {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+  .touch-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile action button grid */
+  .header-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+  .header-action-group button, .header-action-group .primary-btn {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    font-size: 0.82rem !important;
+    padding: 10px 8px !important;
   }
 }
 

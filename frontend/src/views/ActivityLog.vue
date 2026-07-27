@@ -224,7 +224,7 @@
       <div class="monthly-report-printable" id="printableReportDocument">
         <div class="report-header">
           <h2>LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS</h2>
-          <p class="report-sub">Sistem AsetKu Hotel — Periode: {{ reportMonthYear }}</p>
+          <p class="report-sub">Sistem AsetKu — Periode: {{ reportMonthYear }}</p>
           <hr class="report-divider" />
         </div>
 
@@ -532,7 +532,7 @@ function printReport() {
 
 function exportToExcel() {
   const monthName = reportMonthYear.value.replace(/\s+/g, '_')
-  const fileName = `Laporan_ActivityLog_Hotel_${monthName}.xls`
+  const fileName = `Laporan_ActivityLog_${monthName}.xls`
 
   let htmlTable = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -559,8 +559,8 @@ function exportToExcel() {
       </style>
     </head>
     <body>
-      <h2 class="summary-header">LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS HOTEL</h2>
-      <p><b>Sistem AsetKu Hotel</b> — Periode: ${reportMonthYear.value}</p>
+      <h2 class="summary-header">LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS OPERASIONAL</h2>
+      <p><b>Sistem AsetKu</b> — Periode: ${reportMonthYear.value}</p>
       <br/>
       <h3 class="section-header">1. REKAPITULASI WORK ORDER SELESAI (FINISH)</h3>
       <table border="1" cellspacing="0" cellpadding="6">

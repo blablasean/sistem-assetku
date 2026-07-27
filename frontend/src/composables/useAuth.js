@@ -1,15 +1,15 @@
 import { ref, computed } from 'vue'
 
-const userRole = ref(localStorage.getItem('user_role') || 'external')
-const userName = ref(localStorage.getItem('user_name') || 'Guest User')
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
+const userName = ref(sessionStorage.getItem('user_name') || 'Guest User')
 
 /**
  * Vue 3 Composable for Authentication & Role Permissions
  */
 export function useAuth() {
   function syncAuth() {
-    userRole.value = localStorage.getItem('user_role') || 'external'
-    userName.value = localStorage.getItem('user_name') || 'Guest User'
+    userRole.value = sessionStorage.getItem('user_role') || 'external'
+    userName.value = sessionStorage.getItem('user_name') || 'Guest User'
   }
 
   const isAdmin = computed(() => userRole.value === 'admin')
@@ -38,7 +38,7 @@ export function useAuth() {
       hod: 'HOD Engineer',
       management: 'Supervisor Engineer',
       engineer: 'Staff Engineer',
-      external: 'Staff Hotel'
+      external: 'Staff Operasional'
     }
     return map[userRole.value] || 'User'
   })

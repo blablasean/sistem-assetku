@@ -238,8 +238,8 @@
   <ModalDialog :show="showReportModal" title="Laporan Preventive Maintenance" maxWidth="960px" @close="showReportModal = false">
     <div class="monthly-report-printable" id="printablePMReport">
       <div class="report-header">
-        <h2>LAPORAN PREVENTIVE MAINTENANCE HOTEL</h2>
-        <p class="report-sub">Sistem AsetKu Hotel &mdash; Periode: {{ reportMonthYear }}</p>
+        <h2>LAPORAN PREVENTIVE MAINTENANCE</h2>
+        <p class="report-sub">Sistem AsetKu &mdash; Periode: {{ reportMonthYear }}</p>
         <hr class="report-divider" />
       </div>
 
@@ -313,7 +313,7 @@ import { useAuth } from '../composables/useAuth'
 import { useNotification } from '../composables/useNotification'
 import { formatDate, getTodayDateStr } from '../utils/formatters'
 
-const { canManageAssets: canManageSchedule, canManageAssets: canCompleteChecklist } = useAuth()
+const { canManageAssets: canManageSchedule, canManageAssets: canCompleteChecklist, userRole, syncAuth } = useAuth()
 const { showToast, toastMsg, toastType, notify } = useNotification()
 
 const todayDateStr = getTodayDateStr()
@@ -512,7 +512,7 @@ function countPMType(type) {
 import { exportToExcel, triggerPrint } from '../utils/exportUtils'
 
 function exportPMToExcel() {
-  const fileName = `Laporan_PM_Hotel_${reportMonthYear.value.replace(/\s+/g, '_')}.xls`
+  const fileName = `Laporan_PM_${reportMonthYear.value.replace(/\s+/g, '_')}.xls`
   const headers = ['ID', 'Aset', 'Frekuensi', 'Jatuh Tempo', 'Checklist', 'Status']
   const rows = pmList.value.map(item => [
     `#PM-${item.id}`,
@@ -633,6 +633,7 @@ async function submitChecklist(item, targetDateStr) {
 }
 
 onMounted(() => {
+  syncAuth()
   fetchPMSchedules()
   fetchRegisteredAssets()
 })

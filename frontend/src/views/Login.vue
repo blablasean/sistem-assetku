@@ -7,13 +7,13 @@
           <span v-else class="login-text-logo">A</span>
         </div>
         <div>
-          <p class="brand-label">AsetKu Hotel</p>
+          <p class="brand-label">AssetKu</p>
           <p class="brand-subtitle">Work Order & Asset Management System</p>
         </div>
       </div>
 
       <h1>Selamat Datang</h1>
-      <p>Masukkan username dan password Anda dari database hotel.</p>
+      <p>Masukkan username dan password Anda.</p>
 
       <form @submit.prevent="login" class="login-form">
         <label>
@@ -56,7 +56,6 @@
 
         <p v-if="error" class="error-message">{{ error }}</p>
       </form>
-      <p class="login-footer-copy">© 2026 <strong>Sistem AsetKu Hotel</strong>. Hak Cipta Dilindungi Undang-Undang.</p>
     </div>
   </div>
 </template>
@@ -302,12 +301,5 @@ p {
   font-size: 0.85rem;
   line-height: 1.4;
   font-weight: 600;
-}
-
-.login-footer-copy {
-  margin-top: 24px;
-  font-size: 0.76rem;
-  color: #94a3b8;
-  text-align: center;
 }
 </style>

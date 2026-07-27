@@ -64,7 +64,7 @@
         </div>
 
         <div class="res-body">
-          <p><strong>Lokasi:</strong> 📍 {{ assetDetail.location || 'Kamar / Area Hotel' }}</p>
+          <p><strong>Lokasi:</strong> 📍 {{ assetDetail.location || 'Ruangan / Area Operasional' }}</p>
           <p><strong>Kategori:</strong> 🏷️ {{ assetDetail.category || 'General' }}</p>
           <p><strong>PIC:</strong> 👤 {{ assetDetail.pic || 'Engineering Team' }}</p>
           <p><strong>Status Reservasi:</strong> {{ assetDetail.is_reserved ? '🟠 Ter-reservasi' : '🟢 Siap Digunakan' }}</p>
@@ -282,7 +282,7 @@ async function handleSearch() {
       errorMsg.value = 'Aset dengan kode tersebut tidak ditemukan.'
     }
   } catch (e) {
-    errorMsg.value = 'Kode Aset ' + scannedCode.value + ' tidak ditemukan di database hotel.'
+    errorMsg.value = 'Kode Aset ' + scannedCode.value + ' tidak ditemukan di database.'
   } finally {
     loading.value = false
   }

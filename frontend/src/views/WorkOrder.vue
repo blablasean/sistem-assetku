@@ -2,8 +2,8 @@
   <div class="page-container">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Work Order</p>
-        <h1>Work Order Hotel</h1>
+        <p class="eyebrow">Work Order System</p>
+        <h1>Work Order & Perbaikan</h1>
         <p class="subtitle">Pelaporan & perbaikan kerusakan.</p>
       </div>
 
@@ -58,14 +58,14 @@
                 <td class="nowrap-cell">
                   <div class="ios-table-pill pill-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <span>{{ wo.location || 'Kamar / Area Hotel' }}</span>
+                    <span>{{ wo.location || 'Ruangan / Area Operasional' }}</span>
                   </div>
                 </td>
                 <td class="nowrap-cell">Aset #{{ wo.asset_id }}</td>
                 <td class="nowrap-cell">
                   <div class="ios-table-pill pill-slate">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <span>@{{ wo.requested_by || 'user_hotel' }}</span>
+                    <span>@{{ wo.requested_by || 'user_system' }}</span>
                   </div>
                 </td>
                 <td class="nowrap-cell">
@@ -212,7 +212,7 @@
       <div class="monthly-report-printable" id="printableReportDocument">
         <div class="report-header">
           <h2>LAPORAN BULANAN MANAJEMEN ASET & WORK ORDER</h2>
-          <p class="report-sub">Sistem AsetKu Hotel — Periode: {{ reportMonthYear }}</p>
+          <p class="report-sub">Sistem AsetKu — Periode: {{ reportMonthYear }}</p>
           <hr class="report-divider" />
         </div>
 
@@ -448,7 +448,7 @@ function openLogsModal(wo) {
       work_order_id: wo.id,
       status: 'Open',
       action_taken: `Laporan diajukan: ${wo.description || ''}`,
-      updated_by: wo.requested_by || 'Staff Hotel',
+      updated_by: wo.requested_by || 'Staff Operasional',
       user_role: wo.department || 'User',
       created_at: wo.created_at || new Date().toISOString()
     }
@@ -585,7 +585,7 @@ const currentUsername = ref(sessionStorage.getItem('username') || localStorage.g
 const currentUserRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'admin')
 
 function formatDepartmentLabel(roleOrDept) {
-  if (!roleOrDept) return 'Staff Hotel'
+  if (!roleOrDept) return 'Staff Operasional'
   const map = {
     dept_akunting: 'Departement Akunting',
     dept_spa: 'Departement Spa',
@@ -599,7 +599,7 @@ function formatDepartmentLabel(roleOrDept) {
     hod: 'HOD Engineer',
     management: 'Supervisor Engineer',
     engineer: 'Staff Engineer',
-    external: 'Staff Hotel'
+    external: 'Staff Operasional'
   }
   return map[roleOrDept] || roleOrDept
 }
@@ -625,7 +625,7 @@ async function submitWorkOrder() {
     await api.post('/workorders', {
       asset_id: Number(formWo.value.asset_id) || 1,
       category: formWo.value.category || 'HVAC / AC',
-      location: formWo.value.location || 'Area Hotel',
+      location: formWo.value.location || 'Ruangan / Area Operasional',
       priority: formWo.value.priority,
       description: formWo.value.description,
       requested_by: currentUsername.value,
@@ -725,7 +725,7 @@ function printMonthlyReport() {
 
 function exportToExcel() {
   const monthName = reportMonthYear.value.replace(/\s+/g, '_')
-  const fileName = `Laporan_WorkOrder_Hotel_${monthName}.xls`
+  const fileName = `Laporan_WorkOrder_${monthName}.xls`
   const headers = ['Kode WO', 'Lokasi / Kamar', 'Prioritas', 'Deskripsi Kerusakan', 'Status Tiket', 'Biaya Perbaikan (Rp)']
   const rows = workOrders.value.map(wo => [
     wo.wo_code || `#WO-${wo.id}`,

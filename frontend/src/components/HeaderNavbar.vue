@@ -13,7 +13,7 @@
           </div>
           <div>
             <span class="brand-title">AsetKu</span>
-            <span class="brand-sub">Hotel Asset & WO</span>
+            <span class="brand-sub">Asset & Work Order</span>
           </div>
         </div>
       </div>
@@ -196,7 +196,7 @@ const dropdownOpen = ref(false)
 const mobileMenuOpen = ref(false)
 const showProfileModal = ref(false)
 
-const userName = ref(sessionStorage.getItem('user_name') || 'User Hotel')
+const userName = ref(sessionStorage.getItem('user_name') || 'Pengguna System')
 const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 const userAvatar = ref(sessionStorage.getItem('user_avatar') || '')
 
@@ -249,13 +249,13 @@ const roleLabel = computed(() => {
     dept_fb_service: 'Department Food Beverage Service',
     dept_housekeeping: 'Department House Keeping',
     dept_frontoffice: 'Department Front Office',
-    external: 'Staff Hotel'
+    external: 'Staff Operasional'
   }
-  return map[userRole.value] || 'User Hotel'
+  return map[userRole.value] || 'Pengguna System'
 })
 
 function syncUserFromStorage() {
-  userName.value = sessionStorage.getItem('user_name') || 'User Hotel'
+  userName.value = sessionStorage.getItem('user_name') || 'Pengguna System'
   userRole.value = sessionStorage.getItem('user_role') || 'external'
   userAvatar.value = sessionStorage.getItem('user_avatar') || ''
 }

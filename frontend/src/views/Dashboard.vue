@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">AsetKu Portal</p>
         <h1>Halo, {{ userName }}</h1>
-        <p class="subtitle">Ringkasan operasional hotel.</p>
+        <p class="subtitle">Ringkasan operasional & manajemen aset.</p>
       </div>
 
       <div class="header-action-group">
@@ -23,7 +23,7 @@
     <div class="summary-cards">
       <article class="summary-card card-primary" @click="$router.push('/assets')">
         <div>
-          <p class="card-title">Total Aset Hotel</p>
+          <p class="card-title">Total Unit Aset</p>
           <p class="card-value">{{ totalAssetsCount }}</p>
         </div>
         <p class="card-note">Data Real Terdaftar di Database</p>
@@ -157,7 +157,7 @@ async function fetchDashboardData() {
       const damagedCount = assetRes.data.data.filter(a => a.status === 'Damaged').length
 
       quickStats.value = [
-        { label: 'Total Aset Terdaftar', value: `${totalAssetsCount.value} Unit`, note: 'Terdaftar di database hotel' },
+        { label: 'Total Aset Terdaftar', value: `${totalAssetsCount.value} Unit`, note: 'Terdaftar di database' },
         { label: 'Aset Berfungsi Normal', value: `${activeCount} Unit`, note: 'Status: Active' },
         { label: 'Dalam Perawatan (PM)', value: `${maintCount} Unit`, note: 'Status: Maintenance' },
         { label: 'Aset Rusak (Damaged)', value: `${damagedCount} Unit`, note: 'Status: Damaged' }
@@ -395,6 +395,32 @@ onMounted(() => {
 @media (max-width: 960px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .insights-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .insight-card {
+    padding: 10px;
+  }
+
+  .insight-value {
+    font-size: 1.15rem;
   }
 }
 </style>
