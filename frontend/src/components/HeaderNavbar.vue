@@ -8,7 +8,7 @@
 
         <div class="navbar-brand">
           <div class="brand-logo">
-            <img :src="'/assets/logo.png'" alt="AsetKu Logo" class="brand-logo-img" @error="logoFailed = true" v-if="!logoFailed" />
+            <img src="/assets/logo.png" alt="AsetKu Logo" class="brand-logo-img" @error="logoFailed = true" v-if="!logoFailed" />
             <span v-else class="brand-text-logo">A</span>
           </div>
           <div>

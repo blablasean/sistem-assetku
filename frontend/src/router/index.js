@@ -31,7 +31,8 @@ router.beforeEach((to, from, next) => {
   const userRole = sessionStorage.getItem('user_role') || 'external'
 
   if (!to.meta.public && !hasValidToken) {
-    clearSessionAndForceLogin()
+    sessionStorage.clear()
+    localStorage.clear()
     next('/login')
   } else if (to.meta.roles && !to.meta.roles.includes(userRole)) {
     alert(`⛔ Akses Ditolak!\nRole "${userRole.toUpperCase()}" tidak memiliki wewenang untuk mengakses halaman ini. Anda dialihkan ke Work Order.`)

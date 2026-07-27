@@ -3,7 +3,7 @@
     <div class="login-panel">
       <div class="login-brand">
         <div class="brand-badge">
-          <img :src="'/assets/logo.png'" alt="AsetKu Logo" class="login-logo-img" @error="logoFailed = true" v-if="!logoFailed" />
+          <img src="/assets/logo.png" alt="AsetKu Logo" class="login-logo-img" @error="logoFailed = true" v-if="!logoFailed" />
           <span v-else class="login-text-logo">A</span>
         </div>
         <div>
@@ -21,7 +21,7 @@
           <input 
             type="text" 
             v-model="username" 
-            placeholder="Masukkan username database"
+            placeholder="Masukkan username"
             :disabled="isLoading"
             required
           />
@@ -71,6 +71,14 @@ const showPassword = ref(false)
 const error = ref('')
 const isLoading = ref(false)
 const logoFailed = ref(false)
+
+function onLogoError(e) {
+  if (e && e.target && e.target.src && e.target.src.includes('/assets/logo.png')) {
+    e.target.src = '/logo.png'
+  } else {
+    logoFailed.value = true
+  }
+}
 const router = useRouter()
 
 async function login() {
@@ -161,8 +169,9 @@ async function login() {
 .brand-badge {
   width: 46px;
   height: 46px;
+  border: 1px solid #e2e8f0;
   border-radius: 6px !important;
-  background: #0f172a;
+  background: #f8fafc;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -171,8 +180,12 @@ async function login() {
 }
 
 .login-logo-img {
-  width: 32px;
-  height: 32px;
+  width: 39px;
+  height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20%;
   object-fit: contain;
 }
 
