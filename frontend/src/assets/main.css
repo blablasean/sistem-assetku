@@ -284,7 +284,10 @@ tbody tr {
     overflow: visible !important;
   }
 
-  /* Hide main page components, top colored table, header navbar, UI controls */
+  /* Hide main page components, root #app wrapper, header navbar, UI controls */
+  #app,
+  .app-layout,
+  .main-wrapper,
   .header-navbar,
   .android-bottom-nav,
   .page-container,
@@ -304,15 +307,21 @@ tbody tr {
     display: none !important;
   }
 
-  /* Flatten modal wrapper so it fills full width A4 landscape page */
+  /* Teleported modal backdrop displayed as clean block starting at page 1 top */
+  body > .modal-backdrop,
   .modal-backdrop {
+    display: block !important;
     position: static !important;
-    background: transparent !important;
+    background: #ffffff !important;
     backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    display: block !important;
     inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   .modal-card {

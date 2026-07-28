@@ -112,7 +112,7 @@
                 :class="['checklist-btn full-width-btn', isItemCompletedOnDate(item, getTodayDateStr()) ? 'btn-completed-style' : 'btn-pending-style']" 
                 @click="submitChecklist(item, getTodayDateStr())"
               >
-                {{ isItemCompletedOnDate(item, getTodayDateStr()) ? 'Checklist Hari Ini Selesai' : 'Selesaikan Checklist Hari Ini (' + getTodayDateStr() + ')' }}
+                {{ isItemCompletedOnDate(item, getTodayDateStr()) ? 'Checklist Hari Ini Selesai ✓' : 'Selesaikan Checklist Hari Ini (' + getTodayDateStr() + ')' }}
               </button>
               <p v-else class="checklist-notice-readonly notice-future">
                 Hari ini bukan tanggal inspeksi untuk aset ini.
@@ -202,7 +202,7 @@
               :class="['checklist-btn full-width-btn', isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'btn-completed-style' : 'btn-pending-style']" 
               @click="submitChecklistFromModal(selectedPmItem, selectedDetailDate)"
             >
-              {{ isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'Checklist Sudah Selesai (Klik untuk update)' : 'Selesaikan Checklist Perawatan' }}
+              {{ isItemCompletedOnDate(selectedPmItem, selectedDetailDate) ? 'Checklist Sudah Selesai ✓' : 'Selesaikan Checklist Perawatan' }}
             </button>
             <p v-else class="checklist-notice-readonly notice-future">
               Checklist perawatan hanya dapat diisi ketika tanggal jadwal ({{ selectedDetailDate }}) telah tiba.
@@ -236,28 +236,70 @@
 
   <!-- Laporan Maintenance Modal -->
   <ModalDialog :show="showReportModal" title="Laporan Preventive Maintenance" maxWidth="960px" @close="showReportModal = false">
+    <!-- Report Filter Selection Bar (iPhone / iOS Segmented Control) -->
+    <div class="report-filter-bar no-print">
+      <span class="filter-bar-title">Frekuensi Jadwal Perawatan</span>
+      <div class="filter-btn-group">
+        <button 
+          :class="['filter-tab-btn', { active: pmReportFilter === 'all' }]" 
+          @click="pmReportFilter = 'all'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          <span>Semua</span>
+        </button>
+        <button 
+          :class="['filter-tab-btn', { active: pmReportFilter === 'Daily' }]" 
+          @click="pmReportFilter = 'Daily'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Daily</span>
+        </button>
+        <button 
+          :class="['filter-tab-btn', { active: pmReportFilter === 'WeeklyMonthly' }]" 
+          @click="pmReportFilter = 'WeeklyMonthly'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+          <span>Weekly / Monthly</span>
+        </button>
+        <button 
+          :class="['filter-tab-btn', { active: pmReportFilter === 'Yearly' }]" 
+          @click="pmReportFilter = 'Yearly'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+          <span>Yearly</span>
+        </button>
+      </div>
+    </div>
+
     <div class="monthly-report-printable" id="printablePMReport">
       <div class="report-header">
-        <h2>LAPORAN PREVENTIVE MAINTENANCE</h2>
+        <h2>
+          {{ 
+            pmReportFilter === 'Daily' ? 'LAPORAN PREVENTIVE MAINTENANCE (HARIAN - DAILY)' : 
+            pmReportFilter === 'WeeklyMonthly' ? 'LAPORAN PREVENTIVE MAINTENANCE (WEEKLY / MONTHLY)' : 
+            pmReportFilter === 'Yearly' ? 'LAPORAN PREVENTIVE MAINTENANCE (TAHUNAN - YEARLY)' : 
+            'LAPORAN PREVENTIVE MAINTENANCE' 
+          }}
+        </h2>
         <p class="report-sub">Sistem AsetKu &mdash; Periode: {{ reportMonthYear }}</p>
         <hr class="report-divider" />
       </div>
 
       <div class="report-summary-boxes">
-        <div class="rbox">
+        <div class="rbox" v-if="pmReportFilter === 'all'">
           <span>Total Jadwal</span>
           <strong>{{ pmList.length }} Jadwal</strong>
         </div>
-        <div class="rbox success">
-          <span>Daily</span>
+        <div class="rbox success" v-if="pmReportFilter === 'all' || pmReportFilter === 'Daily'">
+          <span>Daily (Harian)</span>
           <strong>{{ countPMType('Daily') }} Jadwal</strong>
         </div>
-        <div class="rbox warning">
+        <div class="rbox warning" v-if="pmReportFilter === 'all' || pmReportFilter === 'WeeklyMonthly'">
           <span>Weekly / Monthly</span>
           <strong>{{ countPMType('Weekly') + countPMType('Monthly') }} Jadwal</strong>
         </div>
-        <div class="rbox danger">
-          <span>Yearly</span>
+        <div class="rbox danger" v-if="pmReportFilter === 'all' || pmReportFilter === 'Yearly'">
+          <span>Yearly (Tahunan)</span>
           <strong>{{ countPMType('Yearly') }} Jadwal</strong>
         </div>
       </div>
@@ -275,7 +317,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in pmList" :key="item.id">
+            <tr v-for="item in filteredPmListForReport" :key="item.id">
               <td>#PM-{{ item.id }}</td>
               <td>{{ getAssetName(item.asset_id) }} (Aset #{{ item.asset_id }})</td>
               <td>{{ item.schedule_type }}</td>
@@ -283,7 +325,7 @@
               <td style="white-space: pre-wrap; font-size: 0.8rem;">{{ item.checklist_data }}</td>
               <td>{{ item.status || 'Active' }}</td>
             </tr>
-            <tr v-if="pmList.length === 0">
+            <tr v-if="filteredPmListForReport.length === 0">
               <td colspan="6" class="empty-state">Belum ada jadwal maintenance terdaftar.</td>
             </tr>
           </tbody>
@@ -296,7 +338,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
         <span>Export ke Excel (.xlsx)</span>
       </button>
-      <button class="print-btn" @click="() => window.print()">
+      <button class="print-btn" @click="printPMReport">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
         <span>Cetak Dokumen Laporan (PDF / Print)</span>
       </button>
@@ -475,9 +517,12 @@ function openDetailModal(item) {
   openDetailModalForDate(item, formatDate(item.next_run))
 }
 
+// Debounce timer map: key = "itemId__date", value = timeout ID
+const checklistDebounceMap = new Map()
+
 async function submitChecklistFromModal(item, targetDateStr) {
   showDetailModal.value = false
-  await submitChecklist(item, targetDateStr)
+  submitChecklist(item, targetDateStr)
 }
 
 function openEditModalFromDetail(item) {
@@ -503,7 +548,21 @@ const pmList = ref([])
 const isLoading = ref(false)
 
 const showReportModal = ref(false)
+const pmReportFilter = ref('all') // 'all' | 'Daily' | 'WeeklyMonthly' | 'Yearly'
 const reportMonthYear = ref(new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }))
+
+const filteredPmListForReport = computed(() => {
+  if (pmReportFilter.value === 'Daily') {
+    return pmList.value.filter(p => p.schedule_type === 'Daily')
+  }
+  if (pmReportFilter.value === 'WeeklyMonthly') {
+    return pmList.value.filter(p => p.schedule_type === 'Weekly' || p.schedule_type === 'Monthly')
+  }
+  if (pmReportFilter.value === 'Yearly') {
+    return pmList.value.filter(p => p.schedule_type === 'Yearly')
+  }
+  return pmList.value
+})
 
 function countPMType(type) {
   return pmList.value.filter(p => p.schedule_type === type).length
@@ -512,9 +571,10 @@ function countPMType(type) {
 import { exportToExcel, triggerPrint } from '../utils/exportUtils'
 
 function exportPMToExcel() {
-  const fileName = `Laporan_PM_${reportMonthYear.value.replace(/\s+/g, '_')}.xls`
+  const filterTag = pmReportFilter.value.toUpperCase()
+  const fileName = `Laporan_PM_${filterTag}_${reportMonthYear.value.replace(/\s+/g, '_')}.xls`
   const headers = ['ID', 'Aset', 'Frekuensi', 'Jatuh Tempo', 'Checklist', 'Status']
-  const rows = pmList.value.map(item => [
+  const rows = filteredPmListForReport.value.map(item => [
     `#PM-${item.id}`,
     `${getAssetName(item.asset_id)} (Aset #${item.asset_id})`,
     item.schedule_type || '',
@@ -523,6 +583,10 @@ function exportPMToExcel() {
     item.status || 'Active'
   ])
   exportToExcel(fileName, headers, rows)
+}
+
+function printPMReport() {
+  triggerPrint()
 }
 
 async function fetchRegisteredAssets() {
@@ -611,25 +675,37 @@ async function deletePMSchedule(item) {
   }
 }
 
-async function submitChecklist(item, targetDateStr) {
-  try {
-    const dateToSubmit = targetDateStr || selectedDetailDate.value || formatDate(item.next_run)
-    await api.post(`/maintenance/${item.id}/checklist`, {
-      target_date: dateToSubmit,
-      checklist: item.checklist_data
-    })
+function submitChecklist(item, targetDateStr) {
+  const dateToSubmit = targetDateStr || selectedDetailDate.value || formatDate(item.next_run)
+  const debounceKey = `${item.id}__${dateToSubmit}`
 
-    if (!item.completed_dates) {
-      item.completed_dates = dateToSubmit
-    } else if (!item.completed_dates.includes(dateToSubmit)) {
-      item.completed_dates += ',' + dateToSubmit
-    }
-
-    notify(`Checklist perawatan Aset #${item.asset_id} tanggal ${dateToSubmit} berhasil diselesaikan (Kuning ➔ Hijau)!`, 'success')
-    await fetchPMSchedules()
-  } catch (e) {
-    notify('Gagal menyelesaikan checklist: ' + (e.response?.data?.message || e.message), 'error')
+  // Jika timer sebelumnya masih berjalan, reset (klik spam → hanya 1 request setelah idle 600ms)
+  if (checklistDebounceMap.has(debounceKey)) {
+    clearTimeout(checklistDebounceMap.get(debounceKey))
   }
+
+  const timerId = setTimeout(async () => {
+    checklistDebounceMap.delete(debounceKey)
+    try {
+      await api.post(`/maintenance/${item.id}/checklist`, {
+        target_date: dateToSubmit,
+        checklist: item.checklist_data
+      })
+
+      if (!item.completed_dates) {
+        item.completed_dates = dateToSubmit
+      } else if (!item.completed_dates.includes(dateToSubmit)) {
+        item.completed_dates += ',' + dateToSubmit
+      }
+
+      notify(`Checklist perawatan Aset #${item.asset_id} tanggal ${dateToSubmit} berhasil diselesaikan!`, 'success')
+      await fetchPMSchedules()
+    } catch (e) {
+      notify('Gagal menyelesaikan checklist: ' + (e.response?.data?.message || e.message), 'error')
+    }
+  }, 600)
+
+  checklistDebounceMap.set(debounceKey, timerId)
 }
 
 onMounted(() => {
@@ -807,6 +883,29 @@ h1 {
   color: #ffffff;
   border-color: #007aff;
   box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+}
+
+/* Disabled / loading state */
+.checklist-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Spinning dot animation for loading state */
+.checklist-loading-dot {
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: checklistSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes checklistSpin {
+  to { transform: rotate(360deg); }
 }
 
 .pm-admin-btns {
@@ -1348,9 +1447,73 @@ h1 {
 .print-btn:hover { background: #0062cc; }
 .btn-icon { flex-shrink: 0; }
 .btn-secondary-ios {
-  background: #ffffff !important; color: #0f172a !important;
-  border: 1px solid #cbd5e1 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
 }
-.btn-secondary-ios:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
+.btn-secondary-ios:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0284c7 !important;
+}
+.report-filter-bar {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-bar-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.filter-btn-group {
+  display: flex;
+  gap: 4px;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-tab-btn {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: transparent;
+  border: none !important;
+  color: #64748b;
+  border-radius: 8px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.filter-tab-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.filter-tab-btn.active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
 @media print { .no-print { display: none !important; } }
 </style>

@@ -53,26 +53,72 @@
         ⚠️ {{ errorMsg }}
       </div>
 
-      <!-- Scanned Result Card -->
+      <!-- Scanned Result Card (iOS Style) -->
       <div v-if="assetDetail" class="scanned-result-card">
+        <!-- Asset Name & Status Row -->
         <div class="res-header">
-          <div>
-            <h4>{{ assetDetail.asset_name }}</h4>
-            <span class="asset-code-badge">{{ assetDetail.asset_code }}</span>
+          <div class="res-title-group">
+            <h4 class="res-asset-name">{{ assetDetail.asset_name }}</h4>
+            <span class="res-code-pill">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+              {{ assetDetail.asset_code }}
+            </span>
           </div>
           <StatusBadge :status="assetDetail.status || 'Active'" />
         </div>
 
+        <!-- Divider -->
+        <div class="res-divider"></div>
+
+        <!-- Detail Rows -->
         <div class="res-body">
-          <p><strong>Lokasi:</strong> 📍 {{ assetDetail.location || 'Ruangan / Area Operasional' }}</p>
-          <p><strong>Kategori:</strong> 🏷️ {{ assetDetail.category || 'General' }}</p>
-          <p><strong>PIC:</strong> 👤 {{ assetDetail.pic || 'Engineering Team' }}</p>
-          <p><strong>Status Reservasi:</strong> {{ assetDetail.is_reserved ? '🟠 Ter-reservasi' : '🟢 Siap Digunakan' }}</p>
+          <div class="res-row">
+            <div class="res-row-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="res-row-content">
+              <span class="res-row-label">Lokasi</span>
+              <span class="res-row-value">{{ assetDetail.location || 'Ruangan / Area Operasional' }}</span>
+            </div>
+          </div>
+          <div class="res-row">
+            <div class="res-row-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+            </div>
+            <div class="res-row-content">
+              <span class="res-row-label">Kategori</span>
+              <span class="res-row-value">{{ assetDetail.category || 'General' }}</span>
+            </div>
+          </div>
+          <div class="res-row">
+            <div class="res-row-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="res-row-content">
+              <span class="res-row-label">PIC</span>
+              <span class="res-row-value">{{ assetDetail.pic || 'Engineering Team' }}</span>
+            </div>
+          </div>
+          <div class="res-row res-row-last">
+            <div class="res-row-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div class="res-row-content">
+              <span class="res-row-label">Status Reservasi</span>
+              <span class="res-row-value">
+                <span class="res-reservation-badge" :class="assetDetail.is_reserved ? 'reserved' : 'available'">
+                  {{ assetDetail.is_reserved ? 'Ter-reservasi' : 'Siap Digunakan' }}
+                </span>
+              </span>
+            </div>
+          </div>
         </div>
 
+        <!-- Action Button -->
         <div class="res-actions">
           <button class="report-wo-btn" @click="reportWorkOrder(assetDetail)">
-            🚨 Laporkan Kerusakan Work Order
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            Laporkan Kerusakan Work Order
           </button>
         </div>
       </div>
@@ -122,61 +168,74 @@ watch(() => props.show, (newVal) => {
 async function startCamera() {
   await stopCamera()
   errorMsg.value = ''
+  isCameraActive.value = true
+  await nextTick()
+
+  const element = document.getElementById('qr-reader')
+  if (!element) return
+
+  const qrConfig = {
+    fps: 10,
+    qrbox: (w, h) => {
+      const min = Math.min(w || 250, h || 250)
+      return { width: Math.max(160, Math.floor(min * 0.75)), height: Math.max(160, Math.floor(min * 0.75)) }
+    }
+  }
+
+  const onScanSuccess = (decodedText) => {
+    if (decodedText && decodedText !== scannedCode.value) {
+      onQrDetected(decodedText)
+    }
+  }
+
   try {
-    isCameraActive.value = true
-    await nextTick()
+    // 1. Direct browser permission prompt trigger
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        stream.getTracks().forEach(track => track.stop())
+      } catch (pErr) {
+        try {
+          const streamUser = await navigator.mediaDevices.getUserMedia({ video: true })
+          streamUser.getTracks().forEach(track => track.stop())
+        } catch (pErr2) {
+          console.warn('getUserMedia permission check:', pErr2)
+        }
+      }
+    }
+
     html5QrcodeInstance = new Html5Qrcode("qr-reader")
 
-    let cameraConfig = { facingMode: "environment" }
+    // Strategy A: facingMode "environment" (Back camera on mobile)
     try {
-      const cameras = await Html5Qrcode.getCameras()
-      if (cameras && cameras.length > 0) {
-        const backCam = cameras.find(c => /back|rear|environment/i.test(c.label))
-        cameraConfig = backCam ? backCam.id : cameras[0].id
-      }
-    } catch (e) {
-      console.warn('Get cameras list fallback:', e)
+      await html5QrcodeInstance.start({ facingMode: "environment" }, qrConfig, onScanSuccess, () => {})
+      return
+    } catch (e1) {
+      console.warn('FacingMode environment failed, trying user camera:', e1)
     }
 
-    await html5QrcodeInstance.start(
-      cameraConfig,
-      {
-        fps: 10,
-        qrbox: (w, h) => {
-          const min = Math.min(w || 250, h || 250)
-          return { width: Math.max(160, Math.floor(min * 0.75)), height: Math.max(160, Math.floor(min * 0.75)) }
-        }
-      },
-      (decodedText) => {
-        if (decodedText && decodedText !== scannedCode.value) {
-          onQrDetected(decodedText)
-        }
-      },
-      () => {}
-    )
-  } catch (err) {
-    console.warn('Camera start error:', err)
-    // Fallback try with facingMode user / default
+    // Strategy B: facingMode "user" (Front camera / desktop webcam)
     try {
-      if (html5QrcodeInstance) {
-        await html5QrcodeInstance.start(
-          { facingMode: "user" },
-          { fps: 10, qrbox: { width: 200, height: 200 } },
-          (decodedText) => {
-            if (decodedText && decodedText !== scannedCode.value) {
-              onQrDetected(decodedText)
-            }
-          },
-          () => {}
-        )
-        isCameraActive.value = true
-        return
-      }
-    } catch (fallbackErr) {
-      console.warn('Camera fallback failed:', fallbackErr)
+      await html5QrcodeInstance.start({ facingMode: "user" }, qrConfig, onScanSuccess, () => {})
+      return
+    } catch (e2) {
+      console.warn('FacingMode user failed, trying getCameras list:', e2)
     }
+
+    // Strategy C: getCameras list fallback
+    const cameras = await Html5Qrcode.getCameras()
+    if (cameras && cameras.length > 0) {
+      const backCam = cameras.find(c => /back|rear|environment|kamera belakang/i.test(c.label))
+      const targetCamId = backCam ? backCam.id : cameras[0].id
+      await html5QrcodeInstance.start(targetCamId, qrConfig, onScanSuccess, () => {})
+      return
+    }
+
+    throw new Error('Tidak ada perangkat kamera yang dapat diakses.')
+  } catch (err) {
+    console.warn('All camera start strategies failed:', err)
     isCameraActive.value = false
-    errorMsg.value = 'Kamera WebCam tidak dapat diakses. Silakan gunakan tombol Upload Foto QR.'
+    errorMsg.value = 'Kamera gagal dibuka: ' + (err.message || 'Izin kamera ditolak').replace('HTML5Qrcode scanner is already scanning.', '') + '. Silakan izinkan akses kamera di browser Anda atau gunakan tombol Upload Foto QR.'
   }
 }
 
@@ -517,57 +576,177 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* ── iOS-Style Scan Result Card ─────────────────────────────── */
 .scanned-result-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px !important;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 16px !important;
+  padding: 0;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+  animation: resultSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes resultSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .res-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  padding: 16px 16px 12px;
 }
 
-.res-header h4 {
+.res-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  margin-right: 12px;
+}
+
+.res-asset-name {
   margin: 0;
   font-size: 1.05rem;
   color: #0f172a;
   font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.asset-code-badge {
-  font-size: 0.75rem;
+.res-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
   background: #f1f5f9;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
-  padding: 2px 8px;
-  border-radius: 4px !important;
-  font-family: monospace;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  width: fit-content;
 }
 
-.res-body p {
-  margin: 4px 0;
-  font-size: 0.85rem;
-  color: #334155;
+.res-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 0 16px;
+}
+
+/* Detail rows */
+.res-body {
+  padding: 4px 0;
+}
+
+.res-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f8fafc;
+  min-height: 44px;
+}
+
+.res-row-last {
+  border-bottom: none;
+}
+
+.res-row-icon {
+  width: 28px;
+  height: 28px;
+  background: #f8fafc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #f1f5f9;
+}
+
+.res-row-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.res-row-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.res-row-value {
+  font-size: 0.88rem;
+  color: #0f172a;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.res-reservation-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.res-reservation-badge.available {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.res-reservation-badge.reserved {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
 }
 
 .res-actions {
-  margin-top: 14px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .report-wo-btn {
   width: 100%;
-  background: #dc2626;
-  color: white;
-  border: 1px solid #dc2626;
-  padding: 10px;
-  border-radius: 4px !important;
+  background: #ff3b30;
+  color: #ffffff;
+  border: none;
+  padding: 13px 16px;
+  border-radius: 12px !important;
   font-weight: 700;
+  font-size: 0.9rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+  box-shadow: 0 4px 14px rgba(255, 59, 48, 0.3);
+  transition: all 0.15s ease;
+}
+
+.report-wo-btn:hover {
+  background: #d70015;
+  box-shadow: 0 6px 18px rgba(255, 59, 48, 0.35);
+  transform: translateY(-1px);
+}
+
+.report-wo-btn:active {
+  transform: scale(0.98);
 }
 </style>

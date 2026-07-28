@@ -160,10 +160,6 @@
             <span>Role / Jabatan</span>
             <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
           </div>
-          <div class="pro-info-row">
-            <span>Status Akun</span>
-            <strong class="status-active-badge">🟢 Aktif</strong>
-          </div>
           <p class="admin-only-notice">
             ℹ️ Perubahan nama & password hanya dapat dilakukan oleh Administrator dari menu User Management.
           </p>

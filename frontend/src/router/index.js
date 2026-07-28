@@ -28,7 +28,7 @@ import { isTokenValid, clearSessionAndForceLogin } from '../utils/auth'
 // Navigation Guard checking token validity and session state
 router.beforeEach((to, from, next) => {
   const hasValidToken = isTokenValid()
-  const userRole = sessionStorage.getItem('user_role') || 'external'
+  const userRole = localStorage.getItem('user_role') || sessionStorage.getItem('user_role') || 'external'
 
   if (!to.meta.public && !hasValidToken) {
     sessionStorage.clear()

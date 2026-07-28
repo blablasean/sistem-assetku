@@ -221,85 +221,175 @@
     </ModalDialog>
 
     <ModalDialog :show="showReportModal" title="Laporan Activity Log & Audit Trail" maxWidth="960px" @close="showReportModal = false">
+      <!-- Report Filter Selection Bar (iPhone / iOS Segmented Control) -->
+      <div class="report-filter-bar no-print">
+        <span class="filter-bar-title">Tipe Dokumen Laporan</span>
+        <div class="filter-btn-group">
+          <button 
+            :class="['filter-tab-btn', { active: reportTypeFilter === 'all' }]" 
+            @click="reportTypeFilter = 'all'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+            <span>Semua</span>
+          </button>
+          <button 
+            :class="['filter-tab-btn', { active: reportTypeFilter === 'wo' }]" 
+            @click="reportTypeFilter = 'wo'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span>Work Order</span>
+          </button>
+          <button 
+            :class="['filter-tab-btn', { active: reportTypeFilter === 'maintenance' }]" 
+            @click="reportTypeFilter = 'maintenance'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>Maintenance</span>
+          </button>
+          <button 
+            :class="['filter-tab-btn', { active: reportTypeFilter === 'mutation' }]" 
+            @click="reportTypeFilter = 'mutation'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            <span>Mutasi Aset</span>
+          </button>
+        </div>
+      </div>
+
       <div class="monthly-report-printable" id="printableReportDocument">
         <div class="report-header">
-          <h2>LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS</h2>
+          <h2>
+            {{ 
+              reportTypeFilter === 'wo' ? 'LAPORAN REKAPITULASI WORK ORDER' : 
+              reportTypeFilter === 'maintenance' ? 'LAPORAN REKAPITULASI MAINTENANCE' : 
+              reportTypeFilter === 'mutation' ? 'LAPORAN RIWAYAT MUTASI ASET' : 
+              'LAPORAN AUDIT TRAIL & AKTIVITAS OPERASIONAL' 
+            }}
+          </h2>
           <p class="report-sub">Sistem AsetKu — Periode: {{ reportMonthYear }}</p>
           <hr class="report-divider" />
         </div>
 
         <div class="report-summary-boxes">
-          <div class="rbox success">
+          <div class="rbox success" v-if="reportTypeFilter === 'all' || reportTypeFilter === 'wo'">
             <span>WO Finish</span>
             <strong>{{ finishedWOs.length }} Tiket</strong>
           </div>
-          <div class="rbox blue">
+          <div class="rbox blue" v-if="reportTypeFilter === 'all' || reportTypeFilter === 'maintenance'">
             <span>Maintenance Selesai</span>
             <strong>{{ maintenanceHistory.length }} Riwayat</strong>
           </div>
-          <div class="rbox danger">
-            <span>Total Biaya Maintenance</span>
-            <strong>Rp {{ formatNumber(totalMaintenanceCost) }}</strong>
+          <div class="rbox orange" v-if="reportTypeFilter === 'all' || reportTypeFilter === 'mutation'">
+            <span>Total Mutasi Aset</span>
+            <strong>{{ assetMutationTimelines.length || mutations.length }} Mutasi</strong>
+          </div>
+          <div class="rbox danger" v-if="reportTypeFilter === 'all' || reportTypeFilter === 'maintenance' || reportTypeFilter === 'wo'">
+            <span>Total Biaya (WO / Maintenance)</span>
+            <strong>Rp {{ formatNumber(reportTypeFilter === 'wo' ? totalWoCost : totalMaintenanceCost) }}</strong>
           </div>
         </div>
 
-        <h3 class="report-section-heading">1. Rekapitulasi Work Order Selesai</h3>
-        <div class="report-table-wrapper">
-          <table class="report-table">
-            <thead>
-              <tr>
-                <th class="col-id">ID</th>
-                <th class="col-loc">Lokasi</th>
-                <th class="col-prio">Prioritas</th>
-                <th class="col-desc">Deskripsi</th>
-                <th class="col-desc">Tindakan Perbaikan</th>
-                <th class="col-stat">Status</th>
-                <th class="col-cost">Biaya (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="wo in finishedWOs" :key="wo.id">
-                <td class="col-id">#WO-{{ wo.id }}</td>
-                <td class="col-loc">{{ wo.location || '—' }}</td>
-                <td class="col-prio">{{ wo.priority }}</td>
-                <td class="col-desc">{{ wo.description }}</td>
-                <td class="col-desc">{{ wo.action_taken || '—' }}</td>
-                <td class="col-stat">{{ wo.status }}</td>
-                <td class="col-cost">Rp {{ formatNumber(wo.cost || 0) }}</td>
-              </tr>
-              <tr v-if="finishedWOs.length === 0">
-                <td colspan="7" class="empty-state">Tidak ada data.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <!-- Section 1: Work Order Selesai -->
+        <template v-if="reportTypeFilter === 'all' || reportTypeFilter === 'wo'">
+          <h3 class="report-section-heading" v-if="reportTypeFilter === 'all'">1. Rekapitulasi Work Order Selesai</h3>
+          <div class="report-table-wrapper">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th class="col-id">ID</th>
+                  <th class="col-loc">Lokasi</th>
+                  <th class="col-prio">Prioritas</th>
+                  <th class="col-desc">Deskripsi</th>
+                  <th class="col-desc">Tindakan Perbaikan</th>
+                  <th class="col-stat">Status</th>
+                  <th class="col-cost">Biaya (Rp)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="wo in finishedWOs" :key="wo.id">
+                  <td class="col-id">#WO-{{ wo.id }}</td>
+                  <td class="col-loc">{{ wo.location || '—' }}</td>
+                  <td class="col-prio">{{ wo.priority }}</td>
+                  <td class="col-desc">{{ wo.description }}</td>
+                  <td class="col-desc">{{ wo.action_taken || '—' }}</td>
+                  <td class="col-stat">{{ wo.status }}</td>
+                  <td class="col-cost">Rp {{ formatNumber(wo.cost || 0) }}</td>
+                </tr>
+                <tr v-if="finishedWOs.length === 0">
+                  <td colspan="7" class="empty-state">Tidak ada data.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
 
-        <h3 class="report-section-heading" style="margin-top: 24px;">2. Rekapitulasi Maintenance Selesai</h3>
-        <div class="report-table-wrapper">
-          <table class="report-table">
-            <thead>
-              <tr>
-                <th class="col-id">ID</th>
-                <th class="col-prio">Aset ID</th>
-                <th class="col-desc">Tindakan Perawatan</th>
-                <th class="col-cost">Biaya (Rp)</th>
-                <th class="col-loc">Tanggal</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="mh in maintenanceHistory" :key="mh.id">
-                <td class="col-id">#MH-{{ mh.id }}</td>
-                <td class="col-prio">Aset #{{ mh.asset_id }}</td>
-                <td class="col-desc">{{ mh.action_taken }}</td>
-                <td class="col-cost">Rp {{ formatNumber(mh.cost || 0) }}</td>
-                <td class="col-loc">{{ formatDate(mh.created_at) }}</td>
-              </tr>
-              <tr v-if="maintenanceHistory.length === 0">
-                <td colspan="5" class="empty-state">Tidak ada data.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <!-- Section 2: Maintenance Selesai -->
+        <template v-if="reportTypeFilter === 'all' || reportTypeFilter === 'maintenance'">
+          <h3 class="report-section-heading" :style="{ marginTop: reportTypeFilter === 'all' ? '24px' : '0' }">
+            {{ reportTypeFilter === 'all' ? '2. Rekapitulasi Maintenance Selesai' : 'Rekapitulasi Maintenance Selesai' }}
+          </h3>
+          <div class="report-table-wrapper">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th class="col-id">ID</th>
+                  <th class="col-prio">Aset ID</th>
+                  <th class="col-desc">Tindakan Perawatan</th>
+                  <th class="col-cost">Biaya (Rp)</th>
+                  <th class="col-loc">Tanggal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="mh in maintenanceHistory" :key="mh.id">
+                  <td class="col-id">#MH-{{ mh.id }}</td>
+                  <td class="col-prio">Aset #{{ mh.asset_id }}</td>
+                  <td class="col-desc">{{ mh.action_taken }}</td>
+                  <td class="col-cost">Rp {{ formatNumber(mh.cost || 0) }}</td>
+                  <td class="col-loc">{{ formatDate(mh.created_at) }}</td>
+                </tr>
+                <tr v-if="maintenanceHistory.length === 0">
+                  <td colspan="5" class="empty-state">Tidak ada data.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- Section 3: Mutasi Aset -->
+        <template v-if="reportTypeFilter === 'all' || reportTypeFilter === 'mutation'">
+          <h3 class="report-section-heading" :style="{ marginTop: reportTypeFilter === 'all' ? '24px' : '0' }">
+            {{ reportTypeFilter === 'all' ? '3. Rekapitulasi Mutasi Aset (Audit Trail Mutasi)' : 'Rekapitulasi Mutasi Aset (Audit Trail Mutasi)' }}
+          </h3>
+          <div class="report-table-wrapper">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th class="col-id">ID Mutasi</th>
+                  <th class="col-prio">Kode Aset</th>
+                  <th class="col-loc">Lokasi Asal</th>
+                  <th class="col-loc">Lokasi Baru</th>
+                  <th class="col-stat">PIC</th>
+                  <th class="col-desc">Alasan Mutasi</th>
+                  <th class="col-loc">Waktu Mutasi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="mut in (assetMutationTimelines.length ? assetMutationTimelines : mutations)" :key="mut.id">
+                  <td class="col-id">#AMUT-{{ mut.id }}</td>
+                  <td class="col-prio">{{ mut.asset_code }}</td>
+                  <td class="col-loc">{{ mut.previous_location || '—' }}</td>
+                  <td class="col-loc">{{ mut.new_location || '—' }}</td>
+                  <td class="col-stat">{{ mut.pic || 'Engineering' }}</td>
+                  <td class="col-desc">{{ mut.reason || '—' }}</td>
+                  <td class="col-loc">{{ formatDate(mut.moved_at || mut.created_at) }}</td>
+                </tr>
+                <tr v-if="(assetMutationTimelines.length === 0 && mutations.length === 0)">
+                  <td colspan="7" class="empty-state">Belum ada riwayat mutasi aset.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </div>
 
       <div class="report-actions no-print">
@@ -321,6 +411,7 @@ import { ref, computed, onMounted } from 'vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
+import { triggerPrint } from '../utils/exportUtils'
 
 const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
 const canManage = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
@@ -347,6 +438,7 @@ const mutations = ref([])
 const isLoading = ref(false)
 
 const showReportModal = ref(false)
+const reportTypeFilter = ref('all') // 'all' | 'wo' | 'maintenance' | 'mutation'
 const reportMonthYear = ref(new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }))
 
 const showWoModal = ref(false)
@@ -527,12 +619,13 @@ async function deleteMh(mh) {
 }
 
 function printReport() {
-  window.print()
+  triggerPrint()
 }
 
 function exportToExcel() {
   const monthName = reportMonthYear.value.replace(/\s+/g, '_')
-  const fileName = `Laporan_ActivityLog_${monthName}.xls`
+  const typeTag = reportTypeFilter.value.toUpperCase()
+  const fileName = `Laporan_ActivityLog_${typeTag}_${monthName}.xls`
 
   let htmlTable = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -543,7 +636,7 @@ function exportToExcel() {
         <x:ExcelWorkbook>
           <x:ExcelWorksheets>
             <x:ExcelWorksheet>
-              <x:Name>Activity Log & Audit Trail</x:Name>
+              <x:Name>Activity Log</x:Name>
               <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
             </x:ExcelWorksheet>
           </x:ExcelWorksheets>
@@ -562,6 +655,10 @@ function exportToExcel() {
       <h2 class="summary-header">LAPORAN BULANAN AUDIT TRAIL & AKTIVITAS OPERASIONAL</h2>
       <p><b>Sistem AsetKu</b> — Periode: ${reportMonthYear.value}</p>
       <br/>
+  `
+
+  if (reportTypeFilter.value === 'all' || reportTypeFilter.value === 'wo') {
+    htmlTable += `
       <h3 class="section-header">1. REKAPITULASI WORK ORDER SELESAI (FINISH)</h3>
       <table border="1" cellspacing="0" cellpadding="6">
         <thead>
@@ -576,30 +673,33 @@ function exportToExcel() {
           </tr>
         </thead>
         <tbody>
-  `
-
-  finishedWOs.value.forEach(wo => {
-    htmlTable += `
-      <tr>
-        <td>#WO-${wo.id}</td>
-        <td>${wo.location || ''}</td>
-        <td>${wo.priority || ''}</td>
-        <td>${wo.description || ''}</td>
-        <td>${wo.action_taken || ''}</td>
-        <td>${wo.status || ''}</td>
-        <td align="right">${wo.cost || 0}</td>
-      </tr>
     `
-  })
-
-  htmlTable += `
-        <tr class="total-row">
-          <td colspan="6" align="right"><b>TOTAL BIAYA WO SELESAI:</b></td>
-          <td align="right"><b>${totalWoCost.value}</b></td>
+    finishedWOs.value.forEach(wo => {
+      htmlTable += `
+        <tr>
+          <td>#WO-${wo.id}</td>
+          <td>${wo.location || ''}</td>
+          <td>${wo.priority || ''}</td>
+          <td>${wo.description || ''}</td>
+          <td>${wo.action_taken || ''}</td>
+          <td>${wo.status || ''}</td>
+          <td align="right">${wo.cost || 0}</td>
         </tr>
-      </tbody>
+      `
+    })
+    htmlTable += `
+          <tr class="total-row">
+            <td colspan="6" align="right"><b>TOTAL BIAYA WO SELESAI:</b></td>
+            <td align="right"><b>${totalWoCost.value}</b></td>
+          </tr>
+        </tbody>
       </table>
       <br/><br/>
+    `
+  }
+
+  if (reportTypeFilter.value === 'all' || reportTypeFilter.value === 'maintenance') {
+    htmlTable += `
       <h3 class="section-header">2. REKAPITULASI RIWAYAT MAINTENANCE SELESAI</h3>
       <table border="1" cellspacing="0" cellpadding="6">
         <thead>
@@ -612,28 +712,68 @@ function exportToExcel() {
           </tr>
         </thead>
         <tbody>
-  `
-
-  maintenanceHistory.value.forEach(mh => {
-    htmlTable += `
-      <tr>
-        <td>#MH-${mh.id}</td>
-        <td>Aset #${mh.asset_id}</td>
-        <td>${mh.action_taken || ''}</td>
-        <td align="right">${mh.cost || 0}</td>
-        <td>${formatDate(mh.created_at)}</td>
-      </tr>
     `
-  })
+    maintenanceHistory.value.forEach(mh => {
+      htmlTable += `
+        <tr>
+          <td>#MH-${mh.id}</td>
+          <td>Aset #${mh.asset_id}</td>
+          <td>${mh.action_taken || ''}</td>
+          <td align="right">${mh.cost || 0}</td>
+          <td>${formatDate(mh.created_at)}</td>
+        </tr>
+      `
+    })
+    htmlTable += `
+          <tr class="total-row">
+            <td colspan="3" align="right"><b>TOTAL BIAYA MAINTENANCE:</b></td>
+            <td align="right"><b>${totalMaintenanceCost.value}</b></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <br/><br/>
+    `
+  }
+
+  if (reportTypeFilter.value === 'all' || reportTypeFilter.value === 'mutation') {
+    htmlTable += `
+      <h3 class="section-header">3. REKAPITULASI RIWAYAT MUTASI ASET (AUDIT TRAIL MUTASI)</h3>
+      <table border="1" cellspacing="0" cellpadding="6">
+        <thead>
+          <tr>
+            <th>ID Mutasi</th>
+            <th>Kode Aset</th>
+            <th>Lokasi Asal</th>
+            <th>Lokasi Baru</th>
+            <th>PIC Penanggung Jawab</th>
+            <th>Alasan Mutasi</th>
+            <th>Waktu Mutasi</th>
+          </tr>
+        </thead>
+        <tbody>
+    `
+    const mutList = assetMutationTimelines.value.length ? assetMutationTimelines.value : mutations.value
+    mutList.forEach(mut => {
+      htmlTable += `
+        <tr>
+          <td>#AMUT-${mut.id}</td>
+          <td>${mut.asset_code || ''}</td>
+          <td>${mut.previous_location || '—'}</td>
+          <td>${mut.new_location || '—'}</td>
+          <td>${mut.pic || 'Engineering'}</td>
+          <td>${mut.reason || '—'}</td>
+          <td>${formatDate(mut.moved_at || mut.created_at)}</td>
+        </tr>
+      `
+    })
+    htmlTable += `
+        </tbody>
+      </table>
+    `
+  }
 
   htmlTable += `
-        <tr class="total-row">
-          <td colspan="3" align="right"><b>TOTAL BIAYA MAINTENANCE:</b></td>
-          <td align="right"><b>${totalMaintenanceCost.value}</b></td>
-          <td></td>
-        </tr>
-      </tbody>
-      </table>
     </body>
     </html>
   `
@@ -1225,10 +1365,62 @@ td {
   white-space: nowrap;
 }
 
-.print-btn:hover {
-  background: #0062cc !important;
-  border-color: #0062cc !important;
-  transform: translateY(-1px);
+.report-filter-bar {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-bar-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.filter-btn-group {
+  display: flex;
+  gap: 4px;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-tab-btn {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: transparent;
+  border: none !important;
+  color: #64748b;
+  border-radius: 8px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.filter-tab-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.filter-tab-btn.active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* === Mobile Responsive CSS (Android & iOS) === */

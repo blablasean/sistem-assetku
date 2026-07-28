@@ -90,10 +90,8 @@ func SeedInitialData(db *gorm.DB) error {
 		hashedPassword = "$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu"
 	}
 
-	// Update ALL existing users in database so their password becomes 'admin123'
-	db.Model(&models.User{}).Where("1 = 1").Update("password", hashedPassword)
-
-	// Initial Default Users for All 5 System Roles (Password: admin123)
+	// Initial Default Users — only created if username does NOT exist yet.
+	// Existing accounts are NEVER modified to preserve custom passwords.
 	users := []models.User{
 		{Username: "admin", Password: hashedPassword, Name: "Administrator Utama Hotel", Role: "admin"},
 		{Username: "hod_eng", Password: hashedPassword, Name: "Pak Alex (HOD Engineer)", Role: "hod"},
@@ -104,17 +102,13 @@ func SeedInitialData(db *gorm.DB) error {
 	for _, u := range users {
 		var existing models.User
 		if err := db.Where("username = ?", u.Username).First(&existing).Error; err != nil {
+			// Only create if the user doesn't exist yet
 			db.Create(&u)
-		} else {
-			db.Model(&existing).Updates(map[string]interface{}{
-				"password": hashedPassword,
-				"name":     u.Name,
-				"role":     u.Role,
-			})
 		}
+		// DO NOT update existing users — preserve their custom passwords & data
 	}
 
-	log.Println("✓ Initial default users seeded & verified successfully")
+	log.Println("✓ Initial default users seeded (existing accounts unchanged)")
 	return nil
 }
 

@@ -106,19 +106,24 @@ async function login() {
       throw new Error('Token tidak ditemukan dari server.')
     }
 
-    // Store session exclusively in tab-isolated sessionStorage (isolates session per tab)
+    // Save session in both localStorage (persists across tabs/reopens) & sessionStorage
+    localStorage.setItem('token', token)
+    localStorage.setItem('user_role', role)
+    localStorage.setItem('user_name', name)
+    localStorage.setItem('username', data.username || username.value)
+
     sessionStorage.setItem('token', token)
     sessionStorage.setItem('user_role', role)
     sessionStorage.setItem('user_name', name)
     sessionStorage.setItem('username', data.username || username.value)
+
     if (data.avatar) {
+      localStorage.setItem('user_avatar', data.avatar)
       sessionStorage.setItem('user_avatar', data.avatar)
     } else {
+      localStorage.removeItem('user_avatar')
       sessionStorage.removeItem('user_avatar')
     }
-
-    // Clear legacy localStorage to prevent cross-tab session leakage
-    localStorage.clear()
 
     router.push('/dashboard')
   } catch (err) {
