@@ -110,7 +110,7 @@ import StatusBadge from '../components/StatusBadge.vue'
 import api from '../api'
 
 const router = useRouter()
-const userName = ref(sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'User Hotel')
+const userName = ref(sessionStorage.getItem('user_name') || 'User Hotel')
 
 defineEmits(['open-qr-scanner'])
 

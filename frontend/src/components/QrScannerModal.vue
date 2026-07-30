@@ -251,6 +251,20 @@ async function stopCamera() {
     }
     html5QrcodeInstance = null
   }
+
+  // Force-release all active video tracks so camera hardware light turns off completely
+  try {
+    const videoElements = document.querySelectorAll('#qr-reader video')
+    videoElements.forEach(video => {
+      if (video.srcObject && video.srcObject.getTracks) {
+        video.srcObject.getTracks().forEach(track => track.stop())
+        video.srcObject = null
+      }
+    })
+  } catch (e) {
+    console.warn('Error releasing video tracks:', e)
+  }
+
   isCameraActive.value = false
 }
 
@@ -275,6 +289,7 @@ function onQrDetected(code) {
   triggerBeep()
   scanSuccessAnim.value = true
   scannedCode.value = code
+  stopCamera() // 🛑 Turn off camera hardware immediately after successful QR scan
   handleSearch()
   setTimeout(() => {
     scanSuccessAnim.value = false

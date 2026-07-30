@@ -17,12 +17,12 @@ func NewWorkOrderController(db *gorm.DB) *WorkOrderController {
 	return &WorkOrderController{db: db}
 }
 
-func (c *WorkOrderController) CreateWorkOrder(data models.WorkOrder, callerRole string) error {
+func (c *WorkOrderController) CreateWorkOrder(data *models.WorkOrder, callerRole string) error {
 	if data.Priority == "" {
 		data.Priority = "Medium"
 	}
 	data.Status = "Open"
-	if err := c.db.Create(&data).Error; err != nil {
+	if err := c.db.Create(data).Error; err != nil {
 		return err
 	}
 

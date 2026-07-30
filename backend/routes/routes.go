@@ -23,6 +23,7 @@ func RegisterRoutes(
 	mutationCtrl *controllers.MutationController,
 	workOrderCtrl *controllers.WorkOrderController,
 	maintenanceCtrl *controllers.MaintenanceController,
+	userCtrl *controllers.UserController,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
 	authMW := middlewares.AuthMiddlewareWithDB(db)
@@ -35,57 +36,34 @@ func RegisterRoutes(
 	mux.Handle("/auth/profile", authMW(handleUpdateProfile(db)))
 	mux.Handle("/auth/logout", authMW(handleLogout(authCtrl)))
 
-	// Protected endpoints (single handler per path; switch by method)
+	// Assets
+	mux.Handle("/assets/scan", authMW(handleGetAssetByCode(assetCtrl)))
+	mux.Handle("/assets/detail", authMW(handleGetAssetDetail(assetCtrl)))
+	mux.Handle("/assets/edit", authMW(handleEditAsset(assetCtrl)))
+	mux.Handle("/assets/delete", authMW(handleDeleteAsset(assetCtrl)))
+	mux.Handle("/assets/reserve", authMW(handleReserveAsset(assetCtrl)))
 	mux.Handle("/assets", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case http.MethodGet:
-			handleGetAssets(assetCtrl)(w, r)
 		case http.MethodPost:
 			handleCreateAsset(assetCtrl)(w, r)
-		case http.MethodPut:
-			handleEditAsset(assetCtrl)(w, r)
+		case http.MethodGet:
+			handleGetAssets(assetCtrl)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})))
 
-	mux.Handle("/assets/code", authMW(handleGetAssetByCode(assetCtrl)))
-	mux.Handle("/assets/reserve", authMW(handleReserveAsset(assetCtrl)))
-	mux.Handle("/assets/delete", authMW(handleDeleteAsset(assetCtrl)))
-
-	// asset detail and history - use prefix "/assets/"
-	mux.Handle("/assets/", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tail := strings.TrimPrefix(r.URL.Path, "/assets/")
-		if tail == "" {
-			http.NotFound(w, r)
-			return
-		}
-		if strings.HasSuffix(tail, "/history") && r.Method == http.MethodGet {
-			idStr := strings.TrimSuffix(tail, "/history")
-			q := r.URL.Query()
-			q.Set("id", idStr)
-			r.URL.RawQuery = q.Encode()
-			handleGetAssetHistory(mutationCtrl)(w, r)
-			return
-		}
-		if r.Method == http.MethodGet {
-			q := r.URL.Query()
-			q.Set("id", tail)
-			r.URL.RawQuery = q.Encode()
-			handleGetAssetDetail(assetCtrl)(w, r)
-			return
-		}
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	})))
-
-	mux.Handle("/assets/mutation-timeline", authMW(handleGetAssetMutationTimeline(mutationCtrl)))
-	mux.Handle("/assets/mutate", authMW(handleMutateAssetByCode(mutationCtrl)))
+	// Activity Logs
+	mux.Handle("/activitylogs", authMW(handleGetActivityLogs(db, workOrderCtrl, mutationCtrl)))
 
 	// Mutations
+	mux.Handle("/mutations/timeline/all", authMW(handleGetAllAssetMutationTimelines(mutationCtrl)))
+	mux.Handle("/mutations/timeline", authMW(handleGetAssetMutationTimeline(mutationCtrl)))
+	mux.Handle("/mutations/code", authMW(handleMutateAssetByCode(db, mutationCtrl)))
 	mux.Handle("/mutations", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			handleCreateMutation(mutationCtrl)(w, r)
+			handleCreateMutation(db, mutationCtrl)(w, r)
 		case http.MethodGet:
 			handleGetMutationHistory(mutationCtrl)(w, r)
 		default:
@@ -94,10 +72,10 @@ func RegisterRoutes(
 	})))
 
 	// Workorders
-	mux.Handle("/workorders/assign", authMW(handleAssignWorker(workOrderCtrl)))
-	mux.Handle("/workorders/status", authMW(handleUpdateWorkOrderStatus(workOrderCtrl)))
+	mux.Handle("/workorders/assign", authMW(handleAssignWorker(db, workOrderCtrl)))
+	mux.Handle("/workorders/status", authMW(handleUpdateWorkOrderStatus(db, workOrderCtrl)))
 	mux.Handle("/workorders/edit", authMW(handleEditWorkOrderDetail(workOrderCtrl)))
-	mux.Handle("/workorders/close", authMW(handleCloseWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/close", authMW(handleCloseWorkOrder(db, workOrderCtrl)))
 	mux.Handle("/workorders/cancel", authMW(handleCancelWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/delete", authMW(handleDeleteWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/logs", authMW(handleGetWorkOrderTimeline(workOrderCtrl)))
@@ -115,7 +93,7 @@ func RegisterRoutes(
 	})))
 
 	// Maintenance
-	mux.Handle("/maintenance/schedules", authMW(handleGetAllPMSchedules(maintenanceCtrl)))
+	mux.Handle("/maintenance/schedules", authMW(handleGetAllPMSchedules(db, maintenanceCtrl)))
 	mux.Handle("/maintenance/schedule", authMW(handleCreatePMSchedule(maintenanceCtrl)))
 	mux.Handle("/maintenance/edit", authMW(handleEditPMSchedule(maintenanceCtrl)))
 	mux.Handle("/maintenance/delete", authMW(handleDeletePMSchedule(maintenanceCtrl)))
@@ -142,14 +120,12 @@ func RegisterRoutes(
 		http.Error(w, "not found", http.StatusNotFound)
 	})))
 
-	// Activity logs
-	mux.Handle("/activitylogs", authMW(handleGetActivityLogs(db, workOrderCtrl, mutationCtrl)))
-
-	// User Management endpoints (Admin)
-	mux.Handle("/users/create", authMW(handleCreateUser(db)))
-	mux.Handle("/users/edit", authMW(handleEditUser(db)))
-	mux.Handle("/users/delete", authMW(handleDeleteUser(db)))
-	mux.Handle("/users", authMW(handleGetAllUsers(db)))
+	// User Management endpoints
+	mux.Handle("/users/engineers", authMW(handleGetEngineers(userCtrl)))
+	mux.Handle("/users/create", authMW(handleCreateUser(userCtrl)))
+	mux.Handle("/users/edit", authMW(handleEditUser(userCtrl)))
+	mux.Handle("/users/delete", authMW(handleDeleteUser(userCtrl)))
+	mux.Handle("/users", authMW(handleGetAllUsers(userCtrl)))
 
 	return mux
 }
@@ -396,7 +372,7 @@ func handleGetAssetHistory(mutationCtrl *controllers.MutationController) http.Ha
 	}
 }
 
-func handleCreateMutation(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+func handleCreateMutation(db *gorm.DB, mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "external"
@@ -438,6 +414,17 @@ func handleGetMutationHistory(mutationCtrl *controllers.MutationController) http
 	}
 }
 
+func handleGetAllAssetMutationTimelines(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		timelines, err := mutationCtrl.GetAllAssetMutationTimelines()
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch mutation timelines", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "All asset mutation timelines retrieved successfully", timelines)
+	}
+}
+
 func handleGetAssetMutationTimeline(mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		assetCode := r.URL.Query().Get("asset_code")
@@ -456,7 +443,7 @@ func handleGetAssetMutationTimeline(mutationCtrl *controllers.MutationController
 	}
 }
 
-func handleMutateAssetByCode(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+func handleMutateAssetByCode(db *gorm.DB, mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "hod"
@@ -533,7 +520,7 @@ func handleCreateWorkOrder(db *gorm.DB, workOrderCtrl *controllers.WorkOrderCont
 			payload.Department = role
 		}
 
-		if err := workOrderCtrl.CreateWorkOrder(payload, role); err != nil {
+		if err := workOrderCtrl.CreateWorkOrder(&payload, role); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to create work order", err.Error())
 			return
 		}
@@ -553,7 +540,7 @@ func handleGetWorkOrders(workOrderCtrl *controllers.WorkOrderController) http.Ha
 	}
 }
 
-func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+func handleAssignWorker(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "hod"
@@ -583,7 +570,7 @@ func handleAssignWorker(workOrderCtrl *controllers.WorkOrderController) http.Han
 	}
 }
 
-func handleUpdateWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+func handleUpdateWorkOrderStatus(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "engineer"
@@ -644,7 +631,7 @@ func handleCancelWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.
 	}
 }
 
-func handleCloseWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+func handleCloseWorkOrder(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
 		role := "hod"
@@ -668,6 +655,8 @@ func handleCloseWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.H
 			utils.SendError(w, http.StatusInternalServerError, "Failed to close work order", err.Error())
 			return
 		}
+
+		utils.SendSuccess(w, http.StatusOK, "Work order closed successfully", payload)
 
 		utils.SendSuccess(w, http.StatusOK, "Work order closed successfully", payload)
 	}
@@ -977,13 +966,14 @@ func handleDeletePMSchedule(maintenanceCtrl *controllers.MaintenanceController) 
 	}
 }
 
-func handleGetAllPMSchedules(maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
+func handleGetAllPMSchedules(db *gorm.DB, maintenanceCtrl *controllers.MaintenanceController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		schedules, err := maintenanceCtrl.GetAllPMSchedules()
 		if err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch PM schedules", err.Error())
 			return
 		}
+
 		utils.SendSuccess(w, http.StatusOK, "PM schedules retrieved successfully", schedules)
 	}
 }
@@ -1068,73 +1058,57 @@ func handleDeleteMaintenanceHistory(maintenanceCtrl *controllers.MaintenanceCont
 	}
 }
 
-func handleGetAllUsers(db *gorm.DB) http.HandlerFunc {
+func handleGetAllUsers(userCtrl *controllers.UserController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var users []models.User
-		if err := db.Order("id desc").Find(&users).Error; err != nil {
+		users, err := userCtrl.GetAllUsers()
+		if err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
 			return
-		}
-		for i := range users {
-			users[i].Password = ""
 		}
 		utils.SendSuccess(w, http.StatusOK, "Users retrieved successfully", users)
 	}
 }
 
-func handleCreateUser(db *gorm.DB) http.HandlerFunc {
+func handleGetEngineers(userCtrl *controllers.UserController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "admin" {
-			utils.SendError(w, http.StatusForbidden, "Akses ditolak: Hanya Admin yang dapat menambah pengguna baru", "Access denied")
+		engineers, err := userCtrl.GetEngineers()
+		if err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to fetch engineers", err.Error())
 			return
 		}
+		utils.SendSuccess(w, http.StatusOK, "Engineers retrieved successfully", engineers)
+	}
+}
 
-		var payload struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-			Name     string `json:"name"`
-			Role     string `json:"role"`
+func handleCreateUser(userCtrl *controllers.UserController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		role := "admin"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
+
+		var payload models.User
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
 
-		if strings.TrimSpace(payload.Username) == "" || strings.TrimSpace(payload.Password) == "" || strings.TrimSpace(payload.Name) == "" {
-			utils.SendError(w, http.StatusBadRequest, "Data pengguna tidak lengkap", "Username, Password, and Name required")
+		if err := userCtrl.CreateUser(&payload, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, err.Error(), err.Error())
 			return
 		}
 
-		hashedPassword, err := utils.HashPassword(payload.Password)
-		if err != nil {
-			utils.SendError(w, http.StatusInternalServerError, "Failed to hash password", err.Error())
-			return
-		}
-
-		user := models.User{
-			Username: payload.Username,
-			Password: hashedPassword,
-			Name:     payload.Name,
-			Role:     payload.Role,
-		}
-
-		if err := db.Create(&user).Error; err != nil {
-			utils.SendError(w, http.StatusBadRequest, "Gagal membuat pengguna (username mungkin sudah digunakan)", err.Error())
-			return
-		}
-
-		user.Password = ""
-		utils.SendSuccess(w, http.StatusCreated, "Pengguna baru berhasil dibuat!", user)
+		utils.SendSuccess(w, http.StatusCreated, "Pengguna baru berhasil ditambahkan!", payload)
 	}
 }
 
-func handleEditUser(db *gorm.DB) http.HandlerFunc {
+func handleEditUser(userCtrl *controllers.UserController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "admin" {
-			utils.SendError(w, http.StatusForbidden, "Akses ditolak: Hanya Admin yang dapat mengubah data pengguna", "Access denied")
-			return
+		role := "admin"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
 
 		var payload struct {
@@ -1143,46 +1117,37 @@ func handleEditUser(db *gorm.DB) http.HandlerFunc {
 			Password string `json:"password"`
 			Name     string `json:"name"`
 			Role     string `json:"role"`
+			Avatar   string `json:"avatar"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
 
-		var user models.User
-		if err := db.First(&user, payload.UserID).Error; err != nil {
-			utils.SendError(w, http.StatusNotFound, "Pengguna tidak ditemukan", err.Error())
+		user := models.User{
+			ID:       payload.UserID,
+			Username: payload.Username,
+			Password: payload.Password,
+			Name:     payload.Name,
+			Role:     payload.Role,
+			Avatar:   payload.Avatar,
+		}
+
+		if err := userCtrl.EditUser(&user, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, err.Error(), err.Error())
 			return
 		}
 
-		user.Name = payload.Name
-		user.Role = payload.Role
-		if strings.TrimSpace(payload.Username) != "" {
-			user.Username = payload.Username
-		}
-		if strings.TrimSpace(payload.Password) != "" {
-			hashedPassword, err := utils.HashPassword(payload.Password)
-			if err == nil {
-				user.Password = hashedPassword
-			}
-		}
-
-		if err := db.Save(&user).Error; err != nil {
-			utils.SendError(w, http.StatusInternalServerError, "Gagal menyimpan perubahan pengguna", err.Error())
-			return
-		}
-
-		user.Password = ""
 		utils.SendSuccess(w, http.StatusOK, "Data pengguna berhasil diperbarui!", user)
 	}
 }
 
-func handleDeleteUser(db *gorm.DB) http.HandlerFunc {
+func handleDeleteUser(userCtrl *controllers.UserController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.Role != "admin" {
-			utils.SendError(w, http.StatusForbidden, "Akses ditolak: Hanya Admin yang dapat menghapus pengguna", "Access denied")
-			return
+		role := "admin"
+		if claims != nil && claims.Role != "" {
+			role = claims.Role
 		}
 
 		var payload struct {
@@ -1193,17 +1158,34 @@ func handleDeleteUser(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		if payload.UserID == claims.UserID {
+		if claims != nil && payload.UserID == claims.UserID {
 			utils.SendError(w, http.StatusBadRequest, "Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif!", "Self deletion prohibited")
 			return
 		}
 
-		if err := db.Where("id = ?", payload.UserID).Delete(&models.User{}).Error; err != nil {
-			utils.SendError(w, http.StatusInternalServerError, "Gagal menghapus pengguna", err.Error())
+		if err := userCtrl.DeleteUser(payload.UserID, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, err.Error(), err.Error())
 			return
 		}
 
 		utils.SendSuccess(w, http.StatusOK, "Pengguna berhasil dihapus permanen!", payload)
+	}
+}
+
+func handleGetMe(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+		if claims == nil || claims.UserID == 0 {
+			utils.SendError(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
+			return
+		}
+		var user models.User
+		if err := db.First(&user, claims.UserID).Error; err != nil {
+			utils.SendError(w, http.StatusNotFound, "User not found", err.Error())
+			return
+		}
+		user.Password = ""
+		utils.SendSuccess(w, http.StatusOK, "User active profile", user)
 	}
 }
 
@@ -1230,7 +1212,6 @@ func handleUpdateProfile(db *gorm.DB) http.HandlerFunc {
 		}
 
 		user.Avatar = payload.Avatar
-
 		if err := db.Save(&user).Error; err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Gagal memperbarui foto profil", err.Error())
 			return
@@ -1248,22 +1229,5 @@ func handleLogout(authCtrl *controllers.AuthController) http.HandlerFunc {
 			_ = authCtrl.Logout(claims.UserID)
 		}
 		utils.SendSuccess(w, http.StatusOK, "Logout successful", nil)
-	}
-}
-
-func handleGetMe(db *gorm.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		claims := middlewares.GetClaimsFromContext(r)
-		if claims == nil || claims.UserID == 0 {
-			utils.SendError(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
-			return
-		}
-		var user models.User
-		if err := db.First(&user, claims.UserID).Error; err != nil {
-			utils.SendError(w, http.StatusNotFound, "User not found", err.Error())
-			return
-		}
-		user.Password = ""
-		utils.SendSuccess(w, http.StatusOK, "User active profile", user)
 	}
 }

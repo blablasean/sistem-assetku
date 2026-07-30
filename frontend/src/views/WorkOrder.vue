@@ -79,7 +79,7 @@
                 <td class="nowrap-cell">
                   <div v-if="wo.engineer_id > 0" class="ios-table-pill pill-emerald">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                    <span>Teknisi #{{ wo.engineer_id }}</span>
+                    <span>{{ getEngineerName(wo.engineer_id) }}</span>
                   </div>
                   <span v-else class="unassigned-chip">Belum Ditugaskan</span>
                 </td>
@@ -171,10 +171,10 @@
         <label>
           <span>Pilih Teknisi (Staff Engineer)</span>
           <select v-model.number="assignEngineerId" required>
-            <option value="101">Teknisi Deni (HVAC & AC)</option>
-            <option value="102">Teknisi Budi (Plumbing & Sanitasi)</option>
-            <option value="103">Teknisi Agus (Elektronik & Kelistrikan)</option>
-            <option value="104">Teknisi Eko (General Maintenance)</option>
+            <option value="" disabled>-- Pilih Teknisi (Staff Engineer) --</option>
+            <option v-for="eng in engineersList" :key="eng.id" :value="eng.id">
+              {{ eng.name }} (@{{ eng.username }})
+            </option>
           </select>
         </label>
 
@@ -363,7 +363,7 @@ import api from '../api'
 
 const route = useRoute()
 
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 
 const canAssign = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 const canManageOrder = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
@@ -401,7 +401,27 @@ const formWo = ref({ asset_id: '', category: '', location: '', priority: 'Medium
 
 const showAssignModal = ref(false)
 const selectedWo = ref(null)
-const assignEngineerId = ref(101)
+const assignEngineerId = ref('')
+const engineersList = ref([])
+
+function getEngineerName(id) {
+  const eng = engineersList.value.find(e => e.id === id)
+  return eng ? eng.name : `Teknisi #${id}`
+}
+
+async function fetchEngineers() {
+  try {
+    const res = await api.get('/users/engineers')
+    if (res.data?.data && Array.isArray(res.data.data)) {
+      engineersList.value = res.data.data
+      if (engineersList.value.length > 0 && !assignEngineerId.value) {
+        assignEngineerId.value = engineersList.value[0].id
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch engineers list:', e)
+  }
+}
 
 const showUpdateModal = ref(false)
 const updateStatus = ref('In Progress')
@@ -642,7 +662,11 @@ async function submitWorkOrder() {
 
 function openAssignModal(wo) {
   selectedWo.value = wo
-  assignEngineerId.value = 101
+  if (engineersList.value.length > 0) {
+    assignEngineerId.value = engineersList.value[0].id
+  } else {
+    assignEngineerId.value = ''
+  }
   showAssignModal.value = true
 }
 
@@ -769,6 +793,7 @@ onMounted(() => {
   }
   fetchWorkOrders()
   fetchRegisteredAssets()
+  fetchEngineers()
 
   // Real-time status sync across all roles & screens
   pollTimer = setInterval(() => {

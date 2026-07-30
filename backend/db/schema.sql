@@ -1,5 +1,5 @@
 -- ========================================================
--- Database schema for db_sistemasetku (Updated Latest Version)
+-- Database schema for db_sistemasetku (Updated Version)
 -- ========================================================
 -- Safe recreate script for db_sistemasetku
 -- Drops tables in dependency-safe order, then recreates them with
@@ -8,6 +8,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS work_order_logs;
+DROP TABLE IF EXISTS timelines;
 DROP TABLE IF EXISTS work_orders;
 DROP TABLE IF EXISTS asset_mutation_timelines;
 DROP TABLE IF EXISTS mutations;
@@ -43,6 +44,7 @@ CREATE TABLE assets (
     registration_location VARCHAR(100) DEFAULT 'Main Area',
     pic VARCHAR(100) DEFAULT 'Engineering',
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
+    is_reserved TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -85,9 +87,9 @@ CREATE TABLE work_orders (
     asset_id INT NOT NULL,
     location VARCHAR(100),
     description TEXT NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT 'Pending',
-    priority VARCHAR(30) DEFAULT 'Normal',
-    reporter VARCHAR(100) DEFAULT 'Staff',
+    status VARCHAR(30) NOT NULL DEFAULT 'Open',
+    priority VARCHAR(30) DEFAULT 'Medium',
+    requested_by VARCHAR(100) DEFAULT 'Staff',
     department VARCHAR(100) DEFAULT 'General',
     requester_id INT NOT NULL,
     engineer_id INT DEFAULT NULL,
@@ -95,16 +97,17 @@ CREATE TABLE work_orders (
     action_taken TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    CONSTRAINT fk_work_orders_asset FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE ON UPDATE RESTRICT,
-    CONSTRAINT fk_work_orders_requester FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE RESTRICT
+    CONSTRAINT fk_work_orders_asset FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE work_order_logs (
+CREATE TABLE timelines (
     id INT NOT NULL AUTO_INCREMENT,
     work_order_id INT NOT NULL,
-    status VARCHAR(30) NOT NULL,
+    status VARCHAR(50) NOT NULL,
     action_taken TEXT,
     cost INT DEFAULT 0,
+    updated_by VARCHAR(100),
+    user_role VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

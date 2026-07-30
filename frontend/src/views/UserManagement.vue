@@ -223,7 +223,7 @@ import { ref, computed, onMounted } from 'vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
 
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 const userList = ref([])
 const isLoading = ref(false)
 

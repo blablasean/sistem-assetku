@@ -26,12 +26,13 @@ func main() {
 	// Get database connection
 	db := config.GetDB()
 
-	// Instantiate controllers
+	// Instantiate controllers (Single Responsibility Architecture)
 	authCtrl := controllers.NewAuthController(db)
 	assetCtrl := controllers.NewAssetController(db)
 	mutationCtrl := controllers.NewMutationController(db)
 	workOrderCtrl := controllers.NewWorkOrderController(db)
 	maintenanceCtrl := controllers.NewMaintenanceController(db)
+	userCtrl := controllers.NewUserController(db)
 
 	// Register routes
 	mux := routes.RegisterRoutes(
@@ -41,6 +42,7 @@ func main() {
 		mutationCtrl,
 		workOrderCtrl,
 		maintenanceCtrl,
+		userCtrl,
 	)
 
 	// Wrap routes with CORS middleware

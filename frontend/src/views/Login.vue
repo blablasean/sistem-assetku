@@ -106,11 +106,8 @@ async function login() {
       throw new Error('Token tidak ditemukan dari server.')
     }
 
-    // Save session in both localStorage (persists across tabs/reopens) & sessionStorage
-    localStorage.setItem('token', token)
-    localStorage.setItem('user_role', role)
-    localStorage.setItem('user_name', name)
-    localStorage.setItem('username', data.username || username.value)
+    // Save session in sessionStorage (session ends automatically when tab/browser is closed)
+    localStorage.clear() // Ensure legacy persistent tokens are removed
 
     sessionStorage.setItem('token', token)
     sessionStorage.setItem('user_role', role)
@@ -118,10 +115,8 @@ async function login() {
     sessionStorage.setItem('username', data.username || username.value)
 
     if (data.avatar) {
-      localStorage.setItem('user_avatar', data.avatar)
       sessionStorage.setItem('user_avatar', data.avatar)
     } else {
-      localStorage.removeItem('user_avatar')
       sessionStorage.removeItem('user_avatar')
     }
 

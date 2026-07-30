@@ -114,8 +114,6 @@ func SeedInitialData(db *gorm.DB) error {
 
 // AutoMigrateModels automatically migrates all database models
 func AutoMigrateModels() error {
-	DB.Exec("ALTER TABLE preventive_maintenances ADD COLUMN IF NOT EXISTS completed_dates TEXT;")
-	DB.Exec("ALTER TABLE users ADD COLUMN active_token TEXT;")
 	return DB.AutoMigrate(
 		&models.User{},
 		&models.Asset{},

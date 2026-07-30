@@ -413,7 +413,7 @@ import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
 import { triggerPrint } from '../utils/exportUtils'
 
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 const canManage = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
 
 const showToast = ref(false)

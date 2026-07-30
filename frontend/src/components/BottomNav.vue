@@ -39,8 +39,8 @@ import { ref, computed } from 'vue'
 
 defineEmits(['open-qr-scanner'])
 
-const userRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'external')
-const isLoggedIn = computed(() => !!(sessionStorage.getItem('token') || localStorage.getItem('token')))
+const userRole = ref(sessionStorage.getItem('user_role') || 'external')
+const isLoggedIn = computed(() => !!sessionStorage.getItem('token'))
 const isMobileView = computed(() => true)
 </script>
 
