@@ -744,34 +744,44 @@ func handleAddTimelineEntry(workOrderCtrl *controllers.WorkOrderController) http
 
 func handleGetActivityLogs(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController, mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Fetch finished / completed Work Orders
-		var finishedWOs []models.WorkOrder
-		db.Where("status IN ('Finish','Completed','Closed')").Order("id desc").Limit(50).Find(&finishedWOs)
+		// Fetch ALL Work Orders for full audit coverage
+		var allWOs []models.WorkOrder
+		db.Order("id desc").Limit(100).Find(&allWOs)
 
-		// Fetch all Work Order Timelines
+		// Fetch work_order_logs (primary WO audit trail)
+		workOrderLogs, _ := workOrderCtrl.GetAllWorkOrderLogs()
+
+		// Fetch timelines (legacy, kept for backward compat)
 		timelines, _ := workOrderCtrl.GetAllTimelines()
 
 		// Fetch all Asset Mutation Timelines
 		assetMutationTimelines, _ := mutationCtrl.GetAllAssetMutationTimelines()
 
-		// Fetch all maintenance history entries
+		// Fetch maintenance_histories
 		var maintenanceHistory []models.MaintenanceHistory
-		db.Order("id desc").Limit(50).Find(&maintenanceHistory)
+		db.Order("id desc").Limit(100).Find(&maintenanceHistory)
 
 		// Fetch all mutation history
 		var mutations []models.Mutation
 		db.Order("mutation_date desc").Limit(100).Find(&mutations)
 
+		// Fetch structured activity_logs (system-wide changes)
+		var activityLogs []models.ActivityLog
+		db.Order("timestamp desc").Limit(200).Find(&activityLogs)
+
 		result := map[string]interface{}{
-			"work_orders":              finishedWOs,
+			"work_orders":              allWOs,
+			"work_order_logs":          workOrderLogs,
 			"timelines":                timelines,
 			"asset_mutation_timelines": assetMutationTimelines,
 			"maintenance_history":      maintenanceHistory,
 			"mutations":                mutations,
+			"activity_logs":            activityLogs,
 		}
 		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", result)
 	}
 }
+
 
 func handleGetWorkOrderStatus(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

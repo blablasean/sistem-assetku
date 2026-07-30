@@ -601,8 +601,8 @@ function formatDate(dateStr) {
   }
 }
 
-const currentUsername = ref(sessionStorage.getItem('username') || localStorage.getItem('username') || sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'admin')
-const currentUserRole = ref(sessionStorage.getItem('user_role') || localStorage.getItem('user_role') || 'admin')
+const currentUsername = ref(sessionStorage.getItem('username') || sessionStorage.getItem('user_name') || 'admin')
+const currentUserRole = ref(sessionStorage.getItem('user_role') || 'admin')
 
 function formatDepartmentLabel(roleOrDept) {
   if (!roleOrDept) return 'Staff Operasional'

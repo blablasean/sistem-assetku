@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"sistem-asetku-backend/models"
+	"sistem-asetku-backend/utils"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -20,7 +22,16 @@ func (c *AssetController) RegistrasiAsset(newAsset models.Asset, callerRole stri
 	if !canManageAssets(callerRole) {
 		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mendaftarkan aset baru")
 	}
-	return c.db.Create(&newAsset).Error
+	if err := c.db.Create(&newAsset).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "ASET", callerRole,
+		"Mendaftarkan aset baru: "+newAsset.AssetName+" ("+newAsset.AssetCode+") di "+newAsset.Location,
+		newAsset.AssetCode)
+
+	return nil
 }
 
 func (c *AssetController) EditAsset(assetID int, updated models.Asset, callerRole string) error {
@@ -37,7 +48,16 @@ func (c *AssetController) EditAsset(assetID int, updated models.Asset, callerRol
 	existing.PIC = updated.PIC
 	existing.Status = updated.Status
 	existing.DocumentURL = updated.DocumentURL
-	return c.db.Save(&existing).Error
+	if err := c.db.Save(&existing).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "ASET", callerRole,
+		"Mengedit data aset: "+existing.AssetName+" ("+existing.AssetCode+") → Status: "+existing.Status+", Lokasi: "+existing.Location,
+		existing.AssetCode)
+
+	return nil
 }
 
 func (c *AssetController) GenerateQRCode(assetCode string, callerRole string) (string, error) {
@@ -86,12 +106,29 @@ func (c *AssetController) ReserveAsset(assetID int, isReserved bool, callerRole 
 	} else if asset.Status == "Reserved" {
 		asset.Status = "Active"
 	}
-	return c.db.Save(&asset).Error
+	if err := c.db.Save(&asset).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	action := "Mereservasi"
+	if !isReserved {
+		action = "Membatalkan reservasi"
+	}
+	utils.RecordActivity(c.db, "ASET", callerRole,
+		action+" aset: "+asset.AssetName+" ("+asset.AssetCode+")",
+		asset.AssetCode)
+
+	return nil
 }
 
 func (c *AssetController) DeleteAsset(assetID int, callerRole string) error {
 	if !canManageAssets(callerRole) {
 		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat menghapus aset")
+	}
+	var existing models.Asset
+	if err := c.db.First(&existing, assetID).Error; err != nil {
+		return errors.New("aset tidak ditemukan di database")
 	}
 	res := c.db.Where("id = ?", assetID).Delete(&models.Asset{})
 	if res.Error != nil {
@@ -100,5 +137,34 @@ func (c *AssetController) DeleteAsset(assetID int, callerRole string) error {
 	if res.RowsAffected == 0 {
 		return errors.New("aset tidak ditemukan di database")
 	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "ASET", callerRole,
+		"Menghapus aset: "+existing.AssetName+" ("+existing.AssetCode+")",
+		existing.AssetCode)
+
+	return nil
+}
+
+// ChangeAssetStatus updates just the status field of an asset and records the change
+func (c *AssetController) ChangeAssetStatus(assetID int, newStatus string, callerRole string) error {
+	if !canManageAssets(callerRole) {
+		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat mengubah status aset")
+	}
+	var asset models.Asset
+	if err := c.db.First(&asset, assetID).Error; err != nil {
+		return errors.New("aset tidak ditemukan")
+	}
+	oldStatus := asset.Status
+	asset.Status = newStatus
+	if err := c.db.Save(&asset).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "ASET", callerRole,
+		"Mengubah status aset "+asset.AssetName+" ("+asset.AssetCode+"): "+oldStatus+" → "+newStatus,
+		strconv.Itoa(assetID))
+
 	return nil
 }

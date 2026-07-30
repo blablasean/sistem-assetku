@@ -23,7 +23,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </span>
           <div>
-            <p class="sbox-label">WO Finish</p>
+            <p class="sbox-label">Total Work Order</p>
             <p class="sbox-value">{{ finishedWOs.length }} Tiket</p>
           </div>
         </div>
@@ -52,6 +52,15 @@
           <div>
             <p class="sbox-label">Total Mutasi Aset</p>
             <p class="sbox-value">{{ mutations.length }} Mutasi</p>
+          </div>
+        </div>
+        <div class="sbox" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #86efac;">
+          <span class="sbox-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </span>
+          <div>
+            <p class="sbox-label">Log Aktivitas Sistem</p>
+            <p class="sbox-value">{{ activityLogs.length }} Entri</p>
           </div>
         </div>
       </div>
@@ -173,7 +182,44 @@
         </div>
       </div>
 
+      <!-- Section 4: System Activity Log (semua perubahan sistem) -->
+      <div class="card-panel" style="margin-top: 24px;">
+        <h2 class="section-title">Log Aktivitas Sistem (Semua Perubahan)</h2>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Kategori</th>
+                <th>Aktor / User</th>
+                <th>Aktivitas / Tindakan</th>
+                <th>Entitas ID</th>
+                <th>Waktu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(log, idx) in filteredActivityLogs" :key="log.id">
+                <td><span class="wo-id">#{{ idx + 1 }}</span></td>
+                <td>
+                  <span :class="['category-badge', 'cat-' + (log.category || 'GENERAL').toLowerCase().replace('_', '-')]">
+                    {{ log.category || 'GENERAL' }}
+                  </span>
+                </td>
+                <td>{{ log.actor || '—' }}</td>
+                <td class="desc-cell" :title="log.action">{{ log.action }}</td>
+                <td><span class="wo-id">{{ log.entity_id || '—' }}</span></td>
+                <td class="time-col">{{ formatDate(log.timestamp) }}</td>
+              </tr>
+              <tr v-if="filteredActivityLogs.length === 0">
+                <td colspan="6" class="empty-state">Belum ada log aktivitas sistem tercatat.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Custom UI Toast Notification -->
+
       <transition name="fade">
         <div v-if="showToast" :class="['custom-ui-toast', toastType]">
           <span class="toast-icon">{{ toastType === 'success' ? '✅' : '⚠️' }}</span>
@@ -435,6 +481,7 @@ const timelines = ref([])
 const assetMutationTimelines = ref([])
 const maintenanceHistory = ref([])
 const mutations = ref([])
+const activityLogs = ref([])
 const isLoading = ref(false)
 
 const showReportModal = ref(false)
@@ -515,6 +562,17 @@ const filteredMutations = computed(() => {
   )
 })
 
+const filteredActivityLogs = computed(() => {
+  const q = searchFilter.value.toLowerCase()
+  if (!q) return activityLogs.value
+  return activityLogs.value.filter(log =>
+    (log.action && log.action.toLowerCase().includes(q)) ||
+    (log.actor && log.actor.toLowerCase().includes(q)) ||
+    (log.category && log.category.toLowerCase().includes(q)) ||
+    (log.entity_id && log.entity_id.toLowerCase().includes(q))
+  )
+})
+
 function formatNumber(num) {
   return (num || 0).toLocaleString('id-ID')
 }
@@ -540,6 +598,7 @@ async function fetchLogs() {
       assetMutationTimelines.value = res.data.data.asset_mutation_timelines || []
       maintenanceHistory.value = res.data.data.maintenance_history || []
       mutations.value = res.data.data.mutations || []
+      activityLogs.value = res.data.data.activity_logs || []
     }
   } catch (e) {
     console.error('Failed to fetch activity logs:', e)
@@ -1435,4 +1494,22 @@ td {
   .report-actions { flex-direction: column; gap: 8px; }
   .excel-btn, .print-btn { width: 100%; justify-content: center; }
 }
+/* === Category Badges for Activity Log === */
+.category-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cat-work-order, .cat-work_order { background: #dbeafe; color: #1d4ed8; }
+.cat-mutasi-aset, .cat-mutasi_aset { background: #fef3c7; color: #b45309; }
+.cat-aset { background: #d1fae5; color: #065f46; }
+.cat-maintenance { background: #ede9fe; color: #6d28d9; }
+.cat-user-management, .cat-user_management { background: #fee2e2; color: #b91c1c; }
+.cat-general { background: #f1f5f9; color: #475569; }
 </style>
+

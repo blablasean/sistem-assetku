@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -40,9 +41,21 @@ func (c *AuthController) Login(username string, password string) (string, *model
 	user.ActiveToken = token
 	_ = c.db.Model(&user).Update("active_token", token)
 
+	// Record login in activity log
+	utils.RecordActivity(c.db, "AUTH", user.Username,
+		"Login ke sistem sebagai "+user.Role+" ("+user.Name+")",
+		strconv.Itoa(user.ID))
+
 	return token, &user, nil
 }
 
 func (c *AuthController) Logout(userID int) error {
+	var user models.User
+	if err := c.db.First(&user, userID).Error; err == nil {
+		// Record logout in activity log
+		utils.RecordActivity(c.db, "AUTH", user.Username,
+			"Logout dari sistem",
+			strconv.Itoa(userID))
+	}
 	return c.db.Model(&models.User{}).Where("id = ?", userID).Update("active_token", "").Error
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -66,6 +67,12 @@ func (c *UserController) CreateUser(u *models.User, callerRole string) error {
 		return err
 	}
 	u.Password = ""
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "USER_MANAGEMENT", "admin",
+		"Menambahkan pengguna baru: "+u.Name+" ("+u.Username+") dengan role "+u.Role,
+		strconv.Itoa(u.ID))
+
 	return nil
 }
 
@@ -79,6 +86,7 @@ func (c *UserController) EditUser(u *models.User, callerRole string) error {
 		return errors.New("pengguna tidak ditemukan")
 	}
 
+	oldRole := existing.Role
 	existing.Name = u.Name
 	existing.Role = u.Role
 	existing.Username = u.Username
@@ -99,6 +107,14 @@ func (c *UserController) EditUser(u *models.User, callerRole string) error {
 	}
 	existing.Password = ""
 	*u = existing
+
+	// Record in activity log — note role changes specifically
+	logMsg := "Mengedit pengguna: " + u.Name + " (" + u.Username + ")"
+	if oldRole != u.Role {
+		logMsg += " — role diubah dari " + oldRole + " menjadi " + u.Role
+	}
+	utils.RecordActivity(c.db, "USER_MANAGEMENT", "admin", logMsg, strconv.Itoa(u.ID))
+
 	return nil
 }
 
@@ -114,5 +130,14 @@ func (c *UserController) DeleteUser(userID int, callerRole string) error {
 	if existing.Username == "admin" {
 		return errors.New("akun Administrator utama tidak boleh dihapus")
 	}
-	return c.db.Delete(&existing).Error
+	if err := c.db.Delete(&existing).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "USER_MANAGEMENT", "admin",
+		"Menghapus pengguna: "+existing.Name+" ("+existing.Username+") role: "+existing.Role,
+		strconv.Itoa(userID))
+
+	return nil
 }

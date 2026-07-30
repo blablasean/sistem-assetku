@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 	"sistem-asetku-backend/models"
+	"sistem-asetku-backend/utils"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -21,7 +23,16 @@ func (c *MaintenanceController) CreatePMSchedule(schedule models.PreventiveMaint
 	if !canManageAssets(callerRole) {
 		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat membuat jadwal Preventive Maintenance")
 	}
-	return c.db.Create(&schedule).Error
+	if err := c.db.Create(&schedule).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MAINTENANCE", callerRole,
+		"Membuat jadwal Preventive Maintenance: "+schedule.ScheduleType+" untuk aset #"+strconv.Itoa(schedule.AssetID),
+		strconv.Itoa(schedule.AssetID))
+
+	return nil
 }
 
 func (c *MaintenanceController) EditPMSchedule(pmID int, updated models.PreventiveMaintenance, callerRole string) error {
@@ -41,7 +52,16 @@ func (c *MaintenanceController) EditPMSchedule(pmID int, updated models.Preventi
 	if !updated.NextRun.IsZero() {
 		schedule.NextRun = updated.NextRun
 	}
-	return c.db.Save(&schedule).Error
+	if err := c.db.Save(&schedule).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MAINTENANCE", callerRole,
+		"Mengedit jadwal Preventive Maintenance #"+strconv.Itoa(pmID)+": "+schedule.ScheduleType,
+		strconv.Itoa(pmID))
+
+	return nil
 }
 
 func (c *MaintenanceController) DeletePMSchedule(pmID int, callerRole string) error {
@@ -55,6 +75,12 @@ func (c *MaintenanceController) DeletePMSchedule(pmID int, callerRole string) er
 	if res.RowsAffected == 0 {
 		return errors.New("jadwal PM tidak ditemukan di database")
 	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MAINTENANCE", callerRole,
+		"Menghapus jadwal Preventive Maintenance #"+strconv.Itoa(pmID),
+		strconv.Itoa(pmID))
+
 	return nil
 }
 
@@ -107,7 +133,16 @@ func (c *MaintenanceController) SubmitPMChecklist(pmID int, targetDate string, c
 		ActionTaken: actMsg,
 		Cost:        50000,
 	}
-	return c.db.Create(&history).Error
+	if err := c.db.Create(&history).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MAINTENANCE", callerRole,
+		"Menyelesaikan checklist PM #"+strconv.Itoa(pmID)+" tanggal "+cleanDate+" untuk aset #"+strconv.Itoa(schedule.AssetID),
+		strconv.Itoa(schedule.AssetID))
+
+	return nil
 }
 
 func (c *MaintenanceController) GetMaintenanceHistory(assetID int) ([]models.MaintenanceHistory, error) {
@@ -140,7 +175,16 @@ func (c *MaintenanceController) EditMaintenanceHistory(historyID int, actionTake
 	if cost >= 0 {
 		mh.Cost = cost
 	}
-	return c.db.Save(&mh).Error
+	if err := c.db.Save(&mh).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MAINTENANCE", callerRole,
+		"Mengedit riwayat maintenance #"+strconv.Itoa(historyID)+": "+actionTaken,
+		strconv.Itoa(historyID))
+
+	return nil
 }
 
 func (c *MaintenanceController) DeleteMaintenanceHistory(historyID int, callerRole string) error {
@@ -154,5 +198,11 @@ func (c *MaintenanceController) DeleteMaintenanceHistory(historyID int, callerRo
 	if res.RowsAffected == 0 {
 		return errors.New("riwayat maintenance tidak ditemukan di database")
 	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MAINTENANCE", callerRole,
+		"Menghapus riwayat maintenance #"+strconv.Itoa(historyID),
+		strconv.Itoa(historyID))
+
 	return nil
 }

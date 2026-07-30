@@ -3,6 +3,8 @@ package controllers
 import (
 	"errors"
 	"sistem-asetku-backend/models"
+	"sistem-asetku-backend/utils"
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -61,6 +63,11 @@ func (c *MutationController) CreateMutation(data models.Mutation, callerRole str
 	}
 	c.db.Create(&tl)
 
+	// Record in activity log
+	utils.RecordActivity(c.db, "MUTASI_ASET", data.PIC,
+		"Mutasi aset "+asset.AssetCode+" ("+asset.AssetName+"): "+data.PreviousLocation+" → "+data.NewLocation+". Alasan: "+data.Reason,
+		asset.AssetCode)
+
 	return nil
 }
 
@@ -106,7 +113,16 @@ func (c *MutationController) CreateMutationByCode(assetCode string, newLocation 
 		Reason:           reason,
 		MovedAt:          now,
 	}
-	return c.db.Create(&tl).Error
+	if err := c.db.Create(&tl).Error; err != nil {
+		return err
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MUTASI_ASET", pic,
+		"Mutasi aset "+assetCode+": "+prevLoc+" → "+newLocation+". Alasan: "+reason,
+		assetCode)
+
+	return nil
 }
 
 func (c *MutationController) GetLocationHistory(assetID int) ([]models.Mutation, error) {
@@ -173,4 +189,34 @@ func (c *MutationController) GetAllAssetMutationTimelines() ([]models.AssetMutat
 		c.db.Order("moved_at desc").Limit(100).Find(&list)
 	}
 	return list, nil
+}
+
+// GetMutationByID retrieves a single mutation by its integer ID
+func (c *MutationController) GetMutationByID(id int) (models.Mutation, error) {
+	var mut models.Mutation
+	if err := c.db.First(&mut, id).Error; err != nil {
+		return models.Mutation{}, err
+	}
+	return mut, nil
+}
+
+// DeleteMutation removes a mutation record and the corresponding asset mutation timeline entry
+func (c *MutationController) DeleteMutation(id int, callerRole string) error {
+	if !canMutate(callerRole) {
+		return errors.New("akses ditolak: hanya Admin atau HOD yang dapat menghapus mutasi aset")
+	}
+	res := c.db.Where("id = ?", id).Delete(&models.Mutation{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return errors.New("data mutasi tidak ditemukan di database")
+	}
+
+	// Record in activity log
+	utils.RecordActivity(c.db, "MUTASI_ASET", callerRole,
+		"Menghapus record mutasi aset #"+strconv.Itoa(id),
+		strconv.Itoa(id))
+
+	return nil
 }
