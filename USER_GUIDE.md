@@ -40,11 +40,11 @@ Sistem membagi pengguna ke dalam beberapa tingkatan peran (*Role*):
 
 | Peran (Role) | Hak Akses Utama |
 | :--- | :--- |
-| **Administrator (`admin`)** | Akses penuh ke seluruh fitur (User Management, Asset, WO, Maintenance, Log). |
-| **HOD Engineer (`hod`)** | Mengelola jadwal maintenance, aset, work order, dan konfirmasi checklist. |
-| **Supervisor Engineer (`management`)** | Mengelola work order, menetapkan teknisi, dan memantau pemeliharaan. |
-| **Staff Engineer (`engineer`)** | Menangani tiket perbaikan work order dan melaksanakan inspeksi fisik. |
-| **Staff Operasional (`external` / `dept_*`)** | Melaporkan kerusakan fasilitas (Work Order) dan memantau status perbaikan. |
+| **Administrator** | Akses penuh ke seluruh fitur (User Management, Asset, WO, Maintenance, Log). |
+| **HOD Engineer** | Mengelola jadwal maintenance, aset, work order, dan konfirmasi checklist. |
+| **Supervisor Engineer** | Mengelola work order, menetapkan teknisi, dan memantau pemeliharaan. |
+| **Staff Engineer (Teknisi)** | Menangani tiket perbaikan work order dan melaksanakan inspeksi fisik. |
+| **Staff Operasional (Departemen)** | Melaporkan kerusakan fasilitas (Work Order) dan memantau status perbaikan. |
 
 ### 🔑 Daftar Akun Uji Coba Bawaan:
 

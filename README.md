@@ -51,11 +51,11 @@ Aplikasi ini mengusung desain **Apple iOS Modern Aesthetic** dengan antarmuka ya
 
 | Role / Jabatan | Hak Akses Utama |
 | :--- | :--- |
-| **👑 Administrator (`admin`)** | Akses penuh atas seluruh aset, Work Order, penugasan, jadwal PM, user management, dan audit log sistem. |
-| **⭐ HOD Engineer (`hod`)** | Registrasi & Edit Aset, Penugasan Teknisi, Penutupan Tiket (*Finish*), Hapus WO/Aset/PM, Cetak Laporan & Export Excel. |
-| **👔 Supervisor (`management`)** | Monitoring Aset, Penugasan Teknisi, Update Status, Mutasi Lokasi, Hapus Data, Cetak Laporan. |
-| **🛠️ Staff Engineer (`engineer`)** | Update progres pengerjaan tiket, isi tindakan perbaikan, biaya, dan penyelesaian *Checklist PM*. |
-| **🛎️ Staff Hotel (`external` / Dept)** | Pengajuan Tiket Kerusakan Aset berdasarkan Lokasi/Kamar dan pemantauan status perbaikan real-time. |
+| **👑 Administrator** | Akses penuh atas seluruh aset, Work Order, penugasan, jadwal PM, user management, dan audit log sistem. |
+| **⭐ HOD Engineer** | Registrasi & Edit Aset, Penugasan Teknisi, Penutupan Tiket (*Finish*), Hapus WO/Aset/PM, Cetak Laporan & Export Excel. |
+| **👔 Supervisor Engineer** | Monitoring Aset, Penugasan Teknisi, Update Status, Mutasi Lokasi, Hapus Data, Cetak Laporan. |
+| **🛠️ Staff Engineer** | Update progres pengerjaan tiket, isi tindakan perbaikan, biaya, dan penyelesaian *Checklist PM*. |
+| **🛎️ Staff Operasional (Dept)** | Pengajuan Tiket Kerusakan Aset berdasarkan Lokasi/Kamar dan pemantauan status perbaikan real-time. |
 
 ---
 
