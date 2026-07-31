@@ -54,7 +54,10 @@
           {{ isLoading ? 'Memverifikasi Data...' : 'Masuk Ke Sistem' }}
         </button>
 
-        <p v-if="error" class="error-message">{{ error }}</p>
+        <div v-if="error" class="error-alert">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>{{ error }}</span>
+        </div>
       </form>
     </div>
   </div>
@@ -97,14 +100,17 @@ async function login() {
       password: password.value,
     })
 
-    const data = res.data?.data || {}
-    const token = data.token
-    const role = data.role || 'external'
-    const name = data.name || username.value
+    const payload = res.data?.data || res.data || {}
+    const token = payload.token || res.data?.token
 
     if (!token) {
-      throw new Error('Token tidak ditemukan dari server.')
+      console.error('Server response payload missing token:', res.data)
+      throw new Error('Token autentikasi tidak ditemukan dari respon server. Silakan coba login kembali.')
     }
+
+    const role = payload.role || 'external'
+    const name = payload.name || username.value
+    const userUn = payload.username || username.value
 
     // Save session in sessionStorage (session ends automatically when tab/browser is closed)
     localStorage.clear() // Ensure legacy persistent tokens are removed
@@ -112,10 +118,10 @@ async function login() {
     sessionStorage.setItem('token', token)
     sessionStorage.setItem('user_role', role)
     sessionStorage.setItem('user_name', name)
-    sessionStorage.setItem('username', data.username || username.value)
+    sessionStorage.setItem('username', userUn)
 
-    if (data.avatar) {
-      sessionStorage.setItem('user_avatar', data.avatar)
+    if (payload.avatar) {
+      sessionStorage.setItem('user_avatar', payload.avatar)
     } else {
       sessionStorage.removeItem('user_avatar')
     }
@@ -308,11 +314,23 @@ p {
   cursor: not-allowed;
 }
 
-.error-message {
-  margin: 0;
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px !important;
   color: #dc2626;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   line-height: 1.4;
   font-weight: 600;
+  margin-top: 4px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.error-alert svg {
+  flex-shrink: 0;
 }
 </style>

@@ -18,7 +18,16 @@ func NewMutationController(db *gorm.DB) *MutationController {
 	return &MutationController{db: db}
 }
 
-func (c *MutationController) CreateMutation(data models.Mutation, callerRole string) error {
+type MutationInput struct {
+	AssetID          int       `json:"asset_id"`
+	PreviousLocation string    `json:"previous_location"`
+	NewLocation      string    `json:"new_location"`
+	PIC              string    `json:"pic"`
+	Reason           string    `json:"reason"`
+	MutationDate     time.Time `json:"mutation_date"`
+}
+
+func (c *MutationController) CreateMutation(data MutationInput, callerRole string) error {
 	if !canMutate(callerRole) {
 		return errors.New("akses ditolak: hanya Admin atau HOD yang dapat membuat mutasi lokasi aset")
 	}
@@ -47,11 +56,6 @@ func (c *MutationController) CreateMutation(data models.Mutation, callerRole str
 		return err
 	}
 
-	// Save legacy mutation record
-	if err := c.db.Create(&data).Error; err != nil {
-		return err
-	}
-
 	// Save entry to dedicated asset_mutation_timelines table
 	tl := models.AssetMutationTimeline{
 		AssetCode:        asset.AssetCode,
@@ -61,7 +65,9 @@ func (c *MutationController) CreateMutation(data models.Mutation, callerRole str
 		Reason:           data.Reason,
 		MovedAt:          data.MutationDate,
 	}
-	c.db.Create(&tl)
+	if err := c.db.Create(&tl).Error; err != nil {
+		return err
+	}
 
 	// Record in activity log
 	utils.RecordActivity(c.db, "MUTASI_ASET", data.PIC,
@@ -93,17 +99,6 @@ func (c *MutationController) CreateMutationByCode(assetCode string, newLocation 
 		return err
 	}
 
-	// Save legacy mutation record
-	mut := models.Mutation{
-		AssetID:          asset.ID,
-		PreviousLocation: prevLoc,
-		NewLocation:      newLocation,
-		PIC:              pic,
-		Reason:           reason,
-		MutationDate:     now,
-	}
-	c.db.Create(&mut)
-
 	// Save entry to dedicated asset_mutation_timelines table
 	tl := models.AssetMutationTimeline{
 		AssetCode:        assetCode,
@@ -125,10 +120,12 @@ func (c *MutationController) CreateMutationByCode(assetCode string, newLocation 
 	return nil
 }
 
-func (c *MutationController) GetLocationHistory(assetID int) ([]models.Mutation, error) {
-	var history []models.Mutation
-	c.db.Where("asset_id = ?", assetID).Order("mutation_date DESC").Find(&history)
-	return history, nil
+func (c *MutationController) GetLocationHistory(assetID int) ([]models.AssetMutationTimeline, error) {
+	var asset models.Asset
+	if err := c.db.First(&asset, assetID).Error; err != nil {
+		return nil, err
+	}
+	return c.GetAssetMutationTimeline(asset.AssetCode)
 }
 
 func (c *MutationController) GetAssetMutationTimeline(assetCode string) ([]models.AssetMutationTimeline, error) {
@@ -191,21 +188,21 @@ func (c *MutationController) GetAllAssetMutationTimelines() ([]models.AssetMutat
 	return list, nil
 }
 
-// GetMutationByID retrieves a single mutation by its integer ID
-func (c *MutationController) GetMutationByID(id int) (models.Mutation, error) {
-	var mut models.Mutation
+// GetMutationByID retrieves a single asset mutation timeline by its integer ID
+func (c *MutationController) GetMutationByID(id int) (models.AssetMutationTimeline, error) {
+	var mut models.AssetMutationTimeline
 	if err := c.db.First(&mut, id).Error; err != nil {
-		return models.Mutation{}, err
+		return models.AssetMutationTimeline{}, err
 	}
 	return mut, nil
 }
 
-// DeleteMutation removes a mutation record and the corresponding asset mutation timeline entry
+// DeleteMutation removes an asset mutation timeline entry
 func (c *MutationController) DeleteMutation(id int, callerRole string) error {
 	if !canMutate(callerRole) {
 		return errors.New("akses ditolak: hanya Admin atau HOD yang dapat menghapus mutasi aset")
 	}
-	res := c.db.Where("id = ?", id).Delete(&models.Mutation{})
+	res := c.db.Where("id = ?", id).Delete(&models.AssetMutationTimeline{})
 	if res.Error != nil {
 		return res.Error
 	}

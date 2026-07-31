@@ -5,6 +5,7 @@ import (
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
 	"strconv"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -31,15 +32,30 @@ func (c *AuthController) Login(username string, password string) (string, *model
 		return "", nil, errors.New("username atau password salah")
 	}
 
+	// Single Active Session Check:
+	// Only reject secondary login if user has a valid active_token AND tab/browser is currently active (last_seen_at <= 30s)
+	if user.IsLoggedIn && user.ActiveToken != "" {
+		isAbandoned := user.LastSeenAt == nil || time.Since(*user.LastSeenAt) > 30*time.Second
+		_, tokenErr := utils.ValidateToken(user.ActiveToken)
+
+		if tokenErr == nil && !isAbandoned {
+			return "", nil, errors.New("Akun sedang tersambung di perangkat lain")
+		}
+	}
+
 	// Generate JWT token
 	token, err := utils.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return "", nil, err
 	}
 
-	// Save & update active session token (overwrites previous session cleanly)
+	// Direct raw SQL update to guarantee is_logged_in, active_token, and last_seen_at are saved to MySQL
+	now := time.Now()
+	user.IsLoggedIn = true
 	user.ActiveToken = token
-	_ = c.db.Model(&user).Update("active_token", token)
+	user.LastSeenAt = &now
+
+	_ = c.db.Exec("UPDATE users SET is_logged_in = 1, active_token = ?, last_seen_at = ? WHERE id = ?", token, now, user.ID).Error
 
 	// Record login in activity log
 	utils.RecordActivity(c.db, "AUTH", user.Username,
@@ -57,5 +73,5 @@ func (c *AuthController) Logout(userID int) error {
 			"Logout dari sistem",
 			strconv.Itoa(userID))
 	}
-	return c.db.Model(&models.User{}).Where("id = ?", userID).Update("active_token", "").Error
+	return c.db.Exec("UPDATE users SET is_logged_in = 0, active_token = '', last_seen_at = NULL WHERE id = ?", userID).Error
 }

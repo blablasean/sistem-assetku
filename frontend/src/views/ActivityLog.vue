@@ -54,7 +54,7 @@
             <p class="sbox-value">{{ mutations.length }} Mutasi</p>
           </div>
         </div>
-        <div class="sbox" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #86efac;">
+        <div class="sbox" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #86efac;" v-if="isAdmin">
           <span class="sbox-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </span>
@@ -65,19 +65,59 @@
         </div>
       </div>
 
-      <!-- Search -->
-      <div class="search-row">
-        <input v-model="searchFilter" placeholder="Cari riwayat activity log..." class="search-input" />
+      <!-- Search & Date Filter Bar -->
+      <div class="filter-card-panel">
+        <div class="filter-main-row">
+          <div class="search-input-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input v-model="searchFilter" placeholder="Cari riwayat activity log (deskripsi, user, status, lokasi)..." class="search-input-field" />
+          </div>
+
+          <div class="date-filter-box">
+            <div class="date-input-group">
+              <label>Dari:</label>
+              <input type="date" v-model="startDateFilter" class="date-picker" />
+            </div>
+            <div class="date-input-group">
+              <label>Sampai:</label>
+              <input type="date" v-model="endDateFilter" class="date-picker" />
+            </div>
+
+            <div class="quick-date-pills">
+              <button :class="['date-pill-btn', { active: activeQuickDate === 'today' }]" @click="setQuickDate('today')">Hari Ini</button>
+              <button :class="['date-pill-btn', { active: activeQuickDate === '7days' }]" @click="setQuickDate('7days')">7 Hari</button>
+              <button :class="['date-pill-btn', { active: activeQuickDate === '30days' }]" @click="setQuickDate('30days')">30 Hari</button>
+              <button :class="['date-pill-btn', { active: activeQuickDate === 'thisMonth' }]" @click="setQuickDate('thisMonth')">Bulan Ini</button>
+              <button class="reset-date-btn" v-if="startDateFilter || endDateFilter || activeQuickDate" @click="clearDateFilter">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Reset Filter</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Section 1: Work Order Timelines (Audit Trail) -->
+      <!-- Section 1: Work Order Logs (Audit Trail) -->
       <div class="card-panel">
-        <h2 class="section-title">Riwayat Seluruh Timeline Work Order (Audit Trail)</h2>
-        <div class="table-responsive">
+        <div class="panel-header-flex">
+          <h2 class="section-title">Riwayat Seluruh Log Work Order (Audit Trail)</h2>
+          <div class="per-page-selector">
+            <span>Tampilkan:</span>
+            <select v-model="pageSizeWoLog" @change="currentPageWoLog = 1">
+              <option :value="5">5 entri</option>
+              <option :value="10">10 entri</option>
+              <option :value="25">25 entri</option>
+              <option :value="50">50 entri</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive table-scroll-container">
           <table>
             <thead>
               <tr>
-                <th>Timeline ID</th>
+                <th>Log ID</th>
                 <th>WO ID</th>
                 <th>Status</th>
                 <th>Di-update Oleh</th>
@@ -87,8 +127,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="tl in filteredTimelines" :key="tl.id">
-                <td><span class="wo-id">#TL-{{ tl.id }}</span></td>
+              <tr v-for="tl in paginatedTimelines" :key="tl.id">
+                <td><span class="wo-id">#WOLOG-{{ tl.id }}</span></td>
                 <td><span class="wo-id">#WO-{{ tl.work_order_id }}</span></td>
                 <td><StatusBadge :status="tl.status" /></td>
                 <td>
@@ -100,17 +140,41 @@
                 <td class="time-col">{{ formatDate(tl.created_at) }}</td>
               </tr>
               <tr v-if="filteredTimelines.length === 0">
-                <td colspan="7" class="empty-state">Tidak ada data riwayat timeline Work Order.</td>
+                <td colspan="7" class="empty-state">Tidak ada data riwayat log Work Order.</td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="pagination-bar" v-if="filteredTimelines.length > 0">
+          <span class="pagination-info">
+            Menampilkan {{ pageSizeWoLog === 'all' ? 1 : (currentPageWoLog - 1) * Number(pageSizeWoLog) + 1 }} - {{ pageSizeWoLog === 'all' ? filteredTimelines.length : Math.min(currentPageWoLog * Number(pageSizeWoLog), filteredTimelines.length) }} dari {{ filteredTimelines.length }} data
+          </span>
+          <div class="pagination-controls" v-if="pageSizeWoLog !== 'all'">
+            <button :disabled="currentPageWoLog <= 1" @click="currentPageWoLog--">← Prev</button>
+            <span>Halaman {{ currentPageWoLog }} dari {{ totalPagesWoLog }}</span>
+            <button :disabled="currentPageWoLog >= totalPagesWoLog" @click="currentPageWoLog++">Next →</button>
+          </div>
         </div>
       </div>
 
       <!-- Section 2: Maintenance History -->
       <div class="card-panel" style="margin-top: 24px;">
-        <h2 class="section-title">Maintenance Selesai</h2>
-        <div class="table-responsive">
+        <div class="panel-header-flex">
+          <h2 class="section-title">Maintenance Selesai</h2>
+          <div class="per-page-selector">
+            <span>Tampilkan:</span>
+            <select v-model="pageSizeMh" @change="currentPageMh = 1">
+              <option :value="5">5 entri</option>
+              <option :value="10">10 entri</option>
+              <option :value="25">25 entri</option>
+              <option :value="50">50 entri</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive table-scroll-container">
           <table>
             <thead>
               <tr>
@@ -123,7 +187,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="mh in filteredMH" :key="mh.id">
+              <tr v-for="mh in paginatedMH" :key="mh.id">
                 <td><span class="wo-id">#MH-{{ mh.id }}</span></td>
                 <td>Aset #{{ mh.asset_id }}</td>
                 <td class="desc-cell" :title="mh.action_taken">{{ mh.action_taken }}</td>
@@ -146,12 +210,36 @@
             </tbody>
           </table>
         </div>
+
+        <div class="pagination-bar" v-if="filteredMH.length > 0">
+          <span class="pagination-info">
+            Menampilkan {{ pageSizeMh === 'all' ? 1 : (currentPageMh - 1) * Number(pageSizeMh) + 1 }} - {{ pageSizeMh === 'all' ? filteredMH.length : Math.min(currentPageMh * Number(pageSizeMh), filteredMH.length) }} dari {{ filteredMH.length }} data
+          </span>
+          <div class="pagination-controls" v-if="pageSizeMh !== 'all'">
+            <button :disabled="currentPageMh <= 1" @click="currentPageMh--">← Prev</button>
+            <span>Halaman {{ currentPageMh }} dari {{ totalPagesMh }}</span>
+            <button :disabled="currentPageMh >= totalPagesMh" @click="currentPageMh++">Next →</button>
+          </div>
+        </div>
       </div>
 
       <!-- Section 3: Asset Mutation Timelines -->
       <div class="card-panel" style="margin-top: 24px;">
-        <h2 class="section-title">Riwayat Seluruh Mutasi Aset (Audit Trail)</h2>
-        <div class="table-responsive">
+        <div class="panel-header-flex">
+          <h2 class="section-title">Riwayat Seluruh Mutasi Aset (Audit Trail)</h2>
+          <div class="per-page-selector">
+            <span>Tampilkan:</span>
+            <select v-model="pageSizeMut" @change="currentPageMut = 1">
+              <option :value="5">5 entri</option>
+              <option :value="10">10 entri</option>
+              <option :value="25">25 entri</option>
+              <option :value="50">50 entri</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive table-scroll-container">
           <table>
             <thead>
               <tr>
@@ -165,7 +253,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="mut in filteredAssetMutationTimelines" :key="mut.id">
+              <tr v-for="mut in paginatedAssetMutationTimelines" :key="mut.id">
                 <td><span class="wo-id">#AMUT-{{ mut.id }}</span></td>
                 <td><span class="wo-id">{{ mut.asset_code }}</span></td>
                 <td>{{ mut.previous_location || '—' }}</td>
@@ -180,12 +268,36 @@
             </tbody>
           </table>
         </div>
+
+        <div class="pagination-bar" v-if="filteredAssetMutationTimelines.length > 0">
+          <span class="pagination-info">
+            Menampilkan {{ pageSizeMut === 'all' ? 1 : (currentPageMut - 1) * Number(pageSizeMut) + 1 }} - {{ pageSizeMut === 'all' ? filteredAssetMutationTimelines.length : Math.min(currentPageMut * Number(pageSizeMut), filteredAssetMutationTimelines.length) }} dari {{ filteredAssetMutationTimelines.length }} data
+          </span>
+          <div class="pagination-controls" v-if="pageSizeMut !== 'all'">
+            <button :disabled="currentPageMut <= 1" @click="currentPageMut--">← Prev</button>
+            <span>Halaman {{ currentPageMut }} dari {{ totalPagesMut }}</span>
+            <button :disabled="currentPageMut >= totalPagesMut" @click="currentPageMut++">Next →</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Section 4: System Activity Log (semua perubahan sistem) -->
-      <div class="card-panel" style="margin-top: 24px;">
-        <h2 class="section-title">Log Aktivitas Sistem (Semua Perubahan)</h2>
-        <div class="table-responsive">
+      <!-- Section 4: System Activity Log -->
+      <div class="card-panel" style="margin-top: 24px;" v-if="isAdmin">
+        <div class="panel-header-flex">
+          <h2 class="section-title">Log Aktivitas Sistem (Semua Perubahan)</h2>
+          <div class="per-page-selector">
+            <span>Tampilkan:</span>
+            <select v-model="pageSizeActLog" @change="currentPageActLog = 1">
+              <option :value="5">5 entri</option>
+              <option :value="10">10 entri</option>
+              <option :value="25">25 entri</option>
+              <option :value="50">50 entri</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive table-scroll-container">
           <table>
             <thead>
               <tr>
@@ -198,8 +310,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(log, idx) in filteredActivityLogs" :key="log.id">
-                <td><span class="wo-id">#{{ idx + 1 }}</span></td>
+              <tr v-for="(log, idx) in paginatedActivityLogs" :key="log.id">
+                <td><span class="wo-id">#{{ (pageSizeActLog === 'all' ? 0 : (currentPageActLog - 1) * Number(pageSizeActLog)) + idx + 1 }}</span></td>
                 <td>
                   <span :class="['category-badge', 'cat-' + (log.category || 'GENERAL').toLowerCase().replace('_', '-')]">
                     {{ log.category || 'GENERAL' }}
@@ -215,6 +327,17 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="pagination-bar" v-if="filteredActivityLogs.length > 0">
+          <span class="pagination-info">
+            Menampilkan {{ pageSizeActLog === 'all' ? 1 : (currentPageActLog - 1) * Number(pageSizeActLog) + 1 }} - {{ pageSizeActLog === 'all' ? filteredActivityLogs.length : Math.min(currentPageActLog * Number(pageSizeActLog), filteredActivityLogs.length) }} dari {{ filteredActivityLogs.length }} data
+          </span>
+          <div class="pagination-controls" v-if="pageSizeActLog !== 'all'">
+            <button :disabled="currentPageActLog <= 1" @click="currentPageActLog--">← Prev</button>
+            <span>Halaman {{ currentPageActLog }} dari {{ totalPagesActLog }}</span>
+            <button :disabled="currentPageActLog >= totalPagesActLog" @click="currentPageActLog++">Next →</button>
+          </div>
         </div>
       </div>
 
@@ -453,7 +576,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
@@ -461,6 +584,7 @@ import { triggerPrint } from '../utils/exportUtils'
 
 const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 const canManage = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
+const isAdmin = computed(() => userRole.value === 'admin')
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -476,6 +600,68 @@ function notify(msg, type = 'success') {
 }
 
 const searchFilter = ref('')
+const startDateFilter = ref('')
+const endDateFilter = ref('')
+const activeQuickDate = ref('')
+
+function setQuickDate(type) {
+  const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
+  activeQuickDate.value = type
+
+  if (type === 'today') {
+    startDateFilter.value = todayStr
+    endDateFilter.value = todayStr
+  } else if (type === '7days') {
+    const past7 = new Date(now)
+    past7.setDate(past7.getDate() - 6)
+    startDateFilter.value = past7.toISOString().split('T')[0]
+    endDateFilter.value = todayStr
+  } else if (type === '30days') {
+    const past30 = new Date(now)
+    past30.setDate(past30.getDate() - 29)
+    startDateFilter.value = past30.toISOString().split('T')[0]
+    endDateFilter.value = todayStr
+  } else if (type === 'thisMonth') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    startDateFilter.value = firstDay.toISOString().split('T')[0]
+    endDateFilter.value = todayStr
+  }
+}
+
+function clearDateFilter() {
+  startDateFilter.value = ''
+  endDateFilter.value = ''
+  activeQuickDate.value = ''
+}
+
+function isWithinDateRange(dateString) {
+  if (!dateString) return true
+  const itemDate = new Date(dateString)
+  if (isNaN(itemDate.getTime())) return true
+
+  if (startDateFilter.value) {
+    const start = new Date(startDateFilter.value)
+    start.setHours(0, 0, 0, 0)
+    if (itemDate < start) return false
+  }
+
+  if (endDateFilter.value) {
+    const end = new Date(endDateFilter.value)
+    end.setHours(23, 59, 59, 999)
+    if (itemDate > end) return false
+  }
+
+  return true
+}
+
+watch([startDateFilter, endDateFilter, searchFilter], () => {
+  currentPageWoLog.value = 1
+  currentPageMh.value = 1
+  currentPageMut.value = 1
+  currentPageActLog.value = 1
+})
+
 const finishedWOs = ref([])
 const timelines = ref([])
 const assetMutationTimelines = ref([])
@@ -483,6 +669,19 @@ const maintenanceHistory = ref([])
 const mutations = ref([])
 const activityLogs = ref([])
 const isLoading = ref(false)
+
+// Pagination state for each section (Default 5 items per page)
+const pageSizeWoLog = ref(5)
+const currentPageWoLog = ref(1)
+
+const pageSizeMh = ref(5)
+const currentPageMh = ref(1)
+
+const pageSizeMut = ref(5)
+const currentPageMut = ref(1)
+
+const pageSizeActLog = ref(5)
+const currentPageActLog = ref(1)
 
 const showReportModal = ref(false)
 const reportTypeFilter = ref('all') // 'all' | 'wo' | 'maintenance' | 'mutation'
@@ -509,68 +708,135 @@ const totalWoCost = computed(() =>
 
 const filteredTimelines = computed(() => {
   const q = searchFilter.value.toLowerCase()
-  if (!q) return timelines.value
-  return timelines.value.filter(tl =>
-    (tl.action_taken && tl.action_taken.toLowerCase().includes(q)) ||
-    (tl.updated_by && tl.updated_by.toLowerCase().includes(q)) ||
-    (tl.status && tl.status.toLowerCase().includes(q)) ||
-    String(tl.work_order_id).includes(q)
-  )
+  return timelines.value.filter(tl => {
+    const matchSearch = !q || (
+      (tl.action_taken && tl.action_taken.toLowerCase().includes(q)) ||
+      (tl.updated_by && tl.updated_by.toLowerCase().includes(q)) ||
+      (tl.status && tl.status.toLowerCase().includes(q)) ||
+      String(tl.work_order_id).includes(q)
+    )
+    const matchDate = isWithinDateRange(tl.created_at)
+    return matchSearch && matchDate
+  })
 })
 
 const filteredAssetMutationTimelines = computed(() => {
   const q = searchFilter.value.toLowerCase()
-  if (!q) return assetMutationTimelines.value
-  return assetMutationTimelines.value.filter(tl =>
-    (tl.asset_code && tl.asset_code.toLowerCase().includes(q)) ||
-    (tl.previous_location && tl.previous_location.toLowerCase().includes(q)) ||
-    (tl.new_location && tl.new_location.toLowerCase().includes(q)) ||
-    (tl.pic && tl.pic.toLowerCase().includes(q)) ||
-    (tl.reason && tl.reason.toLowerCase().includes(q))
-  )
+  return assetMutationTimelines.value.filter(tl => {
+    const matchSearch = !q || (
+      (tl.asset_code && tl.asset_code.toLowerCase().includes(q)) ||
+      (tl.previous_location && tl.previous_location.toLowerCase().includes(q)) ||
+      (tl.new_location && tl.new_location.toLowerCase().includes(q)) ||
+      (tl.pic && tl.pic.toLowerCase().includes(q)) ||
+      (tl.reason && tl.reason.toLowerCase().includes(q))
+    )
+    const matchDate = isWithinDateRange(tl.moved_at || tl.created_at)
+    return matchSearch && matchDate
+  })
 })
 
 const filteredWOs = computed(() => {
   const q = searchFilter.value.toLowerCase()
-  if (!q) return finishedWOs.value
-  return finishedWOs.value.filter(wo =>
-    (wo.description && wo.description.toLowerCase().includes(q)) ||
-    (wo.action_taken && wo.action_taken.toLowerCase().includes(q)) ||
-    (wo.location && wo.location.toLowerCase().includes(q)) ||
-    String(wo.asset_id).includes(q)
-  )
+  return finishedWOs.value.filter(wo => {
+    const matchSearch = !q || (
+      (wo.description && wo.description.toLowerCase().includes(q)) ||
+      (wo.action_taken && wo.action_taken.toLowerCase().includes(q)) ||
+      (wo.location && wo.location.toLowerCase().includes(q)) ||
+      String(wo.asset_id).includes(q)
+    )
+    const matchDate = isWithinDateRange(wo.created_at)
+    return matchSearch && matchDate
+  })
 })
 
 const filteredMH = computed(() => {
   const q = searchFilter.value.toLowerCase()
-  if (!q) return maintenanceHistory.value
-  return maintenanceHistory.value.filter(mh =>
-    (mh.action_taken && mh.action_taken.toLowerCase().includes(q)) ||
-    String(mh.asset_id).includes(q)
-  )
+  return maintenanceHistory.value.filter(mh => {
+    const matchSearch = !q || (
+      (mh.action_taken && mh.action_taken.toLowerCase().includes(q)) ||
+      String(mh.asset_id).includes(q)
+    )
+    const matchDate = isWithinDateRange(mh.created_at)
+    return matchSearch && matchDate
+  })
 })
 
 const filteredMutations = computed(() => {
   const q = searchFilter.value.toLowerCase()
-  if (!q) return mutations.value
-  return mutations.value.filter(mut =>
-    (mut.new_location && mut.new_location.toLowerCase().includes(q)) ||
-    (mut.previous_location && mut.previous_location.toLowerCase().includes(q)) ||
-    (mut.new_pic && mut.new_pic.toLowerCase().includes(q)) ||
-    (mut.reason && mut.reason.toLowerCase().includes(q)) ||
-    String(mut.asset_id).includes(q)
-  )
+  return mutations.value.filter(mut => {
+    const matchSearch = !q || (
+      (mut.new_location && mut.new_location.toLowerCase().includes(q)) ||
+      (mut.previous_location && mut.previous_location.toLowerCase().includes(q)) ||
+      (mut.new_pic && mut.new_pic.toLowerCase().includes(q)) ||
+      (mut.reason && mut.reason.toLowerCase().includes(q)) ||
+      String(mut.asset_id).includes(q)
+    )
+    const matchDate = isWithinDateRange(mut.moved_at || mut.created_at)
+    return matchSearch && matchDate
+  })
 })
 
 const filteredActivityLogs = computed(() => {
   const q = searchFilter.value.toLowerCase()
-  if (!q) return activityLogs.value
-  return activityLogs.value.filter(log =>
-    (log.action && log.action.toLowerCase().includes(q)) ||
-    (log.actor && log.actor.toLowerCase().includes(q)) ||
-    (log.category && log.category.toLowerCase().includes(q)) ||
-    (log.entity_id && log.entity_id.toLowerCase().includes(q))
-  )
+  return activityLogs.value.filter(log => {
+    const matchSearch = !q || (
+      (log.action && log.action.toLowerCase().includes(q)) ||
+      (log.actor && log.actor.toLowerCase().includes(q)) ||
+      (log.category && log.category.toLowerCase().includes(q)) ||
+      (log.entity_id && log.entity_id.toLowerCase().includes(q))
+    )
+    const matchDate = isWithinDateRange(log.timestamp || log.created_at)
+    return matchSearch && matchDate
+  })
+})
+
+// Paginated Computed Properties
+const paginatedTimelines = computed(() => {
+  if (pageSizeWoLog.value === 'all') return filteredTimelines.value
+  const limit = Number(pageSizeWoLog.value)
+  const start = (currentPageWoLog.value - 1) * limit
+  return filteredTimelines.value.slice(start, start + limit)
+})
+
+const totalPagesWoLog = computed(() => {
+  if (pageSizeWoLog.value === 'all') return 1
+  return Math.ceil(filteredTimelines.value.length / Number(pageSizeWoLog.value)) || 1
+})
+
+const paginatedMH = computed(() => {
+  if (pageSizeMh.value === 'all') return filteredMH.value
+  const limit = Number(pageSizeMh.value)
+  const start = (currentPageMh.value - 1) * limit
+  return filteredMH.value.slice(start, start + limit)
+})
+
+const totalPagesMh = computed(() => {
+  if (pageSizeMh.value === 'all') return 1
+  return Math.ceil(filteredMH.value.length / Number(pageSizeMh.value)) || 1
+})
+
+const paginatedAssetMutationTimelines = computed(() => {
+  if (pageSizeMut.value === 'all') return filteredAssetMutationTimelines.value
+  const limit = Number(pageSizeMut.value)
+  const start = (currentPageMut.value - 1) * limit
+  return filteredAssetMutationTimelines.value.slice(start, start + limit)
+})
+
+const totalPagesMut = computed(() => {
+  if (pageSizeMut.value === 'all') return 1
+  return Math.ceil(filteredAssetMutationTimelines.value.length / Number(pageSizeMut.value)) || 1
+})
+
+const paginatedActivityLogs = computed(() => {
+  if (pageSizeActLog.value === 'all') return filteredActivityLogs.value
+  const limit = Number(pageSizeActLog.value)
+  const start = (currentPageActLog.value - 1) * limit
+  return filteredActivityLogs.value.slice(start, start + limit)
+})
+
+const totalPagesActLog = computed(() => {
+  if (pageSizeActLog.value === 'all') return 1
+  return Math.ceil(filteredActivityLogs.value.length / Number(pageSizeActLog.value)) || 1
 })
 
 function formatNumber(num) {
@@ -594,7 +860,7 @@ async function fetchLogs() {
     const res = await api.get('/activitylogs')
     if (res.data?.data) {
       finishedWOs.value = res.data.data.work_orders || []
-      timelines.value = res.data.data.timelines || []
+      timelines.value = res.data.data.work_order_logs || res.data.data.timelines || []
       assetMutationTimelines.value = res.data.data.asset_mutation_timelines || []
       maintenanceHistory.value = res.data.data.maintenance_history || []
       mutations.value = res.data.data.mutations || []
@@ -1511,5 +1777,241 @@ td {
 .cat-maintenance { background: #ede9fe; color: #6d28d9; }
 .cat-user-management, .cat-user_management { background: #fee2e2; color: #b91c1c; }
 .cat-general { background: #f1f5f9; color: #475569; }
+
+/* === Date Filter Card Styling === */
+.filter-card-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px !important;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.filter-main-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.search-input-field {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border-radius: 8px !important;
+  border: 1px solid #cbd5e1;
+  font-size: 0.88rem;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.search-input-field:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.date-filter-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.date-picker {
+  padding: 6px 10px;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 0.82rem;
+  color: #0f172a;
+  outline: none;
+}
+
+.date-picker:focus {
+  border-color: #2563eb;
+}
+
+.quick-date-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.date-pill-btn {
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 20px !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.date-pill-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.date-pill-btn.active {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.reset-date-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #dc2626;
+  border-radius: 20px !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reset-date-btn:hover {
+  background: #fee2e2;
+}
+
+/* === Pagination & Scrollable Table UI (Apple / Microsoft Style) === */
+.panel-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.per-page-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.per-page-selector select {
+  padding: 4px 10px;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.per-page-selector select:focus {
+  border-color: #2563eb;
+}
+
+.table-scroll-container {
+  max-height: 340px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px !important;
+}
+
+.table-scroll-container table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-scroll-container th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 5;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pagination-info {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination-controls button {
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 6px !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagination-controls span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
 </style>
 

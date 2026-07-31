@@ -58,22 +58,16 @@ func InitDatabase() error {
 		return fmt.Errorf("failed to auto-migrate models: %w", err)
 	}
 
-	// Ensure avatar column is LONGTEXT to hold Base64 images
+	// Ensure avatar and session tracking columns exist on users table
 	db.Exec("ALTER TABLE users MODIFY COLUMN avatar LONGTEXT NULL;")
+	db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_logged_in TINYINT(1) NOT NULL DEFAULT 0;")
+	db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_token TEXT NULL;")
+	db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at DATETIME NULL;")
 
-	// Fix mutations table: use string pic column instead of old integer pic_id
-	db.Exec("ALTER TABLE mutations ADD COLUMN IF NOT EXISTS pic VARCHAR(255) DEFAULT '';")
-	db.Exec("ALTER TABLE mutations MODIFY COLUMN previous_location VARCHAR(255) DEFAULT '';")
-	db.Exec("ALTER TABLE mutations MODIFY COLUMN mutation_date DATETIME NULL DEFAULT NULL;")
+	// Reset all active session flags on server restart so users can log in cleanly after restart
+	db.Exec("UPDATE users SET is_logged_in = 0, active_token = '', last_seen_at = NULL;")
 
-	var picIdCount int64
-	db.Raw("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mutations' AND COLUMN_NAME = 'pic_id'", dbname).Scan(&picIdCount)
-	if picIdCount > 0 {
-		db.Exec("ALTER TABLE mutations DROP FOREIGN KEY IF EXISTS fk_mutations_pic;")
-		db.Exec("ALTER TABLE mutations DROP COLUMN pic_id;")
-	}
-
-	log.Println("✓ Database models auto-migrated successfully")
+	log.Println("✓ Database models auto-migrated successfully & active sessions reset")
 
 	// Seed initial default users and hotel assets if database is empty
 	if err := SeedInitialData(db); err != nil {
@@ -112,17 +106,14 @@ func SeedInitialData(db *gorm.DB) error {
 	return nil
 }
 
-// AutoMigrateModels automatically migrates all database models
+// AutoMigrateModels automatically migrates active database models
 func AutoMigrateModels() error {
 	return DB.AutoMigrate(
 		&models.User{},
 		&models.Asset{},
-		&models.SparePart{},
-		&models.Mutation{},
 		&models.AssetMutationTimeline{},
 		&models.WorkOrder{},
 		&models.WorkOrderLog{},
-		&models.Timeline{},
 		&models.PreventiveMaintenance{},
 		&models.MaintenanceHistory{},
 		&models.ActivityLog{},

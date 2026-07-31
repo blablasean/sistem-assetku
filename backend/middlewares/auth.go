@@ -6,6 +6,7 @@ import (
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -41,11 +42,14 @@ func AuthMiddlewareWithDB(db *gorm.DB) func(http.Handler) http.Handler {
 			// Single Active Session Validation: Verify token matches database active token
 			if db != nil && claims.UserID > 0 {
 				var user models.User
-				if err := db.Select("active_token").First(&user, claims.UserID).Error; err == nil {
+				if err := db.Select("active_token, is_logged_in").First(&user, claims.UserID).Error; err == nil {
 					if user.ActiveToken != "" && user.ActiveToken != tokenString {
 						utils.SendError(w, http.StatusUnauthorized, "Sesi Anda telah berakhir karena akun ini sedang aktif di perangkat lain.", "Session invalidated")
 						return
 					}
+					// Update last_seen_at timestamp and ensure is_logged_in = 1 on valid requests
+					now := time.Now()
+					db.Exec("UPDATE users SET is_logged_in = 1, last_seen_at = ? WHERE id = ?", now, claims.UserID)
 				}
 			}
 

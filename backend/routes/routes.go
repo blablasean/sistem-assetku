@@ -152,7 +152,11 @@ func handleLogin(authCtrl *controllers.AuthController) http.HandlerFunc {
 
 		token, user, err := authCtrl.Login(payload.Username, payload.Password)
 		if err != nil {
-			utils.SendError(w, http.StatusUnauthorized, err.Error(), err.Error())
+			status := http.StatusUnauthorized
+			if err.Error() == "Akun sedang tersambung di perangkat lain" {
+				status = http.StatusConflict
+			}
+			utils.SendError(w, status, err.Error(), err.Error())
 			return
 		}
 
@@ -380,7 +384,7 @@ func handleCreateMutation(db *gorm.DB, mutationCtrl *controllers.MutationControl
 			role = claims.Role
 		}
 
-		var payload models.Mutation
+		var payload controllers.MutationInput
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
@@ -744,15 +748,14 @@ func handleAddTimelineEntry(workOrderCtrl *controllers.WorkOrderController) http
 
 func handleGetActivityLogs(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController, mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		claims := middlewares.GetClaimsFromContext(r)
+
 		// Fetch ALL Work Orders for full audit coverage
 		var allWOs []models.WorkOrder
 		db.Order("id desc").Limit(100).Find(&allWOs)
 
 		// Fetch work_order_logs (primary WO audit trail)
 		workOrderLogs, _ := workOrderCtrl.GetAllWorkOrderLogs()
-
-		// Fetch timelines (legacy, kept for backward compat)
-		timelines, _ := workOrderCtrl.GetAllTimelines()
 
 		// Fetch all Asset Mutation Timelines
 		assetMutationTimelines, _ := mutationCtrl.GetAllAssetMutationTimelines()
@@ -761,21 +764,19 @@ func handleGetActivityLogs(db *gorm.DB, workOrderCtrl *controllers.WorkOrderCont
 		var maintenanceHistory []models.MaintenanceHistory
 		db.Order("id desc").Limit(100).Find(&maintenanceHistory)
 
-		// Fetch all mutation history
-		var mutations []models.Mutation
-		db.Order("mutation_date desc").Limit(100).Find(&mutations)
-
-		// Fetch structured activity_logs (system-wide changes)
+		// Fetch structured activity_logs ONLY if caller is admin
 		var activityLogs []models.ActivityLog
-		db.Order("timestamp desc").Limit(200).Find(&activityLogs)
+		if claims != nil && claims.Role == "admin" {
+			db.Order("timestamp desc").Limit(200).Find(&activityLogs)
+		}
 
 		result := map[string]interface{}{
 			"work_orders":              allWOs,
 			"work_order_logs":          workOrderLogs,
-			"timelines":                timelines,
+			"timelines":                workOrderLogs,
 			"asset_mutation_timelines": assetMutationTimelines,
 			"maintenance_history":      maintenanceHistory,
-			"mutations":                mutations,
+			"mutations":                assetMutationTimelines,
 			"activity_logs":            activityLogs,
 		}
 		utils.SendSuccess(w, http.StatusOK, "Activity logs retrieved successfully", result)

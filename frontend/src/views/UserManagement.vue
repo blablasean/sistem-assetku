@@ -190,6 +190,7 @@
         <label>
           <span>Role / Hak Akses Sistem:</span>
           <select v-model="formUser.role" required class="sharp-select">
+            <option value="" disabled selected>-- Pilih Role --</option>
             <option value="admin">Administrator (Akses Penuh)</option>
             <option value="hod">Head of Department (HOD Engineer)</option>
             <option value="management">Supervisor Engineer</option>
@@ -232,7 +233,7 @@ const roleFilter = ref('')
 
 const showUserModal = ref(false)
 const isEditMode = ref(false)
-const formUser = ref({ user_id: 0, username: '', password: '', name: '', role: 'engineer' })
+const formUser = ref({ user_id: 0, username: '', password: '', name: '', role: '' })
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -302,7 +303,7 @@ async function fetchUsers() {
 
 function openAddModal() {
   isEditMode.value = false
-  formUser.value = { user_id: 0, username: '', password: '', name: '', role: 'engineer' }
+  formUser.value = { user_id: 0, username: '', password: '', name: '', role: '' }
   showUserModal.value = true
 }
 
@@ -319,6 +320,10 @@ function openEditModal(user) {
 }
 
 async function saveUser() {
+  if (!formUser.value.role) {
+    notify('Silakan pilih role / peranan pengguna terlebih dahulu!', 'error')
+    return
+  }
   try {
     if (isEditMode.value) {
       await api.post('/users/edit', formUser.value)
@@ -742,6 +747,7 @@ h1, .page-header h1 {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding-bottom: 30px;
 }
 
 .form-sharp label {
@@ -754,7 +760,7 @@ h1, .page-header h1 {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
 .u-avatar-img {

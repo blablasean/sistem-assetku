@@ -11,18 +11,67 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import api from './api'
 import HeaderNavbar from './components/HeaderNavbar.vue'
 import QrScannerModal from './components/QrScannerModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 const showQrScanner = ref(false)
 
 const showNavbar = computed(() => {
   return route.path !== '/login'
 })
-</script>
+
+let heartbeatInterval = null
+
+async function sendHeartbeat() {
+  const token = sessionStorage.getItem('token')
+  if (!token || route.path === '/login') return
+
+  try {
+    // Keep backend session active & update last_seen_at
+    await api.get('/auth/me')
+  } catch (err) {
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      sessionStorage.clear()
+      if (route.path !== '/login') {
+        router.push('/login')
+      }
+    }
+  }
+}
+
+function handleTabClose() {
+  // If user closes tab/window, release session state on server immediately via sendBeacon if available
+  const token = sessionStorage.getItem('token')
+  if (token && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+    try {
+      const baseUrl = api.defaults.baseURL || ''
+      navigator.sendBeacon(`${baseUrl}/auth/logout`)
+    } catch (e) {
+      // Beacon fallback
+    }
+  }
+}
+
+onMounted(() => {
+  // Heartbeat ping every 12 seconds to keep last_seen_at updated in DB while tab is open
+  sendHeartbeat()
+  heartbeatInterval = setInterval(sendHeartbeat, 12000)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', handleTabClose)
+  }
+})
+
+onUnmounted(() => {
+  if (heartbeatInterval) clearInterval(heartbeatInterval)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pagehide', handleTabClose)
+  }
+})</script>
 
 <style>
 :root {

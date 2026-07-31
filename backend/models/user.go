@@ -8,7 +8,9 @@ type User struct {
 	Password  string    `gorm:"not null" json:"password,omitempty"`
 	Name      string    `gorm:"not null" json:"name"`
 	Role        string    `gorm:"not null" json:"role"`
-	Avatar      string    `gorm:"type:longtext" json:"avatar"`
-	ActiveToken string    `gorm:"type:text" json:"-"`
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+	Avatar      string     `gorm:"type:longtext" json:"avatar"`
+	IsLoggedIn  bool       `gorm:"default:false" json:"is_logged_in"`
+	ActiveToken string     `gorm:"type:text" json:"-"`
+	LastSeenAt  *time.Time `gorm:"type:datetime" json:"last_seen_at,omitempty"`
+	CreatedAt   time.Time  `gorm:"autoCreateTime" json:"created_at"`
 }

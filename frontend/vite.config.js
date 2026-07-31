@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import basicSsl from '@vitejs/plugin-basic-ssl'
 
 // Helper to bypass dev server API proxy for HTML page navigations & static asset files
 const bypassHtml = (req) => {
@@ -14,8 +13,7 @@ const bypassHtml = (req) => {
 
 export default defineConfig({
   plugins: [
-    vue(),
-    basicSsl()
+    vue()
   ],
   server: {
     port: 3000,

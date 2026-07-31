@@ -177,7 +177,6 @@ func (c *WorkOrderController) DeleteWorkOrder(woID int, callerRole string) error
 	}
 	// Cascade delete logs
 	c.db.Where("work_order_id = ?", woID).Delete(&models.WorkOrderLog{})
-	c.db.Where("work_order_id = ?", woID).Delete(&models.Timeline{})
 
 	// Record in activity_logs
 	utils.RecordActivity(c.db, "WORK_ORDER", "admin",
@@ -326,18 +325,14 @@ func (c *WorkOrderController) GetAllWorkOrderLogs() ([]models.WorkOrderLog, erro
 	return list, nil
 }
 
-// GetWorkOrderTimeline kept for backward compatibility (reads from timelines table)
-func (c *WorkOrderController) GetWorkOrderTimeline(woID int) ([]models.Timeline, error) {
-	var timelines []models.Timeline
-	c.db.Where("work_order_id = ?", woID).Order("created_at asc").Find(&timelines)
-	return timelines, nil
+// GetWorkOrderTimeline returns work_order_logs for a specific WO
+func (c *WorkOrderController) GetWorkOrderTimeline(woID int) ([]models.WorkOrderLog, error) {
+	return c.GetWorkOrderLogs(woID)
 }
 
-// GetAllTimelines kept for backward compatibility (reads from timelines table)
-func (c *WorkOrderController) GetAllTimelines() ([]models.Timeline, error) {
-	var list []models.Timeline
-	c.db.Order("created_at desc").Limit(100).Find(&list)
-	return list, nil
+// GetAllTimelines returns all work_order_logs
+func (c *WorkOrderController) GetAllTimelines() ([]models.WorkOrderLog, error) {
+	return c.GetAllWorkOrderLogs()
 }
 
 func (c *WorkOrderController) AddTimelineEntry(woID int, status string, actionTaken string, cost int, callerRole string, updatedBy string) error {
@@ -366,19 +361,8 @@ func (c *WorkOrderController) AddTimelineEntry(woID int, status string, actionTa
 		return err
 	}
 
-	// Log to work_order_logs (primary)
+	// Log to work_order_logs
 	c.logWO(woID, wo.Status, actionTaken, cost, updatedBy, callerRole)
-
-	// Also keep timelines for legacy views
-	tl := models.Timeline{
-		WorkOrderID: woID,
-		Status:      wo.Status,
-		ActionTaken: actionTaken,
-		Cost:        cost,
-		UpdatedBy:   updatedBy,
-		UserRole:    callerRole,
-	}
-	c.db.Create(&tl)
 
 	// Record in activity_logs
 	logMsg := "Menambah progress Work Order #" + strconv.Itoa(woID)
