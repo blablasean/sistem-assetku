@@ -1,9 +1,9 @@
 <template>
   <div class="app-layout">
-    <HeaderNavbar v-if="showNavbar" @open-qr-scanner="showQrScanner = true" />
+    <HeaderNavbar v-if="showNavbar" @open-qr-scanner="handleOpenQrScanner" />
 
     <main class="main-wrapper">
-      <router-view @open-qr-scanner="showQrScanner = true" />
+      <router-view @open-qr-scanner="handleOpenQrScanner" />
     </main>
 
     <QrScannerModal :show="showQrScanner" @close="showQrScanner = false" />
@@ -20,6 +20,16 @@ import QrScannerModal from './components/QrScannerModal.vue'
 const route = useRoute()
 const router = useRouter()
 const showQrScanner = ref(false)
+let isOpeningQr = false
+
+function handleOpenQrScanner() {
+  if (showQrScanner.value || isOpeningQr) return
+  isOpeningQr = true
+  showQrScanner.value = true
+  setTimeout(() => {
+    isOpeningQr = false
+  }, 1000)
+}
 
 const showNavbar = computed(() => {
   return route.path !== '/login'
@@ -134,6 +144,12 @@ textarea,
   overflow-x: hidden;
 }
 
+@media (max-width: 850px) {
+  .main-wrapper {
+    padding-bottom: 76px !important;
+  }
+}
+
 /* Crisp Clean Buttons */
 button, .btn {
   font-family: inherit;
@@ -143,10 +159,15 @@ button, .btn {
 }
 
 button:active, .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 @media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS WebKit auto-zoom on focus */
+    min-height: 44px;
+  }
+
   .page-container, .dashboard-screen {
     padding: 12px 10px !important;
   }

@@ -675,37 +675,39 @@ async function deletePMSchedule(item) {
   }
 }
 
-function submitChecklist(item, targetDateStr) {
+const activeProcessingKeys = ref(new Set())
+
+async function submitChecklist(item, targetDateStr) {
   const dateToSubmit = targetDateStr || selectedDetailDate.value || formatDate(item.next_run)
   const debounceKey = `${item.id}__${dateToSubmit}`
 
-  // Jika timer sebelumnya masih berjalan, reset (klik spam → hanya 1 request setelah idle 600ms)
-  if (checklistDebounceMap.has(debounceKey)) {
-    clearTimeout(checklistDebounceMap.get(debounceKey))
+  if (activeProcessingKeys.value.has(debounceKey)) {
+    return
   }
 
-  const timerId = setTimeout(async () => {
-    checklistDebounceMap.delete(debounceKey)
-    try {
-      await api.post(`/maintenance/${item.id}/checklist`, {
-        target_date: dateToSubmit,
-        checklist: item.checklist_data
-      })
+  activeProcessingKeys.value.add(debounceKey)
 
-      if (!item.completed_dates) {
-        item.completed_dates = dateToSubmit
-      } else if (!item.completed_dates.includes(dateToSubmit)) {
-        item.completed_dates += ',' + dateToSubmit
-      }
+  try {
+    await api.post(`/maintenance/${item.id}/checklist`, {
+      target_date: dateToSubmit,
+      checklist: item.checklist_data
+    })
 
-      notify(`Checklist perawatan Aset #${item.asset_id} tanggal ${dateToSubmit} berhasil diselesaikan!`, 'success')
-      await fetchPMSchedules()
-    } catch (e) {
-      notify('Gagal menyelesaikan checklist: ' + (e.response?.data?.message || e.message), 'error')
+    if (!item.completed_dates) {
+      item.completed_dates = dateToSubmit
+    } else if (!item.completed_dates.includes(dateToSubmit)) {
+      item.completed_dates += ',' + dateToSubmit
     }
-  }, 600)
 
-  checklistDebounceMap.set(debounceKey, timerId)
+    notify(`Checklist perawatan Aset #${item.asset_id} tanggal ${dateToSubmit} berhasil diselesaikan!`, 'success')
+    await fetchPMSchedules()
+  } catch (e) {
+    notify('Gagal menyelesaikan checklist: ' + (e.response?.data?.message || e.message), 'error')
+  } finally {
+    setTimeout(() => {
+      activeProcessingKeys.value.delete(debounceKey)
+    }, 800)
+  }
 }
 
 onMounted(() => {

@@ -43,15 +43,8 @@
       <!-- Mobile Drawer Overlay -->
       <div class="mobile-drawer-overlay" v-if="mobileMenuOpen && isLoggedIn" @click="mobileMenuOpen = false">
         <div class="mobile-drawer" @click.stop>
-          <div class="drawer-header clickable" @click="showProfileFromMobile" title="Klik untuk edit profil & foto">
-            <div class="user-avatar">
-              <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
-              <span v-else>{{ userInitial }}</span>
-            </div>
-            <div class="drawer-user-info">
-              <p class="drawer-name">{{ shortUserName }}</p>
-              <span class="role-badge" :class="userRole">{{ roleLabel }}</span>
-            </div>
+          <div class="drawer-top-bar">
+            <span class="drawer-menu-title">Menu Navigasi</span>
             <button class="close-drawer" @click.stop="mobileMenuOpen = false">✕</button>
           </div>
 
@@ -77,11 +70,6 @@
 
             <div class="drawer-divider"></div>
 
-            <button class="drawer-item profile-drawer-btn" @click="showProfileFromMobile">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <span>Profil Saya & Foto</span>
-            </button>
-
             <button class="drawer-item logout" @click="handleLogout">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Keluar (Logout)
             </button>
@@ -91,7 +79,7 @@
 
       <!-- User Menu & Scan Button -->
       <div class="navbar-user" v-if="isLoggedIn">
-        <button class="qr-quick-btn" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
+        <button class="qr-quick-btn desktop-only" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
         </button>
 
@@ -131,6 +119,14 @@
             </button>
           </div>
         </div>
+
+        <!-- Profile Avatar Trigger Button (Mobile Only, Top Right Header) -->
+        <button class="mobile-profile-avatar-btn mobile-only" @click="showProfile" title="Profil Saya & Foto">
+          <div class="user-avatar">
+            <img v-if="userAvatar" :src="userAvatar" class="avatar-img-nav" />
+            <span v-else>{{ userInitial }}</span>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -176,6 +172,59 @@
         </div>
       </form>
     </ModalDialog>
+
+    <!-- Mobile Bottom Dock (iOS App Style Navigation) -->
+    <nav class="mobile-bottom-dock mobile-only" v-if="isLoggedIn">
+      <!-- Staff / External Role Dock Layout (3 Items: Dashboard | Scan QR (Center) | Work Order) -->
+      <template v-if="isStaffOnly">
+        <router-link to="/dashboard" class="dock-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Dashboard</span>
+        </router-link>
+
+        <button class="dock-fab-scan" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
+          <div class="fab-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+          </div>
+          <span>Scan QR</span>
+        </button>
+
+        <router-link to="/workorders" class="dock-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <span>Work Order</span>
+        </router-link>
+      </template>
+
+      <!-- Advanced Role Dock Layout (5 Items: Dashboard | Work Order | Scan QR (Center) | Aset | Maintenance) -->
+      <template v-else>
+        <router-link to="/dashboard" class="dock-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Dashboard</span>
+        </router-link>
+
+        <router-link to="/workorders" class="dock-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <span>Work Order</span>
+        </router-link>
+
+        <button class="dock-fab-scan" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
+          <div class="fab-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+          </div>
+          <span>Scan QR</span>
+        </button>
+
+        <router-link to="/assets" class="dock-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          <span>Aset</span>
+        </router-link>
+
+        <router-link to="/maintenance" class="dock-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          <span>Maintenance</span>
+        </router-link>
+      </template>
+    </nav>
   </header>
 </template>
 
@@ -723,44 +772,20 @@ onUnmounted(() => {
   box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.drawer-header {
+.drawer-top-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
 }
 
-.drawer-header.clickable {
-  cursor: pointer;
-  border-radius: 12px;
-  padding: 8px;
-  margin: -8px -8px 16px;
-  transition: background 0.15s ease;
-}
-
-.drawer-header.clickable:hover {
-  background: #f8fafc;
-}
-
-.drawer-user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  overflow: hidden;
-}
-
-.drawer-name {
-  margin: 0 0 2px;
+.drawer-menu-title {
   font-weight: 800;
+  font-size: 1rem;
   color: #0f172a;
-  font-size: 0.95rem;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  max-width: 170px;
+  letter-spacing: -0.01em;
 }
 
 .close-drawer {
@@ -822,6 +847,15 @@ onUnmounted(() => {
   color: #dc2626;
 }
 
+.mobile-profile-avatar-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
 /* Responsive Queries for Mobile (Android & iOS) */
 @media (max-width: 850px) {
   .desktop-only {
@@ -830,6 +864,12 @@ onUnmounted(() => {
 
   .mobile-hamburger {
     display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-profile-avatar-btn {
+    display: flex !important;
     align-items: center;
     justify-content: center;
   }
@@ -1263,5 +1303,91 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* === iOS App Style Mobile Bottom Navigation Dock === */
+.mobile-bottom-dock {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  z-index: 250;
+  padding: 0 8px calc(env(safe-area-inset-bottom, 0px) + 2px);
+  box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08);
+  justify-content: space-around;
+  align-items: center;
+}
+
+@media (max-width: 850px) {
+  .mobile-bottom-dock {
+    display: flex !important;
+  }
+}
+
+.dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.dock-item.router-link-active {
+  color: #007aff;
+}
+
+.dock-item:active {
+  transform: scale(0.92);
+}
+
+.dock-fab-scan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  color: #007aff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: -18px;
+  flex: 1;
+}
+
+.fab-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007aff, #0056b3);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 122, 255, 0.4);
+  border: 3px solid #ffffff;
+  transition: all 0.15s ease;
+}
+
+.dock-fab-scan:active .fab-icon-wrapper {
+  transform: scale(0.92);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
 }
 </style>

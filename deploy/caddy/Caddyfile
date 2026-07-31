@@ -1,0 +1,42 @@
+# =====================================================================
+# Konfigurasi Caddy Web Server (Zero-Config 1-File HTTPS Proxy)
+# Sistem AssetKu Hotel — IP Target: 172.17.10.109
+# =====================================================================
+
+172.17.10.109, localhost {
+    # File Sertifikat SSL Self-Signed
+    tls ../ssl/server.crt ../ssl/server.key
+
+    # Reverse Proxy API Endpoints ke Backend Go (Port 8080)
+    handle /auth/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /assets/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /workorders/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /maintenance/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /users/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /activitylogs* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /mutations/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /uploads/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # Serve Frontend SPA (dist/)
+    handle {
+        root * ../../frontend/dist
+        file_server
+        try_files {path} {path}/ /index.html
+    }
+}

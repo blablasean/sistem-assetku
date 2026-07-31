@@ -45,8 +45,8 @@ func main() {
 		userCtrl,
 	)
 
-	// Wrap routes with CORS middleware
-	handler := middlewares.CORSMiddleware(mux)
+	// Wrap routes with CORS & Request Logger middleware
+	handler := middlewares.CORSMiddleware(middlewares.RequestLoggerMiddleware(mux))
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")

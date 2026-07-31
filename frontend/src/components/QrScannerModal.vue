@@ -165,30 +165,34 @@ watch(() => props.show, (newVal) => {
   }
 })
 
+let isCameraStarting = false
+
 async function startCamera() {
-  await stopCamera()
-  errorMsg.value = ''
-  isCameraActive.value = true
-  await nextTick()
-
-  const element = document.getElementById('qr-reader')
-  if (!element) return
-
-  const qrConfig = {
-    fps: 10,
-    qrbox: (w, h) => {
-      const min = Math.min(w || 250, h || 250)
-      return { width: Math.max(160, Math.floor(min * 0.75)), height: Math.max(160, Math.floor(min * 0.75)) }
-    }
-  }
-
-  const onScanSuccess = (decodedText) => {
-    if (decodedText && decodedText !== scannedCode.value) {
-      onQrDetected(decodedText)
-    }
-  }
-
+  if (isCameraStarting || isCameraActive.value) return
+  isCameraStarting = true
   try {
+    await stopCamera()
+    errorMsg.value = ''
+    isCameraActive.value = true
+    await nextTick()
+
+    const element = document.getElementById('qr-reader')
+    if (!element) return
+
+    const qrConfig = {
+      fps: 10,
+      qrbox: (w, h) => {
+        const min = Math.min(w || 250, h || 250)
+        return { width: Math.max(160, Math.floor(min * 0.75)), height: Math.max(160, Math.floor(min * 0.75)) }
+      }
+    }
+
+    const onScanSuccess = (decodedText) => {
+      if (decodedText && decodedText !== scannedCode.value) {
+        onQrDetected(decodedText)
+      }
+    }
+
     // 1. Direct browser permission prompt trigger
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
@@ -236,6 +240,8 @@ async function startCamera() {
     console.warn('All camera start strategies failed:', err)
     isCameraActive.value = false
     errorMsg.value = 'Kamera gagal dibuka: ' + (err.message || 'Izin kamera ditolak').replace('HTML5Qrcode scanner is already scanning.', '') + '. Silakan izinkan akses kamera di browser Anda atau gunakan tombol Upload Foto QR.'
+  } finally {
+    isCameraStarting = false
   }
 }
 
