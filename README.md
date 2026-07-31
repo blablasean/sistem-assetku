@@ -6,6 +6,13 @@ Aplikasi ini mengusung desain **Apple iOS Modern Aesthetic** dengan antarmuka ya
 
 ---
 
+## 📚 Dokumentasi Terkait & Panduan Lengkap
+- 📖 **[USER_GUIDE.md](file:///c:/Users/Sean/Documents/KERJA/PROJECT/sistem-assetku/USER_GUIDE.md)**: Panduan Pengguna & Pengoperasian Seluruh Fitur Sistem (Penggunaan Kamera HP, Hak Akses Akun, Work Order, PM, Cetak Stiker QR).
+- 🛠️ **[SETUP.md](file:///c:/Users/Sean/Documents/KERJA/PROJECT/sistem-assetku/SETUP.md)**: Panduan Instalasi Lokal & Konfigurasi Database MySQL.
+- 🌐 **[DEPLOYMENT_GUIDE.md](file:///c:/Users/Sean/Documents/KERJA/PROJECT/sistem-assetku/deploy/DEPLOYMENT_GUIDE.md)**: Panduan Deploy HTTPS Server Production (Port 443 Nginx/Caddy & IP `172.17.10.109`).
+
+---
+
 ## 🌟 Fitur Utama Sistem
 
 ### 1. 🔐 Autentikasi & Keamanan Sesi Real-Time (Anti Lockout & Multi-Device Protection)
