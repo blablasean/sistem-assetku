@@ -3,6 +3,8 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -139,6 +141,23 @@ func RegisterRoutes(
 // Handlers
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
+	// Try serving static frontend from ./dist or ../frontend/dist
+	dirs := []string{"./dist", "../frontend/dist", "./public"}
+	for _, dir := range dirs {
+		if stat, err := os.Stat(dir); err == nil && stat.IsDir() {
+			filePath := filepath.Join(dir, filepath.Clean(r.URL.Path))
+			if fstat, err := os.Stat(filePath); err == nil && !fstat.IsDir() {
+				http.ServeFile(w, r, filePath)
+				return
+			}
+			// Fallback to index.html for SPA client-side routes
+			indexPath := filepath.Join(dir, "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				http.ServeFile(w, r, indexPath)
+				return
+			}
+		}
+	}
 	utils.SendSuccess(w, http.StatusOK, "Sistem AsetKu backend running", map[string]string{
 		"version": "1.0.0",
 		"status":  "active",

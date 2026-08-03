@@ -1,38 +1,36 @@
 version: '3.8'
+
 services:
   db:
     image: mysql:8.0
-    restart: unless-stopped
+    container_name: assetku_db
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: db_sistemasetku
-    volumes:
-      - db_data:/var/lib/mysql
     ports:
       - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
 
   backend:
-    build: ./backend
-    restart: unless-stopped
-    environment:
-      DB_HOST: db
-      DB_PORT: "3306"
-      DB_USER: root
-      DB_PASS: rootpassword
-      DB_NAME: db_sistemasetku
-      AUTO_MIGRATE_TIMEOUT: 30s
-    depends_on:
-      - db
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: assetku_app
+    restart: always
     ports:
       - "8080:8080"
-
-  frontend:
-    build: ./frontend
-    restart: unless-stopped
-    ports:
-      - "3000:80"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=db_sistemasetku
+      - SERVER_PORT=8080
+      - JWT_SECRET=sistemasetku_secret_production_key_2026
     depends_on:
-      - backend
+      - db
 
 volumes:
-  db_data:
+  mysql_data:
