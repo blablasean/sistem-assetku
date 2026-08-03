@@ -46,16 +46,15 @@ Sistem membagi pengguna ke dalam beberapa tingkatan peran (*Role*):
 | **Staff Engineer (Teknisi)** | Menangani tiket perbaikan work order dan melaksanakan inspeksi fisik. |
 | **Staff Operasional (Departemen)** | Melaporkan kerusakan fasilitas (Work Order) dan memantau status perbaikan. |
 
-### 🔑 Daftar Akun Uji Coba Bawaan:
+### 🔑 Akun Superadmin Bawaan System:
 
 > [!NOTE]
-> Seluruh akun di bawah menggunakan password default: **`admin123`**
+> Untuk keperluan awal setup produksi, sistem menyediakan 1 akun **Administrator Utama** bawaan:
+> - Username: **`admin`**
+> - Password: **`admin123`**
+> 
+> Administrator dapat langsung login dan menambahkan akun pengguna baru (HOD, Supervisor, Teknisi, & Staff) melalui menu **Manajemen Pengguna**.
 
-1. **Administrator**: Username `admin`
-2. **HOD Engineering**: Username `hod_eng`
-3. **Supervisor Engineering**: Username `spv_eng`
-4. **Staff Engineer (Teknisi)**: Username `teknisi_budi`
-5. **Staff Front Office**: Username `staff_frontdesk`
 
 ---
 

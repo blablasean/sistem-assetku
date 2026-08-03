@@ -54,9 +54,13 @@ func RegisterRoutes(
 	})))
 
 	// Activity Logs
+	mux.Handle("/activitylogs/edit", authMW(handleEditActivityLog(db)))
+	mux.Handle("/activitylogs/delete", authMW(handleDeleteActivityLog(db)))
 	mux.Handle("/activitylogs", authMW(handleGetActivityLogs(db, workOrderCtrl, mutationCtrl)))
 
 	// Mutations
+	mux.Handle("/mutations/timeline/edit", authMW(handleEditMutationTimeline(mutationCtrl)))
+	mux.Handle("/mutations/timeline/delete", authMW(handleDeleteMutationTimeline(mutationCtrl)))
 	mux.Handle("/mutations/timeline/all", authMW(handleGetAllAssetMutationTimelines(mutationCtrl)))
 	mux.Handle("/mutations/timeline", authMW(handleGetAssetMutationTimeline(mutationCtrl)))
 	mux.Handle("/mutations/code", authMW(handleMutateAssetByCode(db, mutationCtrl)))
@@ -78,6 +82,8 @@ func RegisterRoutes(
 	mux.Handle("/workorders/close", authMW(handleCloseWorkOrder(db, workOrderCtrl)))
 	mux.Handle("/workorders/cancel", authMW(handleCancelWorkOrder(workOrderCtrl)))
 	mux.Handle("/workorders/delete", authMW(handleDeleteWorkOrder(workOrderCtrl)))
+	mux.Handle("/workorders/logs/edit", authMW(handleEditWorkOrderLog(workOrderCtrl)))
+	mux.Handle("/workorders/logs/delete", authMW(handleDeleteWorkOrderLog(workOrderCtrl)))
 	mux.Handle("/workorders/logs", authMW(handleGetWorkOrderTimeline(workOrderCtrl)))
 	mux.Handle("/workorders/timeline/add", authMW(handleAddTimelineEntry(workOrderCtrl)))
 	mux.Handle("/workorders/timeline", authMW(handleGetWorkOrderTimeline(workOrderCtrl)))
@@ -748,8 +754,6 @@ func handleAddTimelineEntry(workOrderCtrl *controllers.WorkOrderController) http
 
 func handleGetActivityLogs(db *gorm.DB, workOrderCtrl *controllers.WorkOrderController, mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims := middlewares.GetClaimsFromContext(r)
-
 		// Fetch ALL Work Orders for full audit coverage
 		var allWOs []models.WorkOrder
 		db.Order("id desc").Limit(100).Find(&allWOs)
@@ -764,11 +768,9 @@ func handleGetActivityLogs(db *gorm.DB, workOrderCtrl *controllers.WorkOrderCont
 		var maintenanceHistory []models.MaintenanceHistory
 		db.Order("id desc").Limit(100).Find(&maintenanceHistory)
 
-		// Fetch structured activity_logs ONLY if caller is admin
+		// Fetch structured activity_logs
 		var activityLogs []models.ActivityLog
-		if claims != nil && claims.Role == "admin" {
-			db.Order("timestamp desc").Limit(200).Find(&activityLogs)
-		}
+		db.Order("timestamp desc").Limit(200).Find(&activityLogs)
 
 		result := map[string]interface{}{
 			"work_orders":              allWOs,
@@ -1242,3 +1244,179 @@ func handleLogout(authCtrl *controllers.AuthController) http.HandlerFunc {
 		utils.SendSuccess(w, http.StatusOK, "Logout successful", nil)
 	}
 }
+
+func getUserRoleFromRequest(r *http.Request) string {
+	role := "external"
+	claims := middlewares.GetClaimsFromContext(r)
+	if claims != nil && claims.Role != "" {
+		role = claims.Role
+	}
+	return role
+}
+
+func handleEditActivityLog(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		role := getUserRoleFromRequest(r)
+		if role != "admin" && role != "hod" {
+			utils.SendError(w, http.StatusForbidden, "Forbidden", "Hanya Admin atau HOD yang dapat mengubah log aktivitas")
+			return
+		}
+		var payload struct {
+			ID       int    `json:"id"`
+			Action   string `json:"action"`
+			Category string `json:"category"`
+			Actor    string `json:"actor"`
+			EntityID string `json:"entity_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+		var log models.ActivityLog
+		if err := db.First(&log, payload.ID).Error; err != nil {
+			utils.SendError(w, http.StatusNotFound, "Not Found", "Log aktivitas tidak ditemukan")
+			return
+		}
+		log.Action = payload.Action
+		log.Category = payload.Category
+		log.Actor = payload.Actor
+		log.EntityID = payload.EntityID
+		if err := db.Save(&log).Error; err != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Database Error", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Log aktivitas berhasil diperbarui", log)
+	}
+}
+
+func handleDeleteActivityLog(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		role := getUserRoleFromRequest(r)
+		if role != "admin" {
+			utils.SendError(w, http.StatusForbidden, "Forbidden", "Hanya Admin yang dapat menghapus log aktivitas sistem")
+			return
+		}
+		var payload struct {
+			ID int `json:"id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+		res := db.Where("id = ?", payload.ID).Delete(&models.ActivityLog{})
+		if res.Error != nil {
+			utils.SendError(w, http.StatusInternalServerError, "Database Error", res.Error.Error())
+			return
+		}
+		if res.RowsAffected == 0 {
+			utils.SendError(w, http.StatusNotFound, "Not Found", "Log aktivitas tidak ditemukan")
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Log aktivitas berhasil dihapus", payload)
+	}
+}
+
+func handleEditWorkOrderLog(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		role := getUserRoleFromRequest(r)
+		var payload struct {
+			LogID       int    `json:"log_id"`
+			ActionTaken string `json:"action_taken"`
+			Cost        int    `json:"cost"`
+			Status      string `json:"status"`
+			UpdatedBy   string `json:"updated_by"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+		if err := workOrderCtrl.EditWorkOrderLog(payload.LogID, payload.ActionTaken, payload.Cost, payload.Status, payload.UpdatedBy, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to edit WO Log", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Log WO berhasil diperbarui", payload)
+	}
+}
+
+func handleDeleteWorkOrderLog(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		role := getUserRoleFromRequest(r)
+		var payload struct {
+			LogID int `json:"log_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+		if err := workOrderCtrl.DeleteWorkOrderLog(payload.LogID, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to delete WO Log", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Log WO berhasil dihapus", payload)
+	}
+}
+
+func handleEditMutationTimeline(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		role := getUserRoleFromRequest(r)
+		var payload struct {
+			ID               int    `json:"id"`
+			PreviousLocation string `json:"previous_location"`
+			NewLocation      string `json:"new_location"`
+			PIC              string `json:"pic"`
+			Reason           string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+		if err := mutationCtrl.EditMutation(payload.ID, payload.PreviousLocation, payload.NewLocation, payload.PIC, payload.Reason, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to edit Mutation Timeline", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Mutasi aset berhasil diperbarui", payload)
+	}
+}
+
+func handleDeleteMutationTimeline(mutationCtrl *controllers.MutationController) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		role := getUserRoleFromRequest(r)
+		var payload struct {
+			ID int `json:"id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+		if err := mutationCtrl.DeleteMutation(payload.ID, role); err != nil {
+			utils.SendError(w, http.StatusBadRequest, "Failed to delete Mutation Timeline", err.Error())
+			return
+		}
+		utils.SendSuccess(w, http.StatusOK, "Mutasi aset berhasil dihapus", payload)
+	}
+}
+

@@ -23,16 +23,6 @@ ON DUPLICATE KEY UPDATE
   `name` = 'Administrator Utama Hotel',
   `role` = 'admin';
 
--- 3. Insert / Update 4 Akun Default Peran Lainnya (Password untuk semua akun: admin123)
-INSERT INTO `users` (`username`, `password`, `name`, `role`, `created_at`)
-VALUES
-  ('hod_eng', '$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu', 'Pak Alex (HOD Engineer)', 'hod', NOW()),
-  ('spv_eng', '$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu', 'Pak Hendra (Supervisor)', 'management', NOW()),
-  ('teknisi_budi', '$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu', 'Budi Santoso (Teknisi)', 'engineer', NOW()),
-  ('staff_frontdesk', '$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu', 'Siti Rahma (Staff Hotel)', 'external', NOW())
-ON DUPLICATE KEY UPDATE 
-  `password` = '$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu',
-  `name` = VALUES(`name`);
-
--- 4. Verifikasi Data Pengguna Terdaftar
+-- 3. Verifikasi Data Pengguna Terdaftar
 SELECT `id`, `username`, `name`, `role`, `created_at` FROM `users`;
+

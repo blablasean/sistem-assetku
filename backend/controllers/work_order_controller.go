@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
@@ -309,19 +310,10 @@ func (c *WorkOrderController) GetWorkOrderLogs(woID int) ([]models.WorkOrderLog,
 	return logs, nil
 }
 
-// GetAllWorkOrderLogs returns all work_order_logs, auto-populating if empty
+// GetAllWorkOrderLogs returns all work_order_logs
 func (c *WorkOrderController) GetAllWorkOrderLogs() ([]models.WorkOrderLog, error) {
 	var list []models.WorkOrderLog
 	c.db.Order("created_at desc").Limit(200).Find(&list)
-
-	if len(list) == 0 {
-		var wos []models.WorkOrder
-		c.db.Find(&wos)
-		for _, wo := range wos {
-			c.GetWorkOrderLogs(wo.ID)
-		}
-		c.db.Order("created_at desc").Limit(200).Find(&list)
-	}
 	return list, nil
 }
 
@@ -376,3 +368,39 @@ func (c *WorkOrderController) AddTimelineEntry(woID int, status string, actionTa
 
 	return nil
 }
+
+func (c *WorkOrderController) EditWorkOrderLog(logID int, actionTaken string, cost int, status string, updatedBy string, callerRole string) error {
+	r := strings.ToLower(strings.TrimSpace(callerRole))
+	if r == "external" || r == "" {
+		return errors.New("akses ditolak: anda harus login terlebih dahulu")
+	}
+	var wol models.WorkOrderLog
+	if err := c.db.First(&wol, logID).Error; err != nil {
+		return errors.New("log work order tidak ditemukan")
+	}
+	wol.ActionTaken = actionTaken
+	wol.Cost = cost
+	if status != "" {
+		wol.Status = status
+	}
+	if updatedBy != "" {
+		wol.UpdatedBy = updatedBy
+	}
+	return c.db.Save(&wol).Error
+}
+
+func (c *WorkOrderController) DeleteWorkOrderLog(logID int, callerRole string) error {
+	r := strings.ToLower(strings.TrimSpace(callerRole))
+	if r == "external" || r == "" {
+		return errors.New("akses ditolak: anda harus login terlebih dahulu")
+	}
+	res := c.db.Where("id = ?", logID).Delete(&models.WorkOrderLog{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return errors.New("log work order tidak ditemukan")
+	}
+	return nil
+}
+

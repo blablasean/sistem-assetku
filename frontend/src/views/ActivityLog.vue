@@ -124,6 +124,7 @@
                 <th>Tindakan / Catatan Progres</th>
                 <th>Biaya (Rp)</th>
                 <th>Tanggal & Waktu Update</th>
+                <th v-if="canManage">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -138,9 +139,19 @@
                 <td class="desc-cell" :title="tl.action_taken">{{ tl.action_taken || '—' }}</td>
                 <td>Rp {{ formatNumber(tl.cost || 0) }}</td>
                 <td class="time-col">{{ formatDate(tl.created_at) }}</td>
+                <td v-if="canManage" class="actions-cell">
+                  <button class="icon-btn edit-btn" @click="openEditWoLogModal(tl)" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Edit</span>
+                  </button>
+                  <button class="icon-btn delete-btn" @click="promptDeleteWoLog(tl)" title="Hapus">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    <span>Hapus</span>
+                  </button>
+                </td>
               </tr>
               <tr v-if="filteredTimelines.length === 0">
-                <td colspan="7" class="empty-state">Tidak ada data riwayat log Work Order.</td>
+                <td :colspan="canManage ? 8 : 7" class="empty-state">Tidak ada data riwayat log Work Order.</td>
               </tr>
             </tbody>
           </table>
@@ -198,7 +209,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     <span>Edit</span>
                   </button>
-                  <button class="icon-btn delete-btn" @click="deleteMh(mh)" title="Hapus">
+                  <button class="icon-btn delete-btn" @click="promptDeleteMh(mh)" title="Hapus">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                     <span>Hapus</span>
                   </button>
@@ -250,6 +261,7 @@
                 <th>PIC / Penanggung Jawab</th>
                 <th>Alasan Mutasi</th>
                 <th>Tanggal & Waktu Mutasi</th>
+                <th v-if="canManage">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -260,10 +272,20 @@
                 <td><span class="location-new">{{ mut.new_location || '—' }}</span></td>
                 <td>{{ mut.pic || 'Engineering' }}</td>
                 <td class="desc-cell" :title="mut.reason">{{ mut.reason || '—' }}</td>
-                <td class="time-col">{{ formatDate(mut.moved_at) }}</td>
+                <td class="time-col">{{ formatDate(mut.moved_at || mut.created_at) }}</td>
+                <td v-if="canManage" class="actions-cell">
+                  <button class="icon-btn edit-btn" @click="openEditMutModal(mut)" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Edit</span>
+                  </button>
+                  <button class="icon-btn delete-btn" @click="promptDeleteMut(mut)" title="Hapus">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    <span>Hapus</span>
+                  </button>
+                </td>
               </tr>
               <tr v-if="filteredAssetMutationTimelines.length === 0">
-                <td colspan="7" class="empty-state">Belum ada riwayat mutasi aset.</td>
+                <td :colspan="canManage ? 8 : 7" class="empty-state">Belum ada riwayat mutasi aset.</td>
               </tr>
             </tbody>
           </table>
@@ -307,6 +329,7 @@
                 <th>Aktivitas / Tindakan</th>
                 <th>Entitas ID</th>
                 <th>Waktu</th>
+                <th v-if="canManage">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -320,10 +343,20 @@
                 <td>{{ log.actor || '—' }}</td>
                 <td class="desc-cell" :title="log.action">{{ log.action }}</td>
                 <td><span class="wo-id">{{ log.entity_id || '—' }}</span></td>
-                <td class="time-col">{{ formatDate(log.timestamp) }}</td>
+                <td class="time-col">{{ formatDate(log.timestamp || log.created_at) }}</td>
+                <td v-if="canManage" class="actions-cell">
+                  <button class="icon-btn edit-btn" @click="openEditActLogModal(log)" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Edit</span>
+                  </button>
+                  <button class="icon-btn delete-btn" @click="promptDeleteActLog(log)" title="Hapus">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    <span>Hapus</span>
+                  </button>
+                </td>
               </tr>
               <tr v-if="filteredActivityLogs.length === 0">
-                <td colspan="6" class="empty-state">Belum ada log aktivitas sistem tercatat.</td>
+                <td :colspan="canManage ? 7 : 6" class="empty-state">Belum ada log aktivitas sistem tercatat.</td>
               </tr>
             </tbody>
           </table>
@@ -387,6 +420,100 @@
 
         <button type="submit" class="submit-modal-btn">Simpan Perubahan</button>
       </form>
+    </ModalDialog>
+
+    <ModalDialog :show="showWoLogModal" title="Edit Log Work Order" @close="showWoLogModal = false">
+      <form @submit.prevent="submitEditWoLog" class="modal-form" v-if="selectedWoLog">
+        <p class="modal-info"><strong>Log WO #WOLOG-{{ selectedWoLog.id }} (WO #{{ selectedWoLog.work_order_id }})</strong></p>
+        <label>
+          <span>Status Progres</span>
+          <select v-model="editWoLogStatus">
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Completed">Completed</option>
+            <option value="Closed">Closed</option>
+            <option value="Finish">Finish</option>
+          </select>
+        </label>
+        <label>
+          <span>Di-update Oleh</span>
+          <input v-model="editWoLogUpdatedBy" placeholder="Username / Peran..." required />
+        </label>
+        <label>
+          <span>Catatan / Tindakan Progres</span>
+          <textarea v-model="editWoLogAction" rows="3" required></textarea>
+        </label>
+        <label>
+          <span>Biaya (Rp)</span>
+          <input v-model.number="editWoLogCost" type="number" min="0" required />
+        </label>
+
+        <button type="submit" class="submit-modal-btn">Simpan Perubahan</button>
+      </form>
+    </ModalDialog>
+
+    <ModalDialog :show="showMutModal" title="Edit Riwayat Mutasi Aset" @close="showMutModal = false">
+      <form @submit.prevent="submitEditMut" class="modal-form" v-if="selectedMut">
+        <p class="modal-info"><strong>Mutasi #AMUT-{{ selectedMut.id }} (Aset {{ selectedMut.asset_code }})</strong></p>
+        <label>
+          <span>Lokasi Asal</span>
+          <input v-model="editMutPreviousLocation" placeholder="Lokasi asal aset..." />
+        </label>
+        <label>
+          <span>Lokasi Tujuan (Baru)</span>
+          <input v-model="editMutLocation" placeholder="Lokasi baru aset..." required />
+        </label>
+        <label>
+          <span>PIC / Penanggung Jawab</span>
+          <input v-model="editMutPic" placeholder="Nama PIC / departemen..." required />
+        </label>
+        <label>
+          <span>Alasan Mutasi</span>
+          <textarea v-model="editMutReason" rows="3" placeholder="Alasan pemindahan aset..."></textarea>
+        </label>
+
+        <button type="submit" class="submit-modal-btn">Simpan Perubahan</button>
+      </form>
+    </ModalDialog>
+
+    <ModalDialog :show="showActLogModal" title="Edit Log Aktivitas Sistem" @close="showActLogModal = false">
+      <form @submit.prevent="submitEditActLog" class="modal-form" v-if="selectedActLog">
+        <p class="modal-info"><strong>Log Aktivitas #{{ selectedActLog.id }}</strong></p>
+        <label>
+          <span>Kategori Log</span>
+          <input v-model="editActLogCategory" placeholder="Kategori (mis: WORK_ORDER, AUTH, ASET)..." required />
+        </label>
+        <label>
+          <span>Aktor / Pengguna</span>
+          <input v-model="editActLogActor" placeholder="Username / Aktor..." required />
+        </label>
+        <label>
+          <span>Entitas ID</span>
+          <input v-model="editActLogEntityID" placeholder="ID Entitas terkait..." />
+        </label>
+        <label>
+          <span>Aktivitas / Catatan Tindakan</span>
+          <textarea v-model="editActLogAction" rows="3" required></textarea>
+        </label>
+
+        <button type="submit" class="submit-modal-btn">Simpan Perubahan</button>
+      </form>
+    </ModalDialog>
+
+    <!-- Custom Web Design UI Delete Confirmation Modal -->
+    <ModalDialog :show="showDeleteConfirmModal" title="Konfirmasi Hapus Data" maxWidth="450px" @close="showDeleteConfirmModal = false">
+      <div class="delete-confirm-box">
+        <div class="confirm-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h4 class="confirm-headline">Hapus Record Data ini?</h4>
+        <p class="confirm-desc">{{ deleteConfirmMessage }}</p>
+        <div class="confirm-btn-group">
+          <button class="cancel-modal-btn" @click="showDeleteConfirmModal = false">Batal</button>
+          <button class="danger-modal-btn" @click="confirmDeleteAction">Ya, Hapus Data</button>
+        </div>
+      </div>
     </ModalDialog>
 
     <ModalDialog :show="showReportModal" title="Laporan Activity Log & Audit Trail" maxWidth="960px" @close="showReportModal = false">
@@ -698,6 +825,33 @@ const selectedMh = ref(null)
 const editMhAction = ref('')
 const editMhCost = ref(0)
 
+const showWoLogModal = ref(false)
+const selectedWoLog = ref(null)
+const editWoLogAction = ref('')
+const editWoLogCost = ref(0)
+const editWoLogStatus = ref('')
+const editWoLogUpdatedBy = ref('')
+
+const showMutModal = ref(false)
+const selectedMut = ref(null)
+const editMutPreviousLocation = ref('')
+const editMutLocation = ref('')
+const editMutPic = ref('')
+const editMutReason = ref('')
+
+const showActLogModal = ref(false)
+const selectedActLog = ref(null)
+const editActLogAction = ref('')
+const editActLogCategory = ref('')
+const editActLogActor = ref('')
+const editActLogEntityID = ref('')
+
+// Custom Delete Confirmation Modal State
+const showDeleteConfirmModal = ref(false)
+const deleteTargetType = ref('')
+const deleteTargetItem = ref(null)
+const deleteConfirmMessage = ref('')
+
 const totalMaintenanceCost = computed(() =>
   maintenanceHistory.value.reduce((sum, mh) => sum + (mh.cost || 0), 0)
 )
@@ -933,13 +1087,145 @@ async function submitEditMh() {
 }
 
 async function deleteMh(mh) {
+  promptDeleteMh(mh)
+}
+
+function promptDeleteMh(mh) {
+  deleteTargetType.value = 'mh'
+  deleteTargetItem.value = mh
+  deleteConfirmMessage.value = `Apakah Anda yakin ingin menghapus Riwayat Maintenance #MH-${mh.id}?`
+  showDeleteConfirmModal.value = true
+}
+
+// Work Order Log Actions
+function openEditWoLogModal(tl) {
+  selectedWoLog.value = tl
+  editWoLogAction.value = tl.action_taken || ''
+  editWoLogCost.value = tl.cost || 0
+  editWoLogStatus.value = tl.status || 'In Progress'
+  editWoLogUpdatedBy.value = tl.updated_by || 'Sistem'
+  showWoLogModal.value = true
+}
+
+async function submitEditWoLog() {
+  if (!selectedWoLog.value) return
   try {
-    await api.post('/maintenance/history/delete', { history_id: mh.id })
-    maintenanceHistory.value = maintenanceHistory.value.filter(m => m.id !== mh.id)
-    notify('Riwayat maintenance dihapus!', 'success')
+    await api.post('/workorders/logs/edit', {
+      log_id: selectedWoLog.value.id,
+      action_taken: editWoLogAction.value,
+      cost: editWoLogCost.value,
+      status: editWoLogStatus.value,
+      updated_by: editWoLogUpdatedBy.value
+    })
+    showWoLogModal.value = false
+    notify('Log Work Order berhasil diperbarui!', 'success')
     await fetchLogs()
   } catch (e) {
-    notify('Gagal menghapus riwayat: ' + (e.response?.data?.message || e.message), 'error')
+    notify('Gagal mengubah log WO: ' + (e.response?.data?.message || e.message), 'error')
+  }
+}
+
+function promptDeleteWoLog(tl) {
+  deleteTargetType.value = 'wolog'
+  deleteTargetItem.value = tl
+  deleteConfirmMessage.value = `Apakah Anda yakin ingin menghapus Log Work Order #WOLOG-${tl.id}?`
+  showDeleteConfirmModal.value = true
+}
+
+// Mutasi Aset Actions
+function openEditMutModal(mut) {
+  selectedMut.value = mut
+  editMutPreviousLocation.value = mut.previous_location || ''
+  editMutLocation.value = mut.new_location || ''
+  editMutPic.value = mut.pic || ''
+  editMutReason.value = mut.reason || ''
+  showMutModal.value = true
+}
+
+async function submitEditMut() {
+  if (!selectedMut.value) return
+  try {
+    await api.post('/mutations/timeline/edit', {
+      id: selectedMut.value.id,
+      previous_location: editMutPreviousLocation.value,
+      new_location: editMutLocation.value,
+      pic: editMutPic.value,
+      reason: editMutReason.value
+    })
+    showMutModal.value = false
+    notify('Riwayat mutasi aset berhasil diperbarui!', 'success')
+    await fetchLogs()
+  } catch (e) {
+    notify('Gagal mengubah mutasi aset: ' + (e.response?.data?.message || e.message), 'error')
+  }
+}
+
+function promptDeleteMut(mut) {
+  deleteTargetType.value = 'mut'
+  deleteTargetItem.value = mut
+  deleteConfirmMessage.value = `Apakah Anda yakin ingin menghapus Riwayat Mutasi #AMUT-${mut.id} (${mut.asset_code})?`
+  showDeleteConfirmModal.value = true
+}
+
+// System Activity Log Actions
+function openEditActLogModal(log) {
+  selectedActLog.value = log
+  editActLogAction.value = log.action || ''
+  editActLogCategory.value = log.category || ''
+  editActLogActor.value = log.actor || ''
+  editActLogEntityID.value = log.entity_id || ''
+  showActLogModal.value = true
+}
+
+async function submitEditActLog() {
+  if (!selectedActLog.value) return
+  try {
+    await api.post('/activitylogs/edit', {
+      id: selectedActLog.value.id,
+      action: editActLogAction.value,
+      category: editActLogCategory.value,
+      actor: editActLogActor.value,
+      entity_id: editActLogEntityID.value
+    })
+    showActLogModal.value = false
+    notify('Log aktivitas sistem berhasil diperbarui!', 'success')
+    await fetchLogs()
+  } catch (e) {
+    notify('Gagal mengubah log aktivitas: ' + (e.response?.data?.message || e.message), 'error')
+  }
+}
+
+function promptDeleteActLog(log) {
+  deleteTargetType.value = 'actlog'
+  deleteTargetItem.value = log
+  deleteConfirmMessage.value = `Apakah Anda yakin ingin menghapus Log Aktivitas Sistem #${log.id}?`
+  showDeleteConfirmModal.value = true
+}
+
+// Centralized Custom UI Delete Confirmation Handler
+async function confirmDeleteAction() {
+  const type = deleteTargetType.value
+  const item = deleteTargetItem.value
+  showDeleteConfirmModal.value = false
+  if (!item) return
+
+  try {
+    if (type === 'wolog') {
+      await api.post('/workorders/logs/delete', { log_id: item.id })
+      notify('Log Work Order berhasil dihapus!', 'success')
+    } else if (type === 'mh') {
+      await api.post('/maintenance/history/delete', { history_id: item.id })
+      notify('Riwayat maintenance berhasil dihapus!', 'success')
+    } else if (type === 'mut') {
+      await api.post('/mutations/timeline/delete', { id: item.id })
+      notify('Riwayat mutasi aset berhasil dihapus!', 'success')
+    } else if (type === 'actlog') {
+      await api.post('/activitylogs/delete', { id: item.id })
+      notify('Log aktivitas sistem berhasil dihapus!', 'success')
+    }
+    await fetchLogs()
+  } catch (e) {
+    notify('Gagal menghapus data: ' + (e.response?.data?.message || e.message), 'error')
   }
 }
 
@@ -1481,8 +1767,8 @@ td {
 }
 
 .primary-btn {
-  background: #ffffff !important;
-  color: #0f172a !important;
+  background: #007aff !important;
+  color: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   padding: 10px 18px !important;
   border-radius: 10px !important;
@@ -1503,7 +1789,7 @@ td {
   background: #0062cc !important;
   border-color: #0062cc !important;
   transform: translateY(-1px);
-}
+} 
 
 .primary-btn .btn-icon {
   width: 16px;
@@ -2012,6 +2298,82 @@ td {
   font-size: 0.82rem;
   font-weight: 700;
   color: #0f172a;
+}
+
+/* === Custom Web Design Delete Confirm Modal === */
+.delete-confirm-box {
+  text-align: center;
+  padding: 8px 12px 12px 12px;
+}
+
+.confirm-icon-wrap {
+  width: 64px;
+  height: 64px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
+.confirm-headline {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.confirm-desc {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.confirm-btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.cancel-modal-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancel-modal-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.danger-modal-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+  transition: all 0.15s ease;
+}
+
+.danger-modal-btn:hover {
+  background: #b91c1c;
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.4);
 }
 </style>
 

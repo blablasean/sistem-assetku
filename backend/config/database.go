@@ -77,32 +77,30 @@ func InitDatabase() error {
 	return nil
 }
 
-// SeedInitialData seeds default users and initial sample data for hotel assets and work orders
+// SeedInitialData creates the default superadmin user ONLY if no admin user exists in DB.
+// No dummy assets, dummy work orders, or dummy users are created.
 func SeedInitialData(db *gorm.DB) error {
 	hashedPassword, err := utils.HashPassword("admin123")
 	if err != nil || hashedPassword == "" {
 		hashedPassword = "$2a$10$aXZN4vu2Nt7mOJR.a5rpSuj1sKaPpVM75B0.YEG5QC/8gJQmGcAwu"
 	}
 
-	// Initial Default Users — only created if username does NOT exist yet.
-	// Existing accounts are NEVER modified to preserve custom passwords.
-	users := []models.User{
-		{Username: "admin", Password: hashedPassword, Name: "Administrator Utama Hotel", Role: "admin"},
-		{Username: "hod_eng", Password: hashedPassword, Name: "Pak Alex (HOD Engineer)", Role: "hod"},
-		{Username: "spv_eng", Password: hashedPassword, Name: "Pak Hendra (Supervisor)", Role: "management"},
-		{Username: "teknisi_budi", Password: hashedPassword, Name: "Budi Santoso (Teknisi)", Role: "engineer"},
-		{Username: "staff_frontdesk", Password: hashedPassword, Name: "Rina (Staff Front Office)", Role: "dept_frontoffice"},
-	}
-	for _, u := range users {
-		var existing models.User
-		if err := db.Where("username = ?", u.Username).First(&existing).Error; err != nil {
-			// Only create if the user doesn't exist yet
-			db.Create(&u)
+	// Create default superadmin account ONLY if no admin user exists in DB
+	var adminCount int64
+	db.Model(&models.User{}).Where("role = ?", "admin").Count(&adminCount)
+	if adminCount == 0 {
+		adminUser := models.User{
+			Username: "admin",
+			Password: hashedPassword,
+			Name:     "Administrator Utama Hotel",
+			Role:     "admin",
 		}
-		// DO NOT update existing users — preserve their custom passwords & data
+		if err := db.Create(&adminUser).Error; err != nil {
+			return fmt.Errorf("failed to create initial admin account: %w", err)
+		}
+		log.Println("✓ Initial default superadmin account created (username: admin)")
 	}
 
-	log.Println("✓ Initial default users seeded (existing accounts unchanged)")
 	return nil
 }
 

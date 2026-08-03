@@ -2,10 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"strconv"
+	"strings"
+	"time"
 	"sistem-asetku-backend/models"
 	"sistem-asetku-backend/utils"
-	"strconv"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -175,16 +176,6 @@ func (c *MutationController) GetAssetMutationTimeline(assetCode string) ([]model
 func (c *MutationController) GetAllAssetMutationTimelines() ([]models.AssetMutationTimeline, error) {
 	var list []models.AssetMutationTimeline
 	c.db.Order("moved_at desc").Limit(100).Find(&list)
-
-	// If empty, auto-populate all existing assets
-	if len(list) == 0 {
-		var assets []models.Asset
-		c.db.Find(&assets)
-		for _, a := range assets {
-			c.GetAssetMutationTimeline(a.AssetCode)
-		}
-		c.db.Order("moved_at desc").Limit(100).Find(&list)
-	}
 	return list, nil
 }
 
@@ -199,8 +190,9 @@ func (c *MutationController) GetMutationByID(id int) (models.AssetMutationTimeli
 
 // DeleteMutation removes an asset mutation timeline entry
 func (c *MutationController) DeleteMutation(id int, callerRole string) error {
-	if !canMutate(callerRole) {
-		return errors.New("akses ditolak: hanya Admin atau HOD yang dapat menghapus mutasi aset")
+	r := strings.ToLower(strings.TrimSpace(callerRole))
+	if r == "external" || r == "" {
+		return errors.New("akses ditolak: anda harus login terlebih dahulu")
 	}
 	res := c.db.Where("id = ?", id).Delete(&models.AssetMutationTimeline{})
 	if res.Error != nil {
@@ -217,3 +209,21 @@ func (c *MutationController) DeleteMutation(id int, callerRole string) error {
 
 	return nil
 }
+
+// EditMutation updates an asset mutation timeline entry
+func (c *MutationController) EditMutation(id int, previousLocation string, newLocation string, pic string, reason string, callerRole string) error {
+	r := strings.ToLower(strings.TrimSpace(callerRole))
+	if r == "external" || r == "" {
+		return errors.New("akses ditolak: anda harus login terlebih dahulu")
+	}
+	var mut models.AssetMutationTimeline
+	if err := c.db.First(&mut, id).Error; err != nil {
+		return errors.New("data mutasi aset tidak ditemukan")
+	}
+	mut.PreviousLocation = previousLocation
+	mut.NewLocation = newLocation
+	mut.PIC = pic
+	mut.Reason = reason
+	return c.db.Save(&mut).Error
+}
+
