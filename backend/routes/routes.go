@@ -1144,6 +1144,7 @@ func handleEditUser(userCtrl *controllers.UserController) http.HandlerFunc {
 		role := getUserRoleFromRequest(r)
 
 		var payload struct {
+			ID       int    `json:"id"`
 			UserID   int    `json:"user_id"`
 			Username string `json:"username"`
 			Password string `json:"password"`
@@ -1156,13 +1157,18 @@ func handleEditUser(userCtrl *controllers.UserController) http.HandlerFunc {
 			return
 		}
 
-		if payload.UserID <= 0 {
-			utils.SendError(w, http.StatusBadRequest, "ID Pengguna tidak valid", "user_id is required")
+		targetID := payload.UserID
+		if targetID <= 0 {
+			targetID = payload.ID
+		}
+
+		if targetID <= 0 {
+			utils.SendError(w, http.StatusBadRequest, "ID Pengguna tidak valid", "user_id or id is required")
 			return
 		}
 
 		user := models.User{
-			ID:       payload.UserID,
+			ID:       targetID,
 			Username: strings.TrimSpace(payload.Username),
 			Password: strings.TrimSpace(payload.Password),
 			Name:     strings.TrimSpace(payload.Name),
