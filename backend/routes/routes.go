@@ -1137,11 +1137,11 @@ func handleCreateUser(userCtrl *controllers.UserController) http.HandlerFunc {
 
 func handleEditUser(userCtrl *controllers.UserController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims := middlewares.GetClaimsFromContext(r)
-		role := "admin"
-		if claims != nil && claims.Role != "" {
-			role = claims.Role
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
+		role := getUserRoleFromRequest(r)
 
 		var payload struct {
 			UserID   int    `json:"user_id"`
@@ -1152,16 +1152,21 @@ func handleEditUser(userCtrl *controllers.UserController) http.HandlerFunc {
 			Avatar   string `json:"avatar"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			utils.SendError(w, http.StatusBadRequest, "Gagal membaca data JSON", err.Error())
+			return
+		}
+
+		if payload.UserID <= 0 {
+			utils.SendError(w, http.StatusBadRequest, "ID Pengguna tidak valid", "user_id is required")
 			return
 		}
 
 		user := models.User{
 			ID:       payload.UserID,
-			Username: payload.Username,
-			Password: payload.Password,
-			Name:     payload.Name,
-			Role:     payload.Role,
+			Username: strings.TrimSpace(payload.Username),
+			Password: strings.TrimSpace(payload.Password),
+			Name:     strings.TrimSpace(payload.Name),
+			Role:     strings.TrimSpace(payload.Role),
 			Avatar:   payload.Avatar,
 		}
 
