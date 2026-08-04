@@ -40,42 +40,44 @@
         </router-link>
       </nav>
 
-      <!-- Mobile Drawer Overlay -->
-      <div class="mobile-drawer-overlay" v-if="mobileMenuOpen && isLoggedIn" @click="mobileMenuOpen = false">
-        <div class="mobile-drawer" @click.stop>
-          <div class="drawer-top-bar">
-            <span class="drawer-menu-title">Menu Navigasi</span>
-            <button class="close-drawer" @click.stop="mobileMenuOpen = false">✕</button>
+      <!-- Mobile Drawer Overlay Teleported to Body -->
+      <Teleport to="body">
+        <div class="mobile-drawer-overlay" v-if="mobileMenuOpen && isLoggedIn" @click="mobileMenuOpen = false">
+          <div class="mobile-drawer" @click.stop>
+            <div class="drawer-top-bar">
+              <span class="drawer-menu-title">Menu Navigasi</span>
+              <button class="close-drawer" @click.stop="mobileMenuOpen = false">✕</button>
+            </div>
+
+            <nav class="drawer-links">
+              <router-link to="/dashboard" class="drawer-item" @click="mobileMenuOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
+              </router-link>
+              <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Manajemen Aset
+              </router-link>
+              <router-link to="/workorders" class="drawer-item" @click="mobileMenuOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Work Order
+              </router-link>
+              <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> Maintenance
+              </router-link>
+              <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Activity Log
+              </router-link>
+              <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'" @click="mobileMenuOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 1 0 7.75"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Management
+              </router-link>
+
+              <div class="drawer-divider"></div>
+
+              <button class="drawer-item logout" @click="handleLogout">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Keluar (Logout)
+              </button>
+            </nav>
           </div>
-
-          <nav class="drawer-links">
-            <router-link to="/dashboard" class="drawer-item" @click="mobileMenuOpen = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
-            </router-link>
-            <router-link to="/assets" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Manajemen Aset
-            </router-link>
-            <router-link to="/workorders" class="drawer-item" @click="mobileMenuOpen = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Work Order
-            </router-link>
-            <router-link to="/maintenance" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> Maintenance
-            </router-link>
-            <router-link to="/activitylogs" class="drawer-item" v-if="canAccessAdvanced" @click="mobileMenuOpen = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Activity Log
-            </router-link>
-            <router-link to="/users" class="drawer-item" v-if="userRole === 'admin'" @click="mobileMenuOpen = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 1 0 7.75"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Management
-            </router-link>
-
-            <div class="drawer-divider"></div>
-
-            <button class="drawer-item logout" @click="handleLogout">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Keluar (Logout)
-            </button>
-          </nav>
         </div>
-      </div>
+      </Teleport>
 
       <!-- User Menu & Scan Button -->
       <div class="navbar-user" v-if="isLoggedIn">
@@ -173,58 +175,60 @@
       </form>
     </ModalDialog>
 
-    <!-- Mobile Bottom Dock (iOS App Style Navigation) -->
-    <nav class="mobile-bottom-dock mobile-only" v-if="isLoggedIn">
-      <!-- Staff / External Role Dock Layout (3 Items: Dashboard | Scan QR (Center) | Work Order) -->
-      <template v-if="isStaffOnly">
-        <router-link to="/dashboard" class="dock-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-          <span>Dashboard</span>
-        </router-link>
+    <!-- Mobile Bottom Dock (iOS App Style Navigation Teleported to Body) -->
+    <Teleport to="body">
+      <nav class="mobile-bottom-dock mobile-only" v-if="isLoggedIn">
+        <!-- Staff / External Role Dock Layout (3 Items: Dashboard | Scan QR (Center) | Work Order) -->
+        <template v-if="isStaffOnly">
+          <router-link to="/dashboard" class="dock-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <span>Dashboard</span>
+          </router-link>
 
-        <button class="dock-fab-scan" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
-          <div class="fab-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-          </div>
-          <span>Scan QR</span>
-        </button>
+          <button class="dock-fab-scan" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
+            <div class="fab-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+            </div>
+            <span>Scan QR</span>
+          </button>
 
-        <router-link to="/workorders" class="dock-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-          <span>Work Order</span>
-        </router-link>
-      </template>
+          <router-link to="/workorders" class="dock-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span>Work Order</span>
+          </router-link>
+        </template>
 
-      <!-- Advanced Role Dock Layout (5 Items: Dashboard | Work Order | Scan QR (Center) | Aset | Maintenance) -->
-      <template v-else>
-        <router-link to="/dashboard" class="dock-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-          <span>Dashboard</span>
-        </router-link>
+        <!-- Advanced Role Dock Layout (5 Items: Dashboard | Work Order | Scan QR (Center) | Aset | Maintenance) -->
+        <template v-else>
+          <router-link to="/dashboard" class="dock-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <span>Dashboard</span>
+          </router-link>
 
-        <router-link to="/workorders" class="dock-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-          <span>Work Order</span>
-        </router-link>
+          <router-link to="/workorders" class="dock-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span>Work Order</span>
+          </router-link>
 
-        <button class="dock-fab-scan" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
-          <div class="fab-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-          </div>
-          <span>Scan QR</span>
-        </button>
+          <button class="dock-fab-scan" @click="$emit('open-qr-scanner')" title="Scan QR Code Aset">
+            <div class="fab-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+            </div>
+            <span>Scan QR</span>
+          </button>
 
-        <router-link to="/assets" class="dock-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-          <span>Aset</span>
-        </router-link>
+          <router-link to="/assets" class="dock-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            <span>Aset</span>
+          </router-link>
 
-        <router-link to="/maintenance" class="dock-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          <span>Maintenance</span>
-        </router-link>
-      </template>
-    </nav>
+          <router-link to="/maintenance" class="dock-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <span>Maintenance</span>
+          </router-link>
+        </template>
+      </nav>
+    </Teleport>
   </header>
 </template>
 
@@ -391,13 +395,15 @@ onUnmounted(() => {
 
 <style scoped>
 .header-navbar {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: #0f172a;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   width: 100%;
 }
 
@@ -415,6 +421,12 @@ onUnmounted(() => {
   overflow: visible;
 }
 
+@media (max-width: 640px) {
+  .navbar-container {
+    padding: 0 10px !important;
+  }
+}
+
 .navbar-left {
   display: flex;
   align-items: center;
@@ -429,8 +441,9 @@ onUnmounted(() => {
   font-size: 1.2rem;
   width: 38px;
   height: 38px;
-  border-radius: 4px !important;
+  border-radius: 10px !important;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .navbar-brand {
@@ -755,21 +768,25 @@ onUnmounted(() => {
 .mobile-drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(2px);
-  z-index: 300;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 999999 !important;
   display: flex;
 }
 
 .mobile-drawer {
-  width: 280px;
-  background: #ffffff;
+  width: 290px;
+  max-width: 85vw;
+  background: #ffffff !important;
   height: 100%;
   display: flex;
   flex-direction: column;
   padding: 20px;
-  border-right: 1px solid #e2e8f0;
-  box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid #cbd5e1;
+  box-shadow: 10px 0 35px rgba(15, 23, 42, 0.25);
+  position: relative;
+  z-index: 1000000 !important;
 }
 
 .drawer-top-bar {
@@ -1308,16 +1325,16 @@ onUnmounted(() => {
 /* === iOS App Style Mobile Bottom Navigation Dock === */
 .mobile-bottom-dock {
   display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
   height: 64px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid rgba(226, 232, 240, 0.8);
-  z-index: 250;
+  z-index: 999999 !important;
   padding: 0 8px calc(env(safe-area-inset-bottom, 0px) + 2px);
   box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08);
   justify-content: space-around;

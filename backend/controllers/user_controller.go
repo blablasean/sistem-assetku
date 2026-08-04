@@ -90,25 +90,34 @@ func (c *UserController) EditUser(u *models.User, callerRole string) error {
 		return errors.New("pengguna tidak ditemukan (ID #" + strconv.Itoa(u.ID) + ")")
 	}
 
+	updates := map[string]interface{}{}
 	oldRole := existing.Role
+
 	if u.Name != "" {
 		existing.Name = u.Name
+		updates["name"] = u.Name
 	}
 	if u.Role != "" {
 		existing.Role = u.Role
+		updates["role"] = u.Role
 	}
 	if u.Avatar != "" {
 		existing.Avatar = u.Avatar
+		updates["avatar"] = u.Avatar
 	}
 
 	// Validate & update username if changed
-	if u.Username != "" && strings.ToLower(u.Username) != strings.ToLower(existing.Username) {
+	newUsername := strings.TrimSpace(u.Username)
+	oldUsername := strings.TrimSpace(existing.Username)
+
+	if newUsername != "" && !strings.EqualFold(newUsername, oldUsername) {
 		var count int64
-		c.db.Model(&models.User{}).Where("LOWER(username) = ? AND id != ?", strings.ToLower(u.Username), u.ID).Count(&count)
+		c.db.Model(&models.User{}).Where("LOWER(username) = ? AND id != ?", strings.ToLower(newUsername), existing.ID).Count(&count)
 		if count > 0 {
-			return errors.New("username '" + u.Username + "' sudah digunakan oleh akun lain")
+			return errors.New("username '" + newUsername + "' sudah digunakan oleh akun lain")
 		}
-		existing.Username = u.Username
+		existing.Username = newUsername
+		updates["username"] = newUsername
 	}
 
 	// Validate & update password if non-empty
@@ -121,11 +130,15 @@ func (c *UserController) EditUser(u *models.User, callerRole string) error {
 			return errors.New("gagal memproses enkripsi password baru: " + err.Error())
 		}
 		existing.Password = hashedPassword
+		updates["password"] = hashedPassword
 	}
 
-	if err := c.db.Save(&existing).Error; err != nil {
-		return errors.New("gagal menyimpan data pengguna: " + err.Error())
+	if len(updates) > 0 {
+		if err := c.db.Model(&models.User{}).Where("id = ?", existing.ID).Updates(updates).Error; err != nil {
+			return errors.New("gagal menyimpan data pengguna ke database: " + err.Error())
+		}
 	}
+
 	existing.Password = ""
 	*u = existing
 

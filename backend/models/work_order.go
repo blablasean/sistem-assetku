@@ -14,10 +14,11 @@ type WorkOrder struct {
 	RequestedBy string     `gorm:"default:''" json:"requested_by"`
 	Department  string     `gorm:"default:''" json:"department"`
 	EngineerID  int        `gorm:"default:0;type:int" json:"engineer_id"`
-	ActionTaken string     `gorm:"default:''" json:"action_taken"`
-	Cost        int        `gorm:"default:0" json:"cost"`
-	CreatedAt   time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	ClosedAt    *time.Time `json:"closed_at"`
+	ActionTaken      string     `gorm:"default:''" json:"action_taken"`
+	AlasanPembatalan string     `gorm:"column:alasan_pembatalan;type:text;default:''" json:"alasan_pembatalan"`
+	Cost             int        `gorm:"default:0" json:"cost"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	ClosedAt         *time.Time `json:"closed_at"`
 }
 
 type WorkOrderLog struct {

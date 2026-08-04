@@ -9,7 +9,7 @@
         </div>
 
         <div class="header-action-group">
-          <button class="primary-btn" @click="showReportModal = true" title="Prinjau & Export Laporan Audit Trail">
+          <button class="primary-btn btn-secondary-ios" @click="showReportModal = true" title="Prinjau & Export Laporan Audit Trail">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             <span>Laporan & Export</span>
           </button>
@@ -1780,7 +1780,7 @@ td {
   justify-content: center;
   gap: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   line-height: 1;
   white-space: nowrap;
 }
@@ -1789,6 +1789,27 @@ td {
   background: #0062cc !important;
   border-color: #0062cc !important;
   transform: translateY(-1px);
+}
+
+.primary-btn.btn-secondary-ios, .btn-secondary-ios {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  height: 40px;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.primary-btn.btn-secondary-ios:hover, .btn-secondary-ios:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0284c7 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15) !important;
+}
+
+.primary-btn.btn-secondary-ios:active, .btn-secondary-ios:active {
+  transform: scale(0.97) !important;
 } 
 
 .primary-btn .btn-icon {

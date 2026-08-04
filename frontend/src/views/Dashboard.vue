@@ -57,7 +57,8 @@
           <button class="secondary-button" @click="$router.push('/workorders')">Lihat Semua</button>
         </div>
 
-        <div class="table-responsive dashboard-wo-scroll">
+        <!-- Desktop Table View -->
+        <div class="table-responsive dashboard-wo-scroll desktop-table-only">
           <table>
             <thead>
               <tr>
@@ -76,8 +77,30 @@
                 <td class="desc-cell">{{ item.description }}</td>
                 <td class="nowrap-cell"><StatusBadge :status="item.status" /></td>
               </tr>
+              <tr v-if="workOrders.length === 0">
+                <td colspan="5" class="empty-cell">Belum ada tiket work order aktif.</td>
+              </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Mobile Compact Work Order List View -->
+        <div class="dashboard-wo-mobile mobile-only">
+          <div v-if="workOrders.length === 0" class="mobile-empty-card">
+            Belum ada tiket work order aktif.
+          </div>
+          <div v-else v-for="item in workOrders" :key="'mwo-' + item.id" class="mwo-card" @click="$router.push('/workorders')">
+            <div class="mwo-top-row">
+              <span class="mwo-id">#WO-{{ item.id }}</span>
+              <StatusBadge :status="item.priority || 'Medium'" />
+            </div>
+            <div class="mwo-location">📍 {{ item.location }}</div>
+            <p class="mwo-desc">{{ item.description }}</p>
+            <div class="mwo-bottom-row">
+              <span class="mwo-label">Status:</span>
+              <StatusBadge :status="item.status" />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -196,10 +219,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  height: 37.6px;
 }
 
 .primary-btn {
   background: #007aff !important;
+  height: 40px;
   color: #ffffff !important;
   border: 1px solid #007aff !important;
   padding: 10px 18px !important;
@@ -244,7 +269,7 @@ onMounted(() => {
 .summary-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 6px !important;
+  border-radius: 14px !important;
   padding: 22px;
   color: #0f172a;
   min-height: 120px;
@@ -252,13 +277,14 @@ onMounted(() => {
   flex-direction: column;
   justify-content: space-between;
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 .summary-card:hover {
   border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 .card-primary { border-top: 4px solid #2563eb; }
@@ -392,6 +418,17 @@ onMounted(() => {
   font-size: 0.78rem;
 }
 
+.header-action-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* === Desktop vs Mobile Display Toggle === */
+.mobile-only {
+  display: none !important;
+}
+
 @media (max-width: 960px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -399,15 +436,123 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+  .desktop-table-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
   .page-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
 
+  .header-action-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .header-action-group .primary-btn {
+    width: 100% !important;
+    padding: 10px 8px !important;
+    font-size: 0.8rem !important;
+    justify-content: center;
+    border-radius: 10px !important;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .header-action-group .primary-btn svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+
   .summary-cards {
     grid-template-columns: 1fr;
     gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .summary-card {
+    padding: 14px 16px !important;
+    min-height: auto !important;
+    border-radius: 12px !important;
+  }
+
+  .card-value {
+    font-size: 1.7rem !important;
+  }
+
+  .secondary-button {
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    border-radius: 8px !important;
+  }
+
+  .dashboard-wo-mobile {
+    max-height: 340px;
+    overflow-y: auto;
+  }
+
+  .mwo-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px !important;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  }
+
+  .mwo-top-row, .mwo-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mwo-id {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #2563eb;
+  }
+
+  .mwo-location {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .mwo-desc {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #475569;
+    line-height: 1.4;
+  }
+
+  .mwo-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .mobile-empty-card {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.85rem;
   }
 
   .insights-list {

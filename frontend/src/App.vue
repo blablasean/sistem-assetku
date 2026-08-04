@@ -169,7 +169,11 @@ button:active, .btn:active {
   }
 
   .page-container, .dashboard-screen {
-    padding: 12px 10px !important;
+    padding: 12px 10px 80px 10px !important;
+  }
+  .navbar-container {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
   }
 
   /* Full width mobile modal adjustments */

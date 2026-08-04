@@ -50,6 +50,10 @@ func RegisterRoutes(
 			handleCreateAsset(assetCtrl)(w, r)
 		case http.MethodGet:
 			handleGetAssets(assetCtrl)(w, r)
+		case http.MethodPut:
+			handleEditAsset(assetCtrl)(w, r)
+		case http.MethodDelete:
+			handleDeleteAsset(assetCtrl)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -65,6 +69,7 @@ func RegisterRoutes(
 	mux.Handle("/mutations/timeline/delete", authMW(handleDeleteMutationTimeline(mutationCtrl)))
 	mux.Handle("/mutations/timeline/all", authMW(handleGetAllAssetMutationTimelines(mutationCtrl)))
 	mux.Handle("/mutations/timeline", authMW(handleGetAssetMutationTimeline(mutationCtrl)))
+	mux.Handle("/assets/mutation-timeline", authMW(handleGetAssetMutationTimeline(mutationCtrl)))
 	mux.Handle("/mutations/code", authMW(handleMutateAssetByCode(db, mutationCtrl)))
 	mux.Handle("/mutations", authMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -275,15 +280,22 @@ func handleEditAsset(assetCtrl *controllers.AssetController) http.HandlerFunc {
 		}
 
 		idStr := r.URL.Query().Get("id")
-		assetID, err := strconv.Atoi(idStr)
-		if err != nil {
-			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", err.Error())
-			return
-		}
-
 		var payload models.Asset
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+			return
+		}
+
+		assetID := 0
+		if idStr != "" {
+			assetID, _ = strconv.Atoi(idStr)
+		}
+		if assetID == 0 {
+			assetID = payload.ID
+		}
+
+		if assetID == 0 {
+			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", "ID parameter is missing")
 			return
 		}
 
@@ -346,20 +358,31 @@ func handleDeleteAsset(assetCtrl *controllers.AssetController) http.HandlerFunc 
 			role = claims.Role
 		}
 
+		idStr := r.URL.Query().Get("id")
 		var payload struct {
 			AssetID int `json:"asset_id"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
+		json.NewDecoder(r.Body).Decode(&payload)
+
+		assetID := 0
+		if idStr != "" {
+			assetID, _ = strconv.Atoi(idStr)
+		}
+		if assetID == 0 {
+			assetID = payload.AssetID
+		}
+
+		if assetID == 0 {
+			utils.SendError(w, http.StatusBadRequest, "Invalid asset ID", "ID parameter missing")
 			return
 		}
 
-		if err := assetCtrl.DeleteAsset(payload.AssetID, role); err != nil {
+		if err := assetCtrl.DeleteAsset(assetID, role); err != nil {
 			utils.SendError(w, http.StatusForbidden, "Failed to delete asset", err.Error())
 			return
 		}
 
-		utils.SendSuccess(w, http.StatusOK, "Asset deleted successfully", payload)
+		utils.SendSuccess(w, http.StatusOK, "Asset deleted successfully", map[string]int{"asset_id": assetID})
 	}
 }
 
@@ -409,10 +432,35 @@ func handleCreateMutation(db *gorm.DB, mutationCtrl *controllers.MutationControl
 			role = claims.Role
 		}
 
-		var payload controllers.MutationInput
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		var raw struct {
+			AssetID          int       `json:"asset_id"`
+			PreviousLocation string    `json:"previous_location"`
+			NewLocation      string    `json:"new_location"`
+			PIC              string    `json:"pic"`
+			NewPIC           string    `json:"new_pic"`
+			Reason           string    `json:"reason"`
+			MutationDate     time.Time `json:"mutation_date"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
+		}
+
+		picVal := strings.TrimSpace(raw.PIC)
+		if picVal == "" {
+			picVal = strings.TrimSpace(raw.NewPIC)
+		}
+		if picVal == "" {
+			picVal = "Engineering"
+		}
+
+		payload := controllers.MutationInput{
+			AssetID:          raw.AssetID,
+			PreviousLocation: raw.PreviousLocation,
+			NewLocation:      raw.NewLocation,
+			PIC:              picVal,
+			Reason:           raw.Reason,
+			MutationDate:     raw.MutationDate,
 		}
 
 		if err := mutationCtrl.CreateMutation(payload, role); err != nil {
@@ -457,8 +505,21 @@ func handleGetAllAssetMutationTimelines(mutationCtrl *controllers.MutationContro
 func handleGetAssetMutationTimeline(mutationCtrl *controllers.MutationController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		assetCode := r.URL.Query().Get("asset_code")
+		idStr := r.URL.Query().Get("assetID")
+
+		if assetCode == "" && idStr != "" {
+			assetID, _ := strconv.Atoi(idStr)
+			history, err := mutationCtrl.GetLocationHistory(assetID)
+			if err != nil {
+				utils.SendError(w, http.StatusInternalServerError, "Failed to fetch mutation history", err.Error())
+				return
+			}
+			utils.SendSuccess(w, http.StatusOK, "Asset mutation timeline retrieved successfully", history)
+			return
+		}
+
 		if assetCode == "" {
-			utils.SendError(w, http.StatusBadRequest, "Asset code required", "asset_code query parameter missing")
+			utils.SendError(w, http.StatusBadRequest, "Asset code parameter required", "asset_code query parameter missing")
 			return
 		}
 
@@ -634,24 +695,27 @@ func handleUpdateWorkOrderStatus(db *gorm.DB, workOrderCtrl *controllers.WorkOrd
 func handleCancelWorkOrder(workOrderCtrl *controllers.WorkOrderController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := middlewares.GetClaimsFromContext(r)
-		role := "hod"
+		role := "external"
 		username := "User"
-		if claims != nil && claims.Role != "" {
-			role = claims.Role
-		}
-		if claims != nil && claims.Username != "" {
-			username = claims.Username
+		if claims != nil {
+			if claims.Role != "" {
+				role = claims.Role
+			}
+			if claims.Username != "" {
+				username = claims.Username
+			}
 		}
 
 		var payload struct {
-			WOID int `json:"wo_id"`
+			WOID   int    `json:"wo_id"`
+			Reason string `json:"reason"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			utils.SendError(w, http.StatusBadRequest, "Failed to decode request", err.Error())
 			return
 		}
 
-		if err := workOrderCtrl.CancelWorkOrder(payload.WOID, role, username); err != nil {
+		if err := workOrderCtrl.CancelWorkOrder(payload.WOID, role, username, payload.Reason); err != nil {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to cancel work order", err.Error())
 			return
 		}

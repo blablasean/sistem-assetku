@@ -94,8 +94,8 @@
         </select>
       </div>
 
-      <!-- Users Data Table -->
-      <div class="table-container-sharp">
+      <!-- Desktop Users Data Table (Visible on Desktop) -->
+      <div class="table-container-sharp desktop-table-only">
         <table class="data-table-sharp">
           <thead>
             <tr>
@@ -145,6 +145,52 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Mobile Native Card List View (Visible on Android & Mobile) -->
+      <div class="mobile-user-list mobile-only">
+        <div v-if="isLoading" class="mobile-empty-card">
+          Memuat data pengguna...
+        </div>
+        <div v-else-if="filteredUsers.length === 0" class="mobile-empty-card">
+          Tidak ada pengguna yang sesuai pencarian.
+        </div>
+        <div v-else v-for="user in filteredUsers" :key="'mob-' + user.id" class="mobile-user-card">
+          <div class="muc-header">
+            <div class="user-cell">
+              <div class="user-avatar-sm">
+                <img v-if="user.avatar" :src="user.avatar" class="u-avatar-img" />
+                <span v-else>{{ getInitial(user.name) }}</span>
+              </div>
+              <div class="muc-info">
+                <div class="muc-name-row">
+                  <span class="u-name">{{ user.name }}</span>
+                  <span class="muc-no">#{{ user.id }}</span>
+                </div>
+                <div class="muc-username">@{{ user.username }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="muc-body">
+            <div class="muc-role-wrap">
+              <span class="role-badge-sharp" :class="user.role">
+                {{ getRoleLabel(user.role) }}
+              </span>
+            </div>
+
+            <div class="action-flex">
+              <button class="tbl-btn edit-btn" @click="openEditModal(user)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Edit</span>
+              </button>
+              <button class="tbl-btn delete-btn" @click="deleteUser(user)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                <span>Hapus</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -443,6 +489,7 @@ h1, .page-header h1 {
 
 .primary-btn {
   background: #007aff !important;
+  height:40px;
   color: #ffffff !important;
   border: 1px solid #007aff !important;
   padding: 10px 18px !important;
@@ -609,12 +656,14 @@ h1, .page-header h1 {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px !important;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .data-table-sharp {
   width: 100%;
+  min-width: 650px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -628,6 +677,7 @@ h1, .page-header h1 {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .data-table-sharp td {
@@ -635,12 +685,14 @@ h1, .page-header h1 {
   border-bottom: 1px solid #e2e8f0;
   font-size: 0.88rem;
   color: #334155;
+  white-space: nowrap;
 }
 
 .empty-cell {
   text-align: center;
   padding: 30px !important;
   color: #64748b;
+  white-space: normal !important;
 }
 
 .user-cell {
@@ -747,7 +799,7 @@ h1, .page-header h1 {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: 30px;
+  padding-bottom: 20px;
 }
 
 .form-sharp label {
@@ -770,11 +822,117 @@ h1, .page-header h1 {
   border-radius: 8px !important;
 }
 
-/* === Mobile Responsive CSS (Android & iOS) === */
+/* === Desktop vs Mobile Display Toggle === */
+.mobile-only {
+  display: none !important;
+}
+
+/* === Mobile Native Android Card List Layout === */
 @media (max-width: 640px) {
-  .page-container { padding: 16px 14px !important; }
-  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
-  .page-header .primary-btn { width: 100%; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
-  .card-panel { padding: 16px !important; border-radius: 14px !important; }
+  .desktop-table-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-container {
+    padding: 14px 10px !important;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .page-header h1 {
+    font-size: 1.4rem !important;
+  }
+  .page-header .primary-btn {
+    width: 100%;
+    justify-content: center;
+    height: 40px !important;
+    font-size: 0.85rem !important;
+  }
+  .filter-card {
+    flex-direction: column;
+    padding: 12px !important;
+  }
+  .search-input-box {
+    width: 100%;
+    min-width: 100% !important;
+  }
+  .sharp-select {
+    width: 100%;
+  }
+
+  .mobile-user-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px !important;
+    padding: 14px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .muc-header {
+    width: 100%;
+  }
+
+  .muc-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .muc-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .muc-no {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .muc-username {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .muc-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    gap: 12px;
+  }
+
+  .muc-role-wrap {
+    flex: 1;
+  }
+
+  .mobile-empty-card {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
 }
 </style>

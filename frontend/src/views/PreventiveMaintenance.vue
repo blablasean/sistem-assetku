@@ -63,23 +63,26 @@
         <div 
           v-for="(cell, index) in calendarDays" 
           :key="index" 
-          :class="['cal-day-cell', { 'empty-cell': !cell.isCurrentMonth, 'today-cell': cell.isToday }]"
+          :class="[
+            'cal-day-cell', 
+            { 
+              'empty-cell': !cell.isCurrentMonth, 
+              'today-cell': cell.isToday,
+              'has-reminder-cell': cell.isCurrentMonth && cell.items && cell.items.length > 0
+            }
+          ]"
+          @click="cell.isCurrentMonth && cell.items && cell.items.length > 0 ? openDateEventsModal(cell) : null"
         >
           <div class="cal-day-number" v-if="cell.isCurrentMonth">
             <span>{{ cell.dayNumber }}</span>
             <span v-if="cell.isToday" class="today-tag">Hari Ini</span>
           </div>
 
-          <div class="cal-events-list" v-if="cell.isCurrentMonth">
-            <div 
-              v-for="item in cell.items" 
-              :key="item.id + '_' + cell.dateStr" 
-              :class="['cal-event-chip', isItemCompletedOnDate(item, cell.dateStr) ? 'status-completed' : 'status-pending']"
-              @click="openDetailModalForDate(item, cell.dateStr)"
-              :title="`Aset #${item.asset_id} (${item.schedule_type}) - ${isItemCompletedOnDate(item, cell.dateStr) ? 'Sudah Di-checklist' : 'Belum Di-checklist'}`"
-            >
-              <span class="event-title">#{{ item.asset_id }} — {{ getAssetName(item.asset_id) }}</span>
-            </div>
+          <div class="cal-reminder-indicator" v-if="cell.isCurrentMonth && cell.items && cell.items.length > 0">
+            <span class="yellow-reminder-badge" title="Klik untuk lihat rincian pengingat maintenance">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="ios-bell-icon"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span>{{ cell.items.length }}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -145,7 +148,6 @@
         <label>
           <span>Pilih Kode Aset Terdaftar</span>
           <select v-model.number="newAssetId" :disabled="isEditMode" required>
-            <option value="" disabled>-- Pilih Kode Aset Terdaftar --</option>
             <option v-for="asset in registeredAssets" :key="asset.id" :value="asset.id">
               {{ asset.asset_code }} — {{ asset.asset_name }} ({{ asset.location }})
             </option>
@@ -154,10 +156,10 @@
         <label>
           <span>Frekuensi Rutin (Schedule Type)</span>
           <select v-model="newScheduleType">
-            <option value="Daily">Daily (Harian)</option>
-            <option value="Weekly">Weekly (Mingguan)</option>
-            <option value="Monthly">Monthly (Bulanan)</option>
             <option value="Yearly">Yearly (Tahunan)</option>
+            <option value="Monthly">Monthly (Bulanan)</option>
+            <option value="Weekly">Weekly (Mingguan)</option>
+            <option value="Daily">Daily (Harian)</option>
           </select>
         </label>
         <label>
@@ -220,6 +222,42 @@
               <span>Hapus Jadwal</span>
             </button>
           </div>
+        </div>
+      </div>
+    </ModalDialog>
+
+    <!-- Modal Daftar Maintenance Tanggal Terpilih (Multi-Item Calendar Event) -->
+    <ModalDialog :show="showDateEventsModal" :title="'Daftar Maintenance (Jadwal ' + selectedCellDate + ')'" @close="showDateEventsModal = false">
+      <div class="pm-date-events-body" v-if="selectedCellItems && selectedCellItems.length > 0">
+        <div v-for="item in selectedCellItems" :key="item.id" class="pm-date-event-card">
+          <div class="pm-header-row" style="margin-bottom: 8px;">
+            <span class="schedule-type-badge">{{ item.schedule_type }}</span>
+            <span :class="['status-chip-badge', isItemCompletedOnDate(item, selectedCellDate) ? 'badge-completed' : 'badge-pending']">
+              {{ isItemCompletedOnDate(item, selectedCellDate) ? 'Sudah Di-checklist' : 'Belum Di-checklist' }}
+            </span>
+          </div>
+
+          <h3 style="margin: 0 0 10px; font-size: 1rem; color: #0f172a; font-weight: 800;">
+            Aset #{{ item.asset_id }} — {{ getAssetName(item.asset_id) }}
+          </h3>
+
+          <div class="checklist-box" style="margin-bottom: 12px;">
+            <p style="margin: 0 0 4px; font-weight: 700; font-size: 0.84rem; color: #334155;">Checklist Inspeksi Fisik:</p>
+            <pre style="margin: 0; background: #ffffff; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">{{ item.checklist_data }}</pre>
+          </div>
+
+          <template v-if="canCompleteChecklist">
+            <button 
+              v-if="isDateReached(selectedCellDate)"
+              :class="['checklist-btn full-width-btn', isItemCompletedOnDate(item, selectedCellDate) ? 'btn-completed-style' : 'btn-pending-style']" 
+              @click="submitChecklistFromCellModal(item, selectedCellDate)"
+            >
+              {{ isItemCompletedOnDate(item, selectedCellDate) ? 'Checklist Sudah Selesai ✓' : 'Selesaikan Checklist Perawatan' }}
+            </button>
+            <p v-else class="checklist-notice-readonly notice-future">
+              Checklist perawatan hanya dapat diisi ketika tanggal jadwal ({{ selectedCellDate }}) telah tiba.
+            </p>
+          </template>
         </div>
       </div>
     </ModalDialog>
@@ -506,6 +544,24 @@ const calendarDays = computed(() => {
 })
 
 const selectedDetailDate = ref('')
+const showDateEventsModal = ref(false)
+const selectedCellDate = ref('')
+const selectedCellItems = ref([])
+
+function openDateEventsModal(cell) {
+  selectedCellDate.value = cell.dateStr
+  selectedCellItems.value = cell.items || []
+  if (cell.items && cell.items.length === 1) {
+    openDetailModalForDate(cell.items[0], cell.dateStr)
+  } else {
+    showDateEventsModal.value = true
+  }
+}
+
+function submitChecklistFromCellModal(item, targetDateStr) {
+  showDateEventsModal.value = false
+  submitChecklist(item, targetDateStr)
+}
 
 function openDetailModalForDate(item, dateStr) {
   selectedPmItem.value = item
@@ -622,7 +678,7 @@ function openAddModal() {
   isEditMode.value = false
   editingPmId.value = 0
   newAssetId.value = registeredAssets.value[0]?.id || ''
-  newScheduleType.value = 'Monthly'
+  newScheduleType.value = 'Yearly'
   newNextRun.value = new Date().toISOString().split('T')[0]
   newChecklistData.value = ''
   showAddModal.value = true
@@ -756,6 +812,7 @@ h1 {
 
 .primary-btn {
   background: #007aff !important;
+  height: 40px;
   color: #ffffff !important;
   border: 1px solid #007aff !important;
   padding: 10px 18px !important;
@@ -780,8 +837,86 @@ h1 {
 
 .pm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .pm-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .pm-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .pm-card {
+    padding: 10px 8px !important;
+    border-radius: 10px !important;
+    min-width: 0 !important;
+    word-break: break-word;
+  }
+
+  .pm-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .pm-asset-title {
+    font-size: 0.78rem !important;
+    line-height: 1.25 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .schedule-type-badge {
+    font-size: 0.62rem !important;
+    padding: 2px 4px !important;
+  }
+
+  .pm-details {
+    font-size: 0.72rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  .checklist-box {
+    padding: 6px 8px !important;
+    margin-top: 6px !important;
+  }
+
+  .checklist-box pre {
+    font-size: 0.7rem !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: pre-wrap;
+  }
+
+  .checklist-btn {
+    font-size: 0.7rem !important;
+    padding: 6px 4px !important;
+  }
+
+  .pm-admin-btns {
+    gap: 4px !important;
+  }
+
+  .pm-admin-btns .icon-btn {
+    padding: 4px 6px !important;
+    font-size: 0.7rem !important;
+  }
 }
 
 .pm-card {
@@ -1416,7 +1551,7 @@ h1 {
 }
 
 /* === Report Modal CSS === */
-.header-action-group { display: flex; align-items: center; gap: 10px; }
+.header-action-group { display: flex; align-items: center; gap: 10px; height: 37.6px;}
 .monthly-report-printable { padding: 4px 0 16px; }
 .report-header { text-align: center; margin-bottom: 20px; }
 .report-header h2 { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
@@ -1448,16 +1583,24 @@ h1 {
 .print-btn { background: #007aff; color: #fff; }
 .print-btn:hover { background: #0062cc; }
 .btn-icon { flex-shrink: 0; }
-.btn-secondary-ios {
+.primary-btn.btn-secondary-ios, .btn-secondary-ios {
   background: #ffffff !important;
   color: #0f172a !important;
   border: 1px solid #cbd5e1 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
-.btn-secondary-ios:hover {
+
+.primary-btn.btn-secondary-ios:hover, .btn-secondary-ios:hover {
   background: #f8fafc !important;
   border-color: #94a3b8 !important;
   color: #0284c7 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15) !important;
+}
+
+.primary-btn.btn-secondary-ios:active, .btn-secondary-ios:active {
+  transform: scale(0.97) !important;
 }
 .report-filter-bar {
   margin-bottom: 20px;
@@ -1515,6 +1658,105 @@ h1 {
   color: #0f172a !important;
   font-weight: 800 !important;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Yellow Reminder Highlight for Calendar Date Cells */
+.cal-day-cell.has-reminder-cell {
+  background: #fefce8 !important;
+  border: 1.5px solid #facc15 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+/* Yellow Reminder Highlight for Calendar Date Cells */
+.cal-day-cell.has-reminder-cell {
+  background: #fefce8 !important;
+  border: 1.5px solid #facc15 !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(250, 204, 21, 0.18);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cal-day-cell.has-reminder-cell:hover {
+  background: #fef08a !important;
+  border-color: #eab308 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(234, 179, 8, 0.3);
+}
+
+.yellow-reminder-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #fff066, #facc15);
+  color: #713f12;
+  border: 1px solid #eab308;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin-top: 6px;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.35);
+  transition: all 0.18s ease;
+}
+
+.yellow-reminder-badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.45);
+}
+
+.ios-bell-icon {
+  width: 14px;
+  height: 14px;
+  stroke: #713f12;
+  fill: none;
+  stroke-width: 2.5;
+  flex-shrink: 0;
+}
+
+.pm-date-events-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pm-date-event-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Responsive horizontal header action group */
+@media (max-width: 640px) {
+  .page-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .header-action-group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .header-action-group .primary-btn {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 12px !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+  }
 }
 
 @media print { .no-print { display: none !important; } }

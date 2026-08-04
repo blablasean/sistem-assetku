@@ -12,23 +12,79 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           <span>Laporan & Export</span>
         </button>
-        <button class="primary-btn" @click="showCreateModal = true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <button class="primary-btn" @click="openCreateModal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Buat Work Order Baru</span>
         </button>
       </div>
     </div>
 
-      <!-- Status Tabs -->
-      <div class="status-tabs">
-        <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]" @click="activeTab = tab.id">
-          {{ tab.label }}
-          <span class="tab-count">{{ getTabCount(tab.id) }}</span>
-        </button>
+      <!-- 5-Box Split Status Grid (Top Row: 3 Boxes, Bottom Row: 2 Boxes) -->
+      <div class="status-grid-container">
+        <!-- Top Row (3 Boxes) -->
+        <div class="status-grid-top">
+          <button 
+            :class="['status-grid-box', { active: activeTab === 'all' }]"
+            @click="activeTab = 'all'"
+          >
+            <div class="sgb-header">
+              <span class="sgb-dot dot-all"></span>
+              <span class="sgb-count">{{ getTabCount('all') }}</span>
+            </div>
+            <span class="sgb-title">Semua Tiket</span>
+          </button>
+
+          <button 
+            :class="['status-grid-box', { active: activeTab === 'Open' }]"
+            @click="activeTab = 'Open'"
+          >
+            <div class="sgb-header">
+              <span class="sgb-dot dot-open"></span>
+              <span class="sgb-count">{{ getTabCount('Open') }}</span>
+            </div>
+            <span class="sgb-title">Open (Baru)</span>
+          </button>
+
+          <button 
+            :class="['status-grid-box', { active: activeTab === 'In Progress' }]"
+            @click="activeTab = 'In Progress'"
+          >
+            <div class="sgb-header">
+              <span class="sgb-dot dot-in-progress"></span>
+              <span class="sgb-count">{{ getTabCount('In Progress') }}</span>
+            </div>
+            <span class="sgb-title">In Progress</span>
+          </button>
+        </div>
+
+        <!-- Bottom Row (2 Boxes) -->
+        <div class="status-grid-bottom">
+          <button 
+            :class="['status-grid-box', { active: activeTab === 'Completed' }]"
+            @click="activeTab = 'Completed'"
+          >
+            <div class="sgb-header">
+              <span class="sgb-dot dot-completed"></span>
+              <span class="sgb-count">{{ getTabCount('Completed') }}</span>
+            </div>
+            <span class="sgb-title">Selesai (Finish)</span>
+          </button>
+
+          <button 
+            :class="['status-grid-box', { active: activeTab === 'Cancelled' }]"
+            @click="activeTab = 'Cancelled'"
+          >
+            <div class="sgb-header">
+              <span class="sgb-dot dot-cancelled"></span>
+              <span class="sgb-count">{{ getTabCount('Cancelled') }}</span>
+            </div>
+            <span class="sgb-title">Dibatalkan</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Work Orders Table -->
-      <div class="card-panel">
+      <!-- Work Orders Table (Desktop Only) -->
+      <div class="card-panel desktop-table-only">
         <div class="table-responsive wo-table-wrapper">
           <table>
             <thead>
@@ -47,7 +103,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="wo in filteredWorkOrders" :key="wo.id">
+              <tr v-for="wo in filteredWorkOrders" :key="wo.id" :class="{ 'highlight-assigned-wo': isAssignedToCurrentUser(wo) }">
                 <td class="nowrap-cell"><span class="wo-id">#WO-{{ wo.id }}</span></td>
                 <td class="nowrap-cell">
                   <div class="ios-table-pill pill-indigo">
@@ -77,7 +133,7 @@
                 <td class="nowrap-cell"><StatusBadge :status="wo.priority || 'Medium'" /></td>
                 <td class="desc-cell" :title="wo.description"><span class="desc-text">{{ wo.description }}</span></td>
                 <td class="nowrap-cell">
-                  <div v-if="wo.engineer_id > 0" class="ios-table-pill pill-emerald">
+                  <div v-if="wo.engineer_id > 0" :class="['ios-table-pill', isAssignedToCurrentUser(wo) ? 'pill-amber-assigned' : 'pill-emerald']">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                     <span>{{ getEngineerName(wo.engineer_id) }}</span>
                   </div>
@@ -86,36 +142,103 @@
                 <td class="nowrap-cell"><StatusBadge :status="wo.status" /></td>
                 <td class="actions-cell">
                   <button class="icon-btn log-btn" @click.stop="openLogsModal(wo)" title="Lihat Laporan Timeline Progres">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Timeline
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Timeline</span>
                   </button>
                   <button v-if="canAssign && wo.status === 'Open'" class="icon-btn assign-btn" @click="openAssignModal(wo)" title="Assign Worker">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg> Assign
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                    <span>Assign</span>
                   </button>
-                  <button v-if="canUpdateProgress && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn progress-btn" @click="openUpdateModal(wo)" title="Update Progres">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Update
+                  <button v-if="canUpdateProgress && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn progress-btn" @click="openUpdateModal(wo)" title="Update Progres Pengerjaan">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Update</span>
                   </button>
                   <button v-if="canManageOrder && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn close-btn" @click="closeOrder(wo)" title="Selesaikan Work Order">
-                    ✅ Selesai
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>Selesai</span>
                   </button>
-
-                  <!-- HOD, Admin, and Management can cancel open work orders -->
-                  <button v-if="canCancel && wo.status === 'Open'" class="icon-btn cancel-btn" @click="cancelOrder(wo)" title="Batal (Cancel Work Order)">
-                    🚫 Batal
+                  <button v-if="canCancelWo(wo)" class="icon-btn cancel-btn" @click="openCancelModal(wo)" title="Batal (Cancel Work Order)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    <span>Batal</span>
                   </button>
-
-                <!-- HOD, Admin, and Management can delete work orders -->
-                <button v-if="canDelete" class="icon-btn delete-btn" @click="deleteOrder(wo)" title="Hapus Work Order Permanen">
-                  🗑️ Hapus
-                </button>
-              </td>
-            </tr>
-            <tr v-if="filteredWorkOrders.length === 0">
-              <td colspan="11" class="empty-state">Tidak ada Work Order pada kategori ini.</td>
-            </tr>
-          </tbody>
-        </table>
+                  <button v-if="canDelete" class="icon-btn delete-btn" @click="deleteOrder(wo)" title="Hapus Work Order Permanen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    <span>Hapus</span>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="filteredWorkOrders.length === 0">
+                <td colspan="11" class="empty-state">Tidak ada Work Order pada kategori ini.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      <!-- Mobile Work Orders Card List View (Visible on Mobile / Android) -->
+      <div class="mobile-wo-list mobile-only">
+        <div v-if="filteredWorkOrders.length === 0" class="mobile-empty-card">
+          Tidak ada Work Order pada kategori ini.
+        </div>
+        <div v-else v-for="wo in filteredWorkOrders" :key="'mwo-' + wo.id" :class="['mwo-card', { 'highlight-assigned-wo': isAssignedToCurrentUser(wo) }]">
+          <div class="mwo-header">
+            <div class="mwo-id-wrap">
+              <span class="wo-id">#WO-{{ wo.id }}</span>
+              <StatusBadge :status="wo.priority || 'Medium'" />
+            </div>
+            <StatusBadge :status="wo.status" />
+          </div>
+
+          <div class="mwo-details">
+            <div class="mwo-pill-row">
+              <div class="ios-table-pill pill-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>{{ wo.location || 'Ruangan' }}</span>
+              </div>
+              <div class="ios-table-pill pill-indigo">
+                <span>{{ wo.category || 'HVAC / AC' }}</span>
+              </div>
+            </div>
+
+            <p class="mwo-desc">{{ wo.description }}</p>
+            <div v-if="wo.status === 'Cancelled' && wo.alasan_pembatalan" class="mwo-cancel-reason">
+              🚫 Alasan Batal: <em>"{{ wo.alasan_pembatalan }}"</em>
+            </div>
+
+            <div class="mwo-meta">
+              <span>Pelapor: <strong>@{{ wo.requested_by || 'user' }}</strong> ({{ formatDepartmentLabel(wo.department) }})</span>
+              <span>Teknisi: <strong>{{ wo.engineer_id > 0 ? getEngineerName(wo.engineer_id) : 'Belum Ditugaskan' }}</strong></span>
+            </div>
+          </div>
+
+          <div class="mwo-actions-bar">
+            <button class="icon-btn log-btn" @click.stop="openLogsModal(wo)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Timeline</span>
+            </button>
+            <button v-if="canAssign && wo.status === 'Open'" class="icon-btn assign-btn" @click="openAssignModal(wo)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+              <span>Assign</span>
+            </button>
+            <button v-if="canUpdateProgress && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn progress-btn" @click="openUpdateModal(wo)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>Update</span>
+            </button>
+            <button v-if="canManageOrder && wo.status !== 'Finish' && wo.status !== 'Cancelled'" class="icon-btn close-btn" @click="closeOrder(wo)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Selesai</span>
+            </button>
+            <button v-if="canCancelWo(wo)" class="icon-btn cancel-btn" @click="openCancelModal(wo)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              <span>Batal</span>
+            </button>
+            <button v-if="canDelete" class="icon-btn delete-btn" @click="deleteOrder(wo)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              <span>Hapus</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
     <!-- Custom UI Toast Notification (No Browser Alert) -->
     <transition name="fade">
@@ -133,7 +256,6 @@
         <label>
           <span>Pilih Kode Aset Terdaftar</span>
           <select v-model.number="formWo.asset_id" @change="onAssetSelected" required>
-            <option value="" disabled>-- Pilih Kode Aset Terdaftar --</option>
             <option v-for="asset in registeredAssets" :key="asset.id" :value="asset.id">
               {{ asset.asset_code }} — {{ asset.asset_name }} ({{ asset.location }})
             </option>
@@ -150,10 +272,10 @@
         <label>
           <span>Tingkat Prioritas (Priority)</span>
           <select v-model="formWo.priority">
-            <option value="Low">Low (Kerusakan Ringan / Tidak Mendesak)</option>
-            <option value="Medium">Medium (Kerusakan Standar)</option>
+            <option value="Emergency">Emergency (Darurat)</option>
             <option value="High">High (Perlu Penanganan Cepat)</option>
-            <option value="Emergency">Emergency (Darurat / Operasional Terganggu)</option>
+            <option value="Medium">Medium (Kerusakan Standar)</option>
+            <option value="Low">Low (Tidak Mendesak)</option>
           </select>
         </label>
         <label>
@@ -182,28 +304,34 @@
       </form>
     </ModalDialog>
 
-    <ModalDialog :show="showUpdateModal" title="Update Status Pengerjaan Teknisi" @close="showUpdateModal = false">
+    <ModalDialog :show="showUpdateModal" title="Update Status Pengerjaan Teknisi" maxWidth="560px" @close="showUpdateModal = false">
       <form @submit.prevent="submitUpdateStatus" class="modal-form" v-if="selectedWo">
-        <label>
-          <span>Status Baru</span>
-          <select v-model="updateStatus">
-            <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
-            <option value="Under Review">Under Review (Selesai Dikerjakan & Menunggu Review)</option>
-            <option value="Finish">Finish / Completed (Selesai & Disetujui)</option>
+        <label class="modal-label">
+          <span class="label-title">Status Baru <span style="color: #dc2626;">*</span></span>
+          <select v-model="updateStatus" class="modal-input ios-select-input">
+            <option value="In Progress">👷 In Progress (Sedang Dikerjakan)</option>
+            <option value="Under Review">🔍 Under Review (Menunggu Review)</option>
+            <option value="Finish">✅ Finish (Selesai & Disetujui)</option>
           </select>
         </label>
 
-        <label>
-          <span>Tindakan Perbaikan yang Dilakukan</span>
-          <textarea v-model="updateActionTaken" rows="3" placeholder="Misal: Ganti kapasitor kompresor AC dan isi ulang freon R32."></textarea>
+        <label class="modal-label" style="margin-top: 12px;">
+          <span class="label-title">Tindakan Perbaikan yang Dilakukan <span style="color: #dc2626;">*</span></span>
+          <textarea v-model="updateActionTaken" rows="3" placeholder="Misal: Ganti kapasitor kompresor AC dan isi ulang freon R32." class="modal-input modal-textarea" required></textarea>
         </label>
 
-        <label>
-          <span>Estimasi Biaya Perbaikan (Rp)</span>
-          <input v-model.number="updateCost" type="number" placeholder="Contoh: 150000" />
+        <label class="modal-label" style="margin-top: 12px;">
+          <span class="label-title">Estimasi Biaya Perbaikan (Rp)</span>
+          <input 
+            type="text" 
+            :value="formattedCostInput" 
+            @input="onCostInput" 
+            placeholder="Rp 0" 
+            class="modal-input" 
+          />
         </label>
 
-        <button type="submit" class="submit-modal-btn">Simpan Progres</button>
+        <button type="submit" class="submit-modal-btn" style="margin-top: 16px; background: #007aff; border-color: #007aff;">Simpan Progres</button>
       </form>
     </ModalDialog>
 
@@ -276,81 +404,110 @@
       </div>
     </ModalDialog>
 
-    <!-- Modal Laporan Progres & Timeline Work Order -->
-    <ModalDialog :show="showLogsModal" title="Laporan Timeline Progres Work Order" @close="showLogsModal = false">
-      <div v-if="selectedWoForLogs" class="logs-modal-body">
-        <div class="wo-info-banner">
-          <div>
-            <span class="wo-badge">#WO-{{ selectedWoForLogs.id }}</span>
-            <h3 class="wo-banner-title">📍 {{ selectedWoForLogs.location }}</h3>
-            <p class="wo-banner-sub">Pelapor: <strong>@{{ selectedWoForLogs.requested_by || 'user' }}</strong> (🏢 {{ formatDepartmentLabel(selectedWoForLogs.department) }})</p>
+    <!-- Modal Laporan Progres & Timeline Work Order (iOS Grouped Page Card UI) -->
+    <ModalDialog :show="showLogsModal" title="Timeline Progres Work Order" maxWidth="640px" @close="showLogsModal = false">
+      <div v-if="selectedWoForLogs" class="ios-timeline-modal-body">
+        
+        <!-- Header Info Card (iOS Style) -->
+        <div class="ios-asset-info-card">
+          <div class="ios-aic-header">
+            <span class="ios-code-badge">#WO-{{ selectedWoForLogs.id }}</span>
+            <StatusBadge :status="selectedWoForLogs.status" />
           </div>
-          <StatusBadge :status="selectedWoForLogs.status" />
+          <h3 class="ios-asset-name">📍 {{ selectedWoForLogs.location }}</h3>
+          <div class="ios-registration-location">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Pelapor: <strong>@{{ selectedWoForLogs.requested_by || 'user' }}</strong> ({{ formatDepartmentLabel(selectedWoForLogs.department) }})</span>
+          </div>
         </div>
 
-        <div class="timeline-container">
-          <h4 class="timeline-title">⏱️ Riwayat Perubahan & Progres Pengerjaan</h4>
+        <!-- Single Consolidated Page Box Card for Timeline Items -->
+        <div class="ios-timeline-page-card">
+          <div class="ios-tl-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <h4>Riwayat Perubahan & Progres Pengerjaan</h4>
+            </div>
+            <button v-if="canUpdateProgress && selectedWoForLogs.status !== 'Finish' && selectedWoForLogs.status !== 'Cancelled'" class="icon-btn progress-btn" @click="handleNavigateToUpdateProgres(selectedWoForLogs)" title="Update Status Pengerjaan Teknisi" style="display: inline-flex; align-items: center; gap: 4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.85;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span style="font-size: 0.78rem;">Update Progres</span>
+            </button>
+          </div>
           
-          <div v-if="isLogsLoading" class="logs-loading">Memuat timeline progres...</div>
+          <div v-if="isLogsLoading" class="ios-tl-loading">
+            Memuat timeline progres...
+          </div>
           
-          <div v-else class="timeline-list">
-            <div v-for="(log, idx) in woProgressLogs" :key="log.id || idx" class="timeline-item">
-              <div class="timeline-node">
-                <span class="node-icon">{{ getStatusIcon(log.status) }}</span>
-              </div>
-              <div class="timeline-content">
-                <div class="timeline-header">
+          <div v-else class="ios-tl-items-wrapper">
+            <div v-for="(log, idx) in woProgressLogs" :key="log.id || idx" class="ios-tl-card-item">
+              <!-- Item Top: Step Chip, Status Badge, & Time -->
+              <div class="ios-tl-item-top">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="ios-step-chip">Langkah #{{ idx + 1 }}</span>
                   <StatusBadge :status="log.status" />
-                  <span class="timeline-time">🕒 {{ formatDate(log.created_at) }}</span>
                 </div>
-                <p class="timeline-actor">
-                  👤 Oleh: <strong>@{{ log.updated_by || 'Sistem' }}</strong> 
-                  <span class="user-role-chip" v-if="log.user_role">({{ formatDepartmentLabel(log.user_role) }})</span>
-                </p>
-                <div class="timeline-notes" v-if="log.action_taken">
-                  <p><strong>📝 Catatan / Tindakan:</strong> {{ log.action_taken }}</p>
+                <span class="ios-tl-time">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {{ formatDate(log.created_at) }}
+                </span>
+              </div>
+
+              <!-- Item Stacked Body (Vertical Stack for Perfect Inside Fit) -->
+              <div class="ios-tl-stacked-body">
+                <!-- Actor / User Info -->
+                <div class="ios-pic-info-pill">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>Oleh: <strong>@{{ log.updated_by || 'Sistem' }}</strong> <span v-if="log.user_role">({{ formatDepartmentLabel(log.user_role) }})</span></span>
                 </div>
-                <p v-if="log.cost > 0" class="timeline-cost">💰 Biaya Terkait: <strong>Rp {{ formatNumber(log.cost) }}</strong></p>
+
+                <!-- Action Taken / Catatan -->
+                <div class="ios-reason-box" v-if="log.action_taken">
+                  <p><strong>Catatan / Tindakan:</strong> {{ formatActionTaken(log.action_taken) }}</p>
+                </div>
+
+                <!-- Biaya Perbaikan (if any) -->
+                <div v-if="log.cost > 0" class="ios-cost-pill">
+                  💰 Biaya Terkait: <strong>Rp {{ formatNumber(log.cost) }}</strong>
+                </div>
               </div>
             </div>
 
-            <div v-if="woProgressLogs.length === 0" class="empty-logs">
+            <div v-if="woProgressLogs.length === 0" class="ios-empty-tl">
               Belum ada riwayat progres tercatat untuk Work Order ini.
             </div>
           </div>
         </div>
 
-        <!-- Form Tambah Catatan Timeline Baru -->
-        <div v-if="canUpdateProgress && selectedWoForLogs.status !== 'Finish' && selectedWoForLogs.status !== 'Cancelled'" class="add-timeline-box">
-          <h4 class="add-tl-title">➕ Tambah Catatan / Update Progres Timeline</h4>
-          <form @submit.prevent="submitAddTimelineNote" class="add-tl-form">
-            <div class="add-tl-row">
-              <label class="tl-field">
-                <span>Status Progres:</span>
-                <select v-model="newTlStatus" class="modal-input">
-                  <option value="In Progress">👷 In Progress (Sedang Dikerjakan)</option>
-                  <option value="Under Review">🔍 Under Review (Menunggu Review HOD)</option>
-                  <option value="Finish">✅ Finish / Completed (Selesai & Disetujui)</option>
-                </select>
-              </label>
-
-              <label class="tl-field">
-                <span>Biaya Perbaikan (Rp):</span>
-                <input v-model.number="newTlCost" type="number" min="0" placeholder="Contoh: 150000" class="modal-input" />
-              </label>
-            </div>
-
-            <label class="tl-field">
-              <span>Catatan Progres / Tindakan Pengerjaan:</span>
-              <textarea v-model="newTlActionTaken" rows="2" placeholder="Tuliskan catatan progres terbaru..." class="modal-input modal-textarea" required></textarea>
-            </label>
-
-            <button type="submit" class="submit-modal-btn add-tl-btn" :disabled="isSubmittingTl">
-              {{ isSubmittingTl ? 'Menyimpan...' : '➕ Simpan Catatan Timeline' }}
-            </button>
-          </form>
-        </div>
       </div>
+    </ModalDialog>
+
+    <!-- Modal Pembatalan Work Order (iOS Style Danger Badge) -->
+    <ModalDialog :show="showCancelModal" title="Membatalkan Work Order" @close="showCancelModal = false">
+      <form @submit.prevent="submitCancelOrder" class="modal-form" v-if="selectedWo">
+        <div class="ios-cancel-warning-banner">
+          <div class="ios-danger-circle-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          </div>
+          <div class="ios-warning-text">
+            <h4>Membatalkan Tiket #WO-{{ selectedWo.id }}</h4>
+            <p>{{ selectedWo.description }}</p>
+          </div>
+        </div>
+
+        <label>
+          <span>Alasan Pembatalan Tiket <span style="color: #dc2626;">*</span></span>
+          <textarea v-model="cancelReason" rows="3" placeholder="Tuliskan alasan pembatalan tiket ini (misal: salah input lokasi / sudah diperbaiki sendiri / duplikat laporan)" required class="sharp-input" style="width: 100%; min-height: 80px; padding: 10px; border-radius: 8px;"></textarea>
+        </label>
+
+        <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+          <button type="button" class="cancel-btn-ios" @click="showCancelModal = false">Kembali</button>
+          <button type="submit" class="danger-btn-ios" :disabled="isSubmittingCancel">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            <span>{{ isSubmittingCancel ? 'Memproses...' : 'Konfirmasi Batal Tiket' }}</span>
+          </button>
+        </div>
+      </form>
     </ModalDialog>
 </template>
 
@@ -365,11 +522,22 @@ const route = useRoute()
 
 const userRole = ref(sessionStorage.getItem('user_role') || 'external')
 
-const canAssign = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canManageOrder = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canUpdateProgress = computed(() => userRole.value === 'engineer' || userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canDelete = computed(() => userRole.value === 'hod' || userRole.value === 'admin' || userRole.value === 'management')
-const canCancel = computed(() => userRole.value === 'hod' || userRole.value === 'admin' || userRole.value === 'management')
+const canAssign = computed(() => ['hod', 'management', 'supervisor', 'admin'].includes(userRole.value.toLowerCase()))
+const canManageOrder = computed(() => ['hod', 'management', 'supervisor', 'admin'].includes(userRole.value.toLowerCase()))
+const canUpdateProgress = computed(() => ['engineer', 'hod', 'management', 'supervisor', 'admin'].includes(userRole.value.toLowerCase()))
+const canDelete = computed(() => ['hod', 'admin', 'management', 'supervisor'].includes(userRole.value.toLowerCase()))
+const canCancel = computed(() => ['hod', 'admin', 'management', 'supervisor'].includes(userRole.value.toLowerCase()))
+
+function isWoRequester(wo) {
+  if (!wo || !currentUsername.value) return false
+  return wo.requested_by && wo.requested_by.toLowerCase() === currentUsername.value.toLowerCase()
+}
+
+function canCancelWo(wo) {
+  if (!wo || wo.status !== 'Open') return false
+  if (canCancel.value) return true
+  return isWoRequester(wo)
+}
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -397,7 +565,22 @@ const workOrders = ref([])
 const isLoading = ref(false)
 
 const showCreateModal = ref(false)
-const formWo = ref({ asset_id: '', category: '', location: '', priority: 'Medium', description: '' })
+const formWo = ref({ asset_id: '', category: '', location: '', priority: 'Emergency', description: '' })
+
+function openCreateModal() {
+  const topAsset = registeredAssets.value[0]
+  formWo.value = {
+    asset_id: topAsset?.id || '',
+    category: topAsset?.category || '',
+    location: topAsset?.location || '',
+    priority: 'Emergency',
+    description: ''
+  }
+  if (topAsset) {
+    onAssetSelected()
+  }
+  showCreateModal.value = true
+}
 
 const showAssignModal = ref(false)
 const selectedWo = ref(null)
@@ -405,8 +588,24 @@ const assignEngineerId = ref('')
 const engineersList = ref([])
 
 function getEngineerName(id) {
-  const eng = engineersList.value.find(e => e.id === id)
-  return eng ? eng.name : `Teknisi #${id}`
+  if (!id) return 'Belum Ditugaskan'
+  const eng = engineersList.value.find(e => Number(e.id) === Number(id))
+  return eng ? (eng.name || `@${eng.username}`) : 'Teknisi'
+}
+
+function formatRupiahDisplay(val) {
+  const num = Number(val) || 0
+  if (num === 0) return '0,00 Rp'
+  const formatted = num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${formatted} Rp`
+}
+
+function formatActionTaken(text) {
+  if (!text) return ''
+  return text.replace(/Teknisi\s*#(\d+)/gi, (match, idStr) => {
+    const engName = getEngineerName(Number(idStr))
+    return (engName && engName !== 'Teknisi' && engName !== 'Belum Ditugaskan') ? `Teknisi ${engName}` : match
+  })
 }
 
 async function fetchEngineers() {
@@ -427,6 +626,21 @@ const showUpdateModal = ref(false)
 const updateStatus = ref('In Progress')
 const updateActionTaken = ref('')
 const updateCost = ref(0)
+const formattedCostInput = ref('Rp 0')
+
+function onCostInput(event) {
+  const inputVal = event.target.value || ''
+  const digitsOnly = inputVal.replace(/\D/g, '')
+
+  if (!digitsOnly || digitsOnly === '0') {
+    updateCost.value = 0
+    formattedCostInput.value = 'Rp 0'
+  } else {
+    const numeric = parseInt(digitsOnly, 10)
+    updateCost.value = numeric
+    formattedCostInput.value = 'Rp ' + numeric.toLocaleString('id-ID')
+  }
+}
 
 const showReportModal = ref(false)
 const reportMonthYear = ref(new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }))
@@ -452,8 +666,16 @@ function getStatusIcon(status) {
   return map[status] || '📌'
 }
 
+function handleNavigateToUpdateProgres(wo) {
+  showLogsModal.value = false
+  openUpdateModal(wo)
+}
+
 function openLogsModal(wo) {
   if (!wo) return
+  if (engineersList.value.length === 0) {
+    fetchEngineers()
+  }
   selectedWoForLogs.value = wo
   showLogsModal.value = true
 
@@ -500,14 +722,15 @@ function openLogsModal(wo) {
   }
 
   if (wo.status === 'Finish' || wo.status === 'Completed' || wo.status === 'Closed' || wo.status === 'Cancelled') {
+    const cancelText = wo.alasan_pembatalan ? `Work order dibatalkan oleh ${wo.requested_by || 'user'}. Alasan: ${wo.alasan_pembatalan}` : `Work order dibatalkan oleh ${wo.requested_by || 'user'}`
     initialLogs.push({
       id: 4,
       work_order_id: wo.id,
       status: wo.status,
-      action_taken: wo.status === 'Cancelled' ? 'Work Order dibatalkan' : 'Work Order diverifikasi selesai',
+      action_taken: wo.status === 'Cancelled' ? cancelText : 'Work Order diverifikasi selesai',
       cost: wo.cost || 0,
-      updated_by: 'Administrator',
-      user_role: 'Admin',
+      updated_by: wo.status === 'Cancelled' ? (wo.requested_by || 'User') : 'Administrator',
+      user_role: wo.status === 'Cancelled' ? (wo.department || 'User') : 'Admin',
       created_at: wo.closed_at || new Date().toISOString()
     })
   }
@@ -562,10 +785,10 @@ async function submitAddTimelineNote() {
 
 const filteredWorkOrders = computed(() => {
   if (activeTab.value === 'all') return workOrders.value
-  if (activeTab.value === 'open') return workOrders.value.filter(w => w.status === 'Open')
-  if (activeTab.value === 'in_progress') return workOrders.value.filter(w => w.status === 'In Progress')
-  if (activeTab.value === 'under_review') return workOrders.value.filter(w => w.status === 'Under Review')
-  if (activeTab.value === 'completed') return workOrders.value.filter(w => w.status === 'Finish' || w.status === 'Completed' || w.status === 'Closed')
+  if (activeTab.value === 'Open') return workOrders.value.filter(w => w.status === 'Open')
+  if (activeTab.value === 'In Progress') return workOrders.value.filter(w => w.status === 'In Progress' || w.status === 'Under Review')
+  if (activeTab.value === 'Completed') return workOrders.value.filter(w => w.status === 'Finish' || w.status === 'Completed' || w.status === 'Closed')
+  if (activeTab.value === 'Cancelled') return workOrders.value.filter(w => w.status === 'Cancelled' || w.status === 'Batal')
   return workOrders.value
 })
 
@@ -575,10 +798,10 @@ const totalReportCost = computed(() => {
 
 function getTabCount(tabId) {
   if (tabId === 'all') return workOrders.value.length
-  if (tabId === 'open') return workOrders.value.filter(w => w.status === 'Open').length
-  if (tabId === 'in_progress') return workOrders.value.filter(w => w.status === 'In Progress').length
-  if (tabId === 'under_review') return workOrders.value.filter(w => w.status === 'Under Review').length
-  if (tabId === 'completed') return workOrders.value.filter(w => w.status === 'Finish' || w.status === 'Completed' || w.status === 'Closed').length
+  if (tabId === 'Open') return workOrders.value.filter(w => w.status === 'Open').length
+  if (tabId === 'In Progress') return workOrders.value.filter(w => w.status === 'In Progress' || w.status === 'Under Review').length
+  if (tabId === 'Completed') return workOrders.value.filter(w => w.status === 'Finish' || w.status === 'Completed' || w.status === 'Closed').length
+  if (tabId === 'Cancelled') return workOrders.value.filter(w => w.status === 'Cancelled' || w.status === 'Batal').length
   return 0
 }
 
@@ -601,8 +824,31 @@ function formatDate(dateStr) {
   }
 }
 
+const currentUserId = ref(Number(sessionStorage.getItem('user_id')) || 0)
 const currentUsername = ref(sessionStorage.getItem('username') || sessionStorage.getItem('user_name') || 'admin')
 const currentUserRole = ref(sessionStorage.getItem('user_role') || 'admin')
+
+function isAssignedToCurrentUser(wo) {
+  if (!wo || !wo.engineer_id) return false
+  
+  if (currentUserId.value > 0 && Number(wo.engineer_id) === currentUserId.value) {
+    return true
+  }
+
+  if (wo.engineer_id > 0 && engineersList.value.length > 0) {
+    const eng = engineersList.value.find(e => Number(e.id) === Number(wo.engineer_id))
+    if (eng) {
+      if (eng.username && currentUsername.value && eng.username.toLowerCase() === currentUsername.value.toLowerCase()) {
+        return true
+      }
+      if (eng.name && currentUsername.value && eng.name.toLowerCase() === currentUsername.value.toLowerCase()) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
 
 function formatDepartmentLabel(roleOrDept) {
   if (!roleOrDept) return 'Staff Operasional'
@@ -678,7 +924,8 @@ async function submitAssign() {
       engineer_id: assignEngineerId.value
     })
     showAssignModal.value = false
-    notify(`Teknisi #${assignEngineerId.value} berhasil ditugaskan ke WO #${selectedWo.value.id}!`, 'success')
+    const engName = getEngineerName(assignEngineerId.value)
+    notify(`Teknisi "${engName}" berhasil ditugaskan ke WO #${selectedWo.value.id}!`, 'success')
     await fetchWorkOrders()
   } catch (e) {
     notify('Gagal menugaskan teknisi: ' + (e.response?.data?.message || e.message), 'error')
@@ -689,7 +936,13 @@ function openUpdateModal(wo) {
   selectedWo.value = wo
   updateStatus.value = wo.status === 'Open' ? 'In Progress' : wo.status
   updateActionTaken.value = ''
-  updateCost.value = 0
+  const initialCost = wo.cost || 0
+  updateCost.value = initialCost
+  if (!initialCost || initialCost === 0) {
+    formattedCostInput.value = 'Rp 0'
+  } else {
+    formattedCostInput.value = 'Rp ' + initialCost.toLocaleString('id-ID')
+  }
   showUpdateModal.value = true
 }
 
@@ -720,13 +973,34 @@ async function closeOrder(wo) {
   }
 }
 
-async function cancelOrder(wo) {
+const showCancelModal = ref(false)
+const cancelReason = ref('')
+const isSubmittingCancel = ref(false)
+
+function openCancelModal(wo) {
+  selectedWo.value = wo
+  cancelReason.value = ''
+  showCancelModal.value = true
+}
+
+async function submitCancelOrder() {
+  if (!selectedWo.value || !cancelReason.value.trim()) {
+    notify('Harap sertakan alasan pembatalan tiket.', 'error')
+    return
+  }
+  isSubmittingCancel.value = true
   try {
-    await api.post('/workorders/cancel', { wo_id: wo.id })
-    notify(`Work Order #${wo.id} dibatalkan (Cancelled)!`, 'success')
+    await api.post('/workorders/cancel', {
+      wo_id: selectedWo.value.id,
+      reason: cancelReason.value.trim()
+    })
+    showCancelModal.value = false
+    notify(`Work Order #WO-${selectedWo.value.id} berhasil dibatalkan!`, 'success')
     await fetchWorkOrders()
   } catch (e) {
     notify('Gagal membatalkan Work Order: ' + (e.response?.data?.message || e.message), 'error')
+  } finally {
+    isSubmittingCancel.value = false
   }
 }
 
@@ -872,16 +1146,24 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.primary-btn.btn-secondary-ios {
+.primary-btn.btn-secondary-ios, .btn-secondary-ios {
   background: #ffffff !important;
   color: #0f172a !important;
   border: 1px solid #cbd5e1 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.primary-btn.btn-secondary-ios:hover {
-  background: #f1f5f9 !important;
+.primary-btn.btn-secondary-ios:hover, .btn-secondary-ios:hover {
+  background: #f8fafc !important;
   border-color: #94a3b8 !important;
+  color: #0284c7 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15) !important;
+}
+
+.primary-btn.btn-secondary-ios:active, .btn-secondary-ios:active {
+  transform: scale(0.97) !important;
 }
 
 .print-report-btn {
@@ -1081,56 +1363,75 @@ td {
 }
 
 .log-btn {
-  background: #eff6ff;
-  color: #2563eb;
-  border-color: #bfdbfe;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1 !important;
 }
 
 .log-btn:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
+  background: #f1f5f9;
+  border-color: #94a3b8 !important;
+  color: #1e293b;
 }
 
 .assign-btn {
   background: #f0fdf4;
-  color: #16a34a;
-  border-color: #bbf7d0;
+  color: #15803d;
+  border: 1px solid #86efac !important;
 }
 
 .assign-btn:hover {
   background: #dcfce7;
+  border-color: #22c55e !important;
 }
 
 .progress-btn {
-  background: #fffbeb;
-  color: #d97706;
-  border-color: #fef3c7;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #60a5fa !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
 }
 
 .progress-btn:hover {
-  background: #fef3c7;
+  background: #dbeafe;
+  border-color: #2563eb !important;
+  color: #1d4ed8;
 }
 
 .close-btn {
-  background: #ecfdf5;
-  color: #059669;
-  border-color: #a7f3d0;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #4ade80 !important;
+  box-shadow: 0 1px 2px rgba(21, 128, 61, 0.08);
 }
 
 .close-btn:hover {
-  background: #d1fae5;
+  background: #dcfce7;
+  border-color: #16a34a !important;
+  color: #166534;
+}
+
+.cancel-btn {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fdba74 !important;
+}
+
+.cancel-btn:hover {
+  background: #ffedd5;
+  border-color: #f97316 !important;
 }
 
 .delete-btn {
   background: #fef2f2;
   color: #dc2626;
-  border-color: #fecaca;
-  padding: 0 8px;
+  border: 1px solid #fca5a5 !important;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.08);
 }
 
 .delete-btn:hover {
   background: #fee2e2;
-  border-color: #fca5a5;
+  border-color: #ef4444 !important;
 }
 
 .modal-form {
@@ -1149,6 +1450,8 @@ td {
 
 .modal-form input, .modal-form select, .modal-form textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   border: 1px solid #cbd5e1;
   border-radius: 4px !important;
@@ -1157,6 +1460,20 @@ td {
   background: #ffffff;
   outline: none;
   transition: all 0.15s ease;
+}
+
+.modal-form select, .ios-select-input {
+  max-width: 100%;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.modal-form select option, .ios-select-input option {
+  max-width: 100%;
+  font-size: 0.88rem;
+  padding: 6px 10px;
 }
 
 .modal-form input:focus, .modal-form select:focus, .modal-form textarea:focus {
@@ -1555,17 +1872,638 @@ td {
   font-weight: 700;
 }
 
+/* === 5-Box Split Status Grid === */
+.status-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px !important;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.status-grid-top {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.status-grid-bottom {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.status-grid-box {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px !important;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+}
+
+.status-grid-box:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.status-grid-box.active {
+  background: #007aff !important;
+  border-color: #007aff !important;
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.25);
+}
+
+.sgb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sgb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-all { background: #2563eb; }
+.dot-open { background: #3b82f6; }
+.dot-in-progress { background: #f59e0b; }
+.dot-completed { background: #10b981; }
+.dot-cancelled { background: #ef4444; }
+
+.status-grid-box.active .sgb-dot {
+  background: #ffffff !important;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+.sgb-count {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.status-grid-box.active .sgb-count {
+  color: #ffffff !important;
+}
+
+.sgb-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.status-grid-box.active .sgb-title {
+  color: #ffffff !important;
+}
+
+/* === Desktop vs Mobile Display Toggle === */
+.mobile-only {
+  display: none !important;
+}
+
 /* === Mobile Responsive CSS (Android & iOS) === */
 @media (max-width: 640px) {
-  .page-container { padding: 16px 14px !important; }
+  .status-grid-container {
+    padding: 8px;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .status-grid-top, .status-grid-bottom {
+    gap: 6px;
+  }
+
+  .status-grid-box {
+    padding: 8px 10px;
+  }
+
+  .sgb-count {
+    font-size: 1rem;
+  }
+
+  .sgb-title {
+    font-size: 0.74rem;
+  }
+
+  .desktop-table-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-container { padding: 14px 10px !important; }
   .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
   .header-action-group { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
   .header-action-group .primary-btn { flex: 1; min-width: 130px; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
-  .status-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
-  .tab-btn { padding: 8px 12px; font-size: 0.8rem; flex-shrink: 0; white-space: nowrap; }
   .card-panel { padding: 16px !important; border-radius: 14px !important; }
   .report-summary-boxes { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .report-actions { flex-direction: column; gap: 8px; }
   .excel-btn, .print-btn { width: 100%; justify-content: center; }
+
+  .mobile-wo-list {
+    width: 100%;
+  }
+
+  .mwo-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px !important;
+    padding: 14px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mwo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .mwo-id-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mwo-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mwo-pill-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .mwo-desc {
+    margin: 2px 0;
+    font-size: 0.84rem;
+    color: #0f172a;
+    font-weight: 600;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mwo-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+
+  .mwo-cancel-reason {
+    font-size: 0.78rem;
+    color: #991b1b;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin: 2px 0 4px;
+  }
+
+  .mwo-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .mwo-actions-bar .icon-btn {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
+  }
+
+  .mobile-empty-card {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.88rem;
+  }
+}
+
+.cancel-btn {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1px solid #fecaca !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease;
+}
+
+.cancel-btn:hover {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+}
+
+.ios-cancel-warning-banner {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ios-danger-circle-icon {
+  width: 42px;
+  height: 42px;
+  background: #fee2e2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #fca5a5;
+}
+
+.ios-warning-text h4 {
+  margin: 0 0 3px;
+  font-size: 0.92rem;
+  color: #991b1b;
+  font-weight: 800;
+}
+
+.ios-warning-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #7f1d1d;
+  line-height: 1.3;
+}
+
+.danger-btn-ios {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid #dc2626 !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+  cursor: pointer;
+}
+
+.danger-btn-ios:hover {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+.cancel-btn-ios {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  cursor: pointer;
+}
+
+/* === iOS Style Grouped Card Work Order Timeline === */
+.ios-timeline-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ios-asset-info-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.ios-aic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ios-code-badge {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.ios-asset-name {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ios-registration-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.ios-timeline-page-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.ios-tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.ios-tl-header h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ios-tl-items-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ios-tl-card-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.ios-tl-card-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.ios-tl-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ios-step-chip {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.ios-tl-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.ios-tl-stacked-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ios-pic-info-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #334155;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 6px 10px;
+  border-radius: 8px;
+  word-break: break-word;
+}
+
+.ios-reason-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 3px solid #2563eb;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #1e40af;
+  word-break: break-word;
+}
+
+.ios-reason-box p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.ios-cost-pill {
+  font-size: 0.78rem;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.ios-empty-tl {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+}
+
+@media (max-width: 640px) {
+  .modal-form select, .ios-select-input {
+    font-size: 0.84rem !important;
+    padding: 10px 12px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .modal-form select option, .ios-select-input option {
+    font-size: 0.82rem !important;
+  }
+
+  .monthly-report-printable {
+    padding: 4px 0 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .report-header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .report-header h2 {
+    font-size: 1.05rem !important;
+  }
+
+  .report-header p {
+    font-size: 0.78rem !important;
+  }
+
+  .report-summary-boxes {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .rbox {
+    padding: 8px 10px !important;
+  }
+
+  .rbox span {
+    font-size: 0.72rem !important;
+  }
+
+  .rbox strong {
+    font-size: 1rem !important;
+  }
+
+  .report-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .report-table {
+    min-width: 600px;
+    font-size: 0.76rem !important;
+  }
+
+  .report-table th, .report-table td {
+    padding: 6px 8px !important;
+    white-space: nowrap;
+  }
+
+  .report-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .report-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* Full Faded Yellow-Blue Box Highlight for Assigned Work Orders */
+tr.highlight-assigned-wo, .mwo-card.highlight-assigned-wo {
+  background: linear-gradient(135deg, #fffbeb 0%, #eff6ff 100%) !important;
+  border: 2px solid #93c5fd !important;
+  box-shadow: 0 4px 16px rgba(147, 197, 253, 0.3) !important;
+}
+
+tr.highlight-assigned-wo td {
+  background: transparent !important;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .monthly-report-printable, .monthly-report-printable * {
+    visibility: visible;
+  }
+  .monthly-report-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .report-table-wrapper {
+    overflow: visible !important;
+    border: none !important;
+  }
+  .report-table {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  .report-table th, .report-table td {
+    white-space: normal !important;
+  }
 }
 </style>

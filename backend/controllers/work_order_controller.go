@@ -74,14 +74,25 @@ func (c *WorkOrderController) AssignWorker(woID int, engineerID int, callerRole 
 		return err
 	}
 
+	// Fetch engineer name/username for clean human readable display
+	engName := "Teknisi #" + strconv.Itoa(engineerID)
+	var engUser models.User
+	if err := c.db.First(&engUser, engineerID).Error; err == nil {
+		if engUser.Name != "" {
+			engName = engUser.Name
+		} else if engUser.Username != "" {
+			engName = "@" + engUser.Username
+		}
+	}
+
 	// Log to work_order_logs
 	c.logWO(woID, "In Progress",
-		"Penugasan Teknisi #"+strconv.Itoa(engineerID)+" untuk perbaikan lokasi "+workOrder.Location,
+		"Penugasan Teknisi "+engName+" untuk perbaikan lokasi "+workOrder.Location,
 		workOrder.Cost, updatedBy, callerRole)
 
 	// Record in activity_logs
 	utils.RecordActivity(c.db, "WORK_ORDER", updatedBy,
-		"Menugaskan Teknisi #"+strconv.Itoa(engineerID)+" ke Work Order #"+strconv.Itoa(woID)+" ("+workOrder.Location+")",
+		"Menugaskan Teknisi "+engName+" ke Work Order #"+strconv.Itoa(woID)+" ("+workOrder.Location+")",
 		strconv.Itoa(woID))
 
 	return nil
@@ -123,20 +134,40 @@ func (c *WorkOrderController) UpdateWOStatus(woID int, status string, actionTake
 	return nil
 }
 
-func (c *WorkOrderController) CancelWorkOrder(woID int, callerRole string, updatedBy string) error {
-	if !canCloseOrDeleteWO(callerRole) {
-		return errors.New("akses ditolak: hanya Admin, HOD, atau Supervisor (Management) yang dapat membatalkan Work Order")
-	}
-	if err := c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Update("status", "Cancelled").Error; err != nil {
-		return err
+func (c *WorkOrderController) CancelWorkOrder(woID int, callerRole string, updatedBy string, reason string) error {
+	var wo models.WorkOrder
+	if err := c.db.First(&wo, woID).Error; err != nil {
+		return errors.New("work order tidak ditemukan (ID #" + strconv.Itoa(woID) + ")")
 	}
 
-	// Log to work_order_logs
-	c.logWO(woID, "Cancelled", "Tiket Work Order dibatalkan oleh "+updatedBy, 0, updatedBy, callerRole)
+	// Permission check: allow Admin, HOD, Management OR any user/role who requested this Work Order
+	isRequester := strings.EqualFold(strings.TrimSpace(wo.RequestedBy), strings.TrimSpace(updatedBy))
+	if !canCloseOrDeleteWO(callerRole) && !isRequester {
+		return errors.New("akses ditolak: hanya pelapor tiket (" + wo.RequestedBy + "), Admin, HOD, atau Supervisor yang dapat membatalkan Work Order ini")
+	}
 
-	// Record in activity_logs
+	cleanReason := strings.TrimSpace(reason)
+	if cleanReason == "" {
+		cleanReason = "Dibatalkan oleh pelapor"
+	}
+
+	// 1. Update status to Cancelled and save alasan_pembatalan in work_orders table
+	updates := map[string]interface{}{
+		"status":            "Cancelled",
+		"alasan_pembatalan": cleanReason,
+	}
+	if err := c.db.Model(&models.WorkOrder{}).Where("id = ?", woID).Updates(updates).Error; err != nil {
+		return errors.New("gagal mengupdate status work order di database: " + err.Error())
+	}
+
+	actionLogText := "Work order dibatalkan oleh " + updatedBy + ". Alasan: " + cleanReason
+
+	// 2. Log to work_order_logs table
+	c.logWO(woID, "Cancelled", actionLogText, 0, updatedBy, callerRole)
+
+	// 3. Record in system activity_logs
 	utils.RecordActivity(c.db, "WORK_ORDER", updatedBy,
-		"Membatalkan Work Order #"+strconv.Itoa(woID),
+		"Membatalkan Work Order #"+strconv.Itoa(woID)+" ("+actionLogText+")",
 		strconv.Itoa(woID))
 
 	return nil

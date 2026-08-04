@@ -40,8 +40,8 @@
         </select>
       </div>
 
-      <!-- Assets Table -->
-      <div class="table-responsive">
+      <!-- Assets Table (Desktop Only) -->
+      <div class="table-responsive desktop-table-only">
         <table>
           <thead>
             <tr>
@@ -92,9 +92,11 @@
                 </button>
                 <button class="icon-btn edit-btn" v-if="canCreateAsset" @click="openEditModal(asset)" title="Edit Aset">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  <span>Edit</span>
                 </button>
                 <button class="icon-btn delete-btn" v-if="canDeleteAsset" @click="deleteAsset(asset)" title="Hapus Aset Permanen">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                  <span>Hapus</span>
                 </button>
               </td>
             </tr>
@@ -103,6 +105,72 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Mobile Asset Cards List View (Visible on Mobile / Android Only) -->
+      <div class="mobile-asset-list mobile-only">
+        <div v-if="displayedAssets.length === 0" class="mobile-empty-card">
+          Tidak ada data aset yang ditemukan.
+        </div>
+        <div v-else v-for="asset in displayedAssets" :key="'ma-' + asset.id" class="mobile-asset-card">
+          <div class="mac-header">
+            <span class="code-badge">{{ asset.asset_code }}</span>
+            <StatusBadge :status="asset.status" />
+          </div>
+
+          <div class="mac-body" @click="viewDetail(asset)">
+            <div class="mac-title-row">
+              <h3 class="mac-title">{{ asset.asset_name }}</h3>
+              <span v-if="asset.is_reserved" class="reserved-tag">Reserved</span>
+            </div>
+
+            <div class="mac-pills-row">
+              <span class="mac-pill category-pill">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 12v9.5"/></svg>
+                <span>{{ asset.category || 'General' }}</span>
+              </span>
+              <span class="mac-pill location-pill">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>{{ asset.location }}</span>
+              </span>
+              <span class="mac-pill pic-pill">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>{{ asset.pic || 'Engineering' }}</span>
+              </span>
+            </div>
+
+            <div v-if="asset.location !== (asset.registration_location || asset.location)" class="mac-mutation-info">
+              <span>Registrasi: {{ asset.registration_location }}</span>
+              <span class="mac-time">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>{{ formatDate(asset.last_moved_at) }}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="mac-actions-bar">
+            <button class="icon-btn log-btn" @click.stop="openMutationTimelineModal(asset)" title="Timeline Mutasi">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Timeline</span>
+            </button>
+            <button class="icon-btn qr-btn" @click="openQrPrint(asset)" title="Cetak QR">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+              <span>QR</span>
+            </button>
+            <button class="icon-btn mut-btn" v-if="canMutate" @click="openMutationModal(asset)" title="Mutasi">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+              <span>Mutasi</span>
+            </button>
+            <button class="icon-btn edit-btn" v-if="canCreateAsset" @click="openEditModal(asset)" title="Edit">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>Edit</span>
+            </button>
+            <button class="icon-btn delete-btn" v-if="canDeleteAsset" @click="deleteAsset(asset)" title="Hapus">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              <span>Hapus</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -137,7 +205,6 @@
         <label>
           <span>PIC Penanggung Jawab (Departemen)</span>
           <select v-model="formAsset.pic" required>
-            <option value="" disabled>-- Pilih Departemen PIC --</option>
             <option value="Front Office">Front Office</option>
             <option value="House Keeping">House Keeping</option>
             <option value="Food Beverage Service">Food Beverage Service</option>
@@ -187,7 +254,6 @@
           <label>
             <span>PIC Penanggung Jawab Baru (Departemen)</span>
             <select v-model="mutPIC" required>
-              <option value="" disabled>-- Pilih Departemen PIC Baru --</option>
               <option value="Front Office">Front Office</option>
               <option value="House Keeping">House Keeping</option>
               <option value="Food Beverage Service">Food Beverage Service</option>
@@ -236,74 +302,87 @@
       </div>
     </ModalDialog>
 
-    <!-- Modal Timeline Mutasi Aset -->
-    <ModalDialog :show="showMutationTimelineModal" title="📜 Timeline & Histori Mutasi Aset" @close="showMutationTimelineModal = false">
-      <div v-if="selectedAssetForTimeline" class="logs-modal-body">
-        <div class="wo-info-banner">
-          <div>
-            <span class="wo-badge">{{ selectedAssetForTimeline.asset_code }}</span>
-            <h3 class="wo-banner-title">📦 {{ selectedAssetForTimeline.asset_name }}</h3>
-            <p class="wo-banner-sub">Lokasi Registrasi Awal: <strong>📍 {{ selectedAssetForTimeline.registration_location || selectedAssetForTimeline.location }}</strong></p>
+    <!-- Modal Timeline Mutasi Aset (iOS Grouped Page Card UI) -->
+    <ModalDialog :show="showMutationTimelineModal" title="Timeline & Histori Mutasi Aset" maxWidth="640px" @close="showMutationTimelineModal = false">
+      <div v-if="selectedAssetForTimeline" class="ios-timeline-modal-body">
+        
+        <!-- Header Info Card (iOS Style) -->
+        <div class="ios-asset-info-card">
+          <div class="ios-aic-header">
+            <span class="ios-code-badge">{{ selectedAssetForTimeline.asset_code }}</span>
+            <StatusBadge :status="selectedAssetForTimeline.status" />
           </div>
-          <StatusBadge :status="selectedAssetForTimeline.status" />
-        </div>
-
-        <div class="timeline-container">
-          <h4 class="timeline-title">⏱️ Histori Pemindahan Lokasi Aset</h4>
-          
-          <div v-if="isTimelineLoading" class="logs-loading">Memuat timeline mutasi...</div>
-          
-          <div v-else class="timeline-list">
-            <div v-for="(log, idx) in assetTimelineLogs" :key="log.id || idx" class="timeline-item">
-              <div class="timeline-node">
-                <span class="node-icon">🔄</span>
-              </div>
-              <div class="timeline-content">
-                <div class="timeline-header">
-                  <span class="location-flow">📍 {{ log.previous_location || '-' }} ➔ <strong>{{ log.new_location }}</strong></span>
-                  <span class="timeline-time">🕒 {{ formatDate(log.moved_at) }}</span>
-                </div>
-                <p class="timeline-actor">
-                  👤 PIC / Penanggung Jawab: <strong>{{ log.pic || 'Engineering' }}</strong>
-                </p>
-                <div class="timeline-notes" v-if="log.reason">
-                  <p><strong>📝 Alasan Mutasi:</strong> {{ log.reason }}</p>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="assetTimelineLogs.length === 0" class="empty-logs">
-              Belum ada riwayat mutasi tercatat untuk aset ini.
-            </div>
+          <h3 class="ios-asset-name">{{ selectedAssetForTimeline.asset_name }}</h3>
+          <div class="ios-registration-location">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>Lokasi Registrasi Awal: <strong>{{ selectedAssetForTimeline.registration_location || selectedAssetForTimeline.location }}</strong></span>
           </div>
         </div>
 
-        <!-- Form Mutasi Langsung Dari Modal Timeline -->
-        <div v-if="canMutate" class="add-timeline-box">
-          <h4 class="add-tl-title">➕ Catat Mutasi Lokasi Baru</h4>
-          <form @submit.prevent="submitAddMutationNote" class="add-tl-form">
-            <div class="add-tl-row">
-              <label class="tl-field">
-                <span>Lokasi Baru:</span>
-                <input v-model="newMutLocation" type="text" placeholder="Contoh: Kamar 305 / Restoran" class="modal-input" required />
-              </label>
-
-              <label class="tl-field">
-                <span>PIC / Penanggung Jawab:</span>
-                <input v-model="newMutPic" type="text" placeholder="Contoh: Budi Santoso" class="modal-input" required />
-              </label>
+        <!-- Single Consolidated Page Box Card for Timeline Items -->
+        <div class="ios-timeline-page-card">
+          <div class="ios-tl-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <h4>Histori Mutasi Lokasi</h4>
             </div>
-
-            <label class="tl-field">
-              <span>Alasan Mutasi / Catatan Pemindahan:</span>
-              <textarea v-model="newMutReason" rows="2" placeholder="Tuliskan alasan pemindahan aset..." class="modal-input modal-textarea" required></textarea>
-            </label>
-
-            <button type="submit" class="submit-modal-btn add-tl-btn" :disabled="isSubmittingMut">
-              {{ isSubmittingMut ? 'Menyimpan...' : '🔄 Simpan Mutasi Aset' }}
+            <button v-if="canMutate" class="icon-btn mut-btn" @click="handleNavigateToMutasi(selectedAssetForTimeline)" title="Lakukan Mutasi Aset" style="display: inline-flex; align-items: center; gap: 4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.85;"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+              <span style="font-size: 0.78rem;">Mutasi Aset</span>
             </button>
-          </form>
+          </div>
+          
+          <div v-if="isTimelineLoading" class="ios-tl-loading">
+            Memuat timeline mutasi...
+          </div>
+          
+          <div v-else class="ios-tl-items-wrapper">
+            <div v-for="(log, idx) in assetTimelineLogs" :key="log.id || idx" class="ios-tl-card-item">
+              <!-- Item Header: Step Badge & Time -->
+              <div class="ios-tl-item-top">
+                <span class="ios-step-chip">Mutasi #{{ idx + 1 }}</span>
+                <span class="ios-tl-time">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {{ formatDate(log.moved_at) }}
+                </span>
+              </div>
+
+              <!-- Item Flow (Stacked Vertically for Perfect Inside Fit) -->
+              <div class="ios-tl-stacked-body">
+                <div class="ios-loc-stack-row">
+                  <div class="ios-loc-box prev-box">
+                    <span class="lbl">Dari:</span>
+                    <span class="val">{{ log.previous_location || 'Registrasi Awal' }}</span>
+                  </div>
+                  <div class="ios-arrow-connector">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  </div>
+                  <div class="ios-loc-box new-box">
+                    <span class="lbl">Ke:</span>
+                    <span class="val">📍 {{ log.new_location }}</span>
+                  </div>
+                </div>
+
+                <!-- PIC / Penanggung Jawab Pill Badge (Inside Card Container) -->
+                <div class="ios-pic-info-pill">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>Penanggung Jawab (PIC): <strong>{{ log.pic || 'Engineering' }}</strong></span>
+                </div>
+
+                <!-- Alasan Mutasi Note Box -->
+                <div class="ios-reason-box" v-if="log.reason">
+                  <p><strong>Alasan / Catatan:</strong> {{ log.reason }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="assetTimelineLogs.length === 0" class="ios-empty-tl">
+              Belum ada riwayat mutasi perpindahan lokasi untuk aset ini.
+            </div>
+          </div>
         </div>
+
       </div>
     </ModalDialog>
 
@@ -386,9 +465,9 @@ import ModalDialog from '../components/ModalDialog.vue'
 import api from '../api'
 
 const userRole = ref(sessionStorage.getItem('user_role') || 'external')
-const canCreateAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canDeleteAsset = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
-const canMutate = computed(() => userRole.value === 'hod' || userRole.value === 'management' || userRole.value === 'admin')
+const canCreateAsset = computed(() => ['hod', 'management', 'supervisor', 'admin'].includes(userRole.value.toLowerCase()))
+const canDeleteAsset = computed(() => ['hod', 'management', 'supervisor', 'admin'].includes(userRole.value.toLowerCase()))
+const canMutate = computed(() => ['hod', 'management', 'supervisor', 'admin'].includes(userRole.value.toLowerCase()))
 
 const showToast = ref(false)
 const toastMsg = ref('')
@@ -470,16 +549,18 @@ function formatDate(dateStr) {
   }
 }
 
-function openMutationTimelineModal(asset) {
+function handleNavigateToMutasi(asset) {
+  showMutationTimelineModal.value = false
+  openMutationModal(asset)
+}
+
+async function openMutationTimelineModal(asset) {
   if (!asset) return
   selectedAssetForTimeline.value = asset
   showMutationTimelineModal.value = true
+  isTimelineLoading.value = true
 
-  newMutLocation.value = ''
-  newMutPic.value = asset.pic || 'Engineering'
-  newMutReason.value = ''
-
-  const initialLogs = [
+  const defaultLogs = [
     {
       id: 1,
       asset_code: asset.asset_code,
@@ -491,29 +572,20 @@ function openMutationTimelineModal(asset) {
     }
   ]
 
-  if (asset.location !== (asset.registration_location || asset.location)) {
-    initialLogs.push({
-      id: 2,
-      asset_code: asset.asset_code,
-      previous_location: asset.registration_location || asset.location,
-      new_location: asset.location,
-      pic: asset.pic || 'Engineering',
-      reason: `Mutasi posisi aset ke ${asset.location}`,
-      moved_at: asset.last_moved_at || new Date().toISOString()
-    })
-  }
-
-  assetTimelineLogs.value = initialLogs
-  isTimelineLoading.value = false
-
-  api.get(`/assets/mutation-timeline?asset_code=${asset.asset_code}`).then(res => {
+  try {
+    const res = await api.get(`/mutations/timeline?asset_code=${encodeURIComponent(asset.asset_code)}`)
     const logsData = res.data?.data || res.data
     if (Array.isArray(logsData) && logsData.length > 0) {
       assetTimelineLogs.value = logsData
+    } else {
+      assetTimelineLogs.value = defaultLogs
     }
-  }).catch(e => {
-    console.error('Background fetch asset mutation timeline error:', e)
-  })
+  } catch (e) {
+    console.error('Fetch asset mutation timeline error:', e)
+    assetTimelineLogs.value = defaultLogs
+  } finally {
+    isTimelineLoading.value = false
+  }
 }
 
 async function submitAddMutationNote() {
@@ -586,15 +658,41 @@ async function fetchAssets() {
   }
 }
 
+function generateUniqueAssetCode() {
+  let code = ''
+  let isDuplicate = true
+  let attempts = 0
+  const existingCodes = new Set((assets.value || []).map(a => a.asset_code))
+  while (isDuplicate && attempts < 1000) {
+    attempts++
+    const randNum = Math.floor(100 + Math.random() * 900)
+    code = `AST-RM${randNum}-UNIT`
+    isDuplicate = existingCodes.has(code)
+  }
+  return code
+}
+
 function openAddModal() {
   isEditMode.value = false
-  formAsset.value = { id: 0, asset_code: 'AST-RM' + Math.floor(100 + Math.random() * 900) + '-UNIT', asset_name: '', category: '', location: '', pic: 'Engineering', status: 'Active', document_url: '' }
+  formAsset.value = { 
+    id: 0, 
+    asset_code: generateUniqueAssetCode(), 
+    asset_name: '', 
+    category: '', 
+    location: '', 
+    pic: 'Front Office', 
+    status: 'Active', 
+    document_url: '' 
+  }
   showAssetModal.value = true
 }
 
 function openEditModal(asset) {
   isEditMode.value = true
-  formAsset.value = { ...asset }
+  formAsset.value = { 
+    ...asset,
+    pic: asset.pic || 'Front Office'
+  }
   showAssetModal.value = true
 }
 
@@ -628,7 +726,7 @@ async function deleteAsset(asset) {
 function openMutationModal(asset) {
   selectedAssetForMut.value = asset
   mutNewLocation.value = ''
-  mutPIC.value = asset.pic || 'Engineering'
+  mutPIC.value = asset.pic || 'Front Office'
   mutReason.value = ''
   showMutModal.value = true
 }
@@ -639,6 +737,7 @@ async function submitMutation() {
     await api.post('/mutations', {
       asset_id: selectedAssetForMut.value.id,
       new_location: mutNewLocation.value,
+      pic: mutPIC.value,
       new_pic: mutPIC.value,
       reason: mutReason.value
     })
@@ -1172,26 +1271,515 @@ td {
 .print-btn { background: #007aff; color: #fff; }
 .print-btn:hover { background: #0062cc; }
 .btn-icon { flex-shrink: 0; }
-.btn-secondary-ios {
-  background: #ffffff !important; color: #0f172a !important;
-  border: 1px solid #cbd5e1 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+.primary-btn.btn-secondary-ios, .btn-secondary-ios {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
-.btn-secondary-ios:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
+
+.primary-btn.btn-secondary-ios:hover, .btn-secondary-ios:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0284c7 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15) !important;
+}
+
+.primary-btn.btn-secondary-ios:active, .btn-secondary-ios:active {
+  transform: scale(0.97) !important;
+}
 @media print {
   .no-print { display: none !important; }
 }
 
+/* === Desktop vs Mobile Display Toggle === */
+.mobile-only {
+  display: none !important;
+}
+
 /* === Mobile Responsive CSS (Android & iOS) === */
 @media (max-width: 640px) {
-  .page-container { padding: 16px 14px !important; }
+  .desktop-table-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-container { padding: 14px 10px !important; }
   .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
   .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
   .header-actions .primary-btn { flex: 1; min-width: 130px; justify-content: center; height: 40px !important; font-size: 0.82rem !important; }
   .toolbar-grid { flex-direction: column; gap: 10px; }
-  .search-input, .select-input { width: 100%; }
+  .search-input, .select-input, .filter-select, .sort-select { width: 100%; }
   .card-panel { padding: 16px !important; border-radius: 14px !important; }
   .report-summary-boxes { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .report-actions { flex-direction: column; gap: 8px; }
   .excel-btn, .print-btn { width: 100%; justify-content: center; }
+
+  .mobile-asset-list {
+    width: 100%;
+  }
+
+  .mobile-asset-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px !important;
+    padding: 14px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mac-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .mac-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .mac-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .mac-title {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mac-pills-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .mac-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    line-height: 1;
+  }
+
+  .mac-pill span {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mac-pill svg {
+    flex-shrink: 0;
+  }
+
+  .category-pill { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .location-pill { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+  .pic-pill { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+
+  .mac-mutation-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.76rem;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+
+  .mac-time {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .mac-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .mac-actions-bar .icon-btn {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
+  }
+
+  .mobile-empty-card {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.88rem;
+  }
+}
+
+/* === iOS Style Grouped Card Mutation Timeline === */
+.ios-timeline-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ios-asset-info-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.ios-aic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ios-code-badge {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.ios-asset-name {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ios-registration-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.ios-timeline-page-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.ios-tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.ios-tl-header h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ios-tl-items-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ios-tl-card-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.ios-tl-card-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.ios-tl-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ios-step-chip {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.ios-tl-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.ios-tl-stacked-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ios-loc-stack-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.ios-loc-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.ios-loc-box .lbl {
+  font-weight: 700;
+  color: #64748b;
+  min-width: 36px;
+}
+
+.ios-loc-box .val {
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.ios-loc-box.new-box .val {
+  color: #15803d;
+}
+
+.ios-arrow-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+}
+
+.ios-pic-info-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #334155;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 6px 10px;
+  border-radius: 8px;
+  word-break: break-word;
+}
+
+.ios-reason-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 3px solid #2563eb;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #1e40af;
+  word-break: break-word;
+}
+
+.ios-reason-box p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.ios-empty-tl {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+}
+
+.ios-add-mutation-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.ios-amc-title {
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ios-amc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .monthly-report-printable {
+    padding: 4px 0 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .report-header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .report-header h2 {
+    font-size: 1.05rem !important;
+  }
+
+  .report-header p {
+    font-size: 0.78rem !important;
+  }
+
+  .report-summary-boxes {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .rbox {
+    padding: 8px 10px !important;
+  }
+
+  .rbox span {
+    font-size: 0.72rem !important;
+  }
+
+  .rbox strong {
+    font-size: 1rem !important;
+  }
+
+  .report-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .report-table {
+    min-width: 580px;
+    font-size: 0.76rem !important;
+  }
+
+  .report-table th, .report-table td {
+    padding: 6px 8px !important;
+    white-space: nowrap;
+  }
+
+  .report-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .report-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .monthly-report-printable, .monthly-report-printable * {
+    visibility: visible;
+  }
+  .monthly-report-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .report-table-wrapper {
+    overflow: visible !important;
+    border: none !important;
+  }
+  .report-table {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  .report-table th, .report-table td {
+    white-space: normal !important;
+  }
 }
 </style>

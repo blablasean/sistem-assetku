@@ -119,6 +119,9 @@ async function login() {
     sessionStorage.setItem('user_role', role)
     sessionStorage.setItem('user_name', name)
     sessionStorage.setItem('username', userUn)
+    if (payload.id || payload.user_id) {
+      sessionStorage.setItem('user_id', String(payload.id || payload.user_id))
+    }
 
     if (payload.avatar) {
       sessionStorage.setItem('user_avatar', payload.avatar)
